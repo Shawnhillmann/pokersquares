@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Poker Bejeweled Prototype</title>
+    <link rel="stylesheet" href="/src/styles.css" />
+  </head>
+  <body>
+    <div class="app">
+      <header class="hud">
+        <div class="hud__left">
+          <div class="brand">
+            <div class="brand__title">POKER CASCADE</div>
+            <div class="brand__subtitle">Swap • Credits • Cascade</div>
+          </div>
+        </div>
+
+        <div class="hud__right">
+          <button class="btn" id="newGameBtn" type="button">New Game</button>
+          <button class="btn btn--ghost" id="toggleChartBtn" type="button">Hide hands</button>
+          <button class="btn btn--ghost" id="helpBtn" type="button">Rules</button>
+        </div>
+      </header>
+
+      <main class="stage">
+        <aside class="panel handChart" id="handChart" aria-label="Poker hand rankings">
+          <div class="handChart__head">
+            <div class="panel__title">Poker hand rankings</div>
+            <button class="btn btn--ghost btn--tiny handChart__toggle" id="toggleChartBtn2" type="button">
+              Hide
+            </button>
+          </div>
+          <div class="handChart__list" role="list">
+            <div class="handRow" role="listitem">
+              <div class="handRow__meta">
+                <div class="handRow__name">Royal Flush</div>
+                <div class="handRow__tag handRow__tag--score handRow__tag--royal">x100</div>
+              </div>
+              <div class="miniHand" aria-hidden="true">
+                <div class="miniCard miniCard--red"><div class="miniCard__corner"><div class="miniCard__rank">10</div></div><div class="miniCard__pip">♥</div></div>
+                <div class="miniCard miniCard--red"><div class="miniCard__corner"><div class="miniCard__rank">J</div></div><div class="miniCard__pip">♥</div></div>
+                <div class="miniCard miniCard--red"><div class="miniCard__corner"><div class="miniCard__rank">Q</div></div><div class="miniCard__pip">♥</div></div>
+                <div class="miniCard miniCard--red"><div class="miniCard__corner"><div class="miniCard__rank">K</div></div><div class="miniCard__pip">♥</div></div>
+                <div class="miniCard miniCard--red"><div class="miniCard__corner"><div class="miniCard__rank">A</div></div><div class="miniCard__pip">♥</div></div>
+              </div>
+            </div>
+
+            <div class="handRow" role="listitem">
+              <div class="handRow__meta">
+                <div class="handRow__name">Straight Flush</div>
+                <div class="handRow__tag handRow__tag--score">x50</div>
+              </div>
+              <div class="miniHand" aria-hidden="true">
+                <div class="miniCard miniCard--black"><div class="miniCard__corner"><div class="miniCard__rank">6</div></div><div class="miniCard__pip">♠</div></div>
+                <div class="miniCard miniCard--black"><div class="miniCard__corner"><div class="miniCard__rank">7</div></div><div class="miniCard__pip">♠</div></div>
+                <div class="miniCard miniCard--black"><div class="miniCard__corner"><div class="miniCard__rank">8</div></div><div class="miniCard__pip">♠</div></div>
+                <div class="miniCard miniCard--black"><div class="miniCard__corner"><div class="miniCard__rank">9</div></div><div class="miniCard__pip">♠</div></div>
+                <div class="miniCard miniCard--black"><div class="miniCard__corner"><div class="miniCard__rank">10</div></div><div class="miniCard__pip">♠</div></div>
+              </div>
+            </div>
+
+            <div class="handRow" role="listitem">
+              <div class="handRow__meta">
+                <div class="handRow__name">Four of a Kind</div>
+                <div class="handRow__tag handRow__tag--score">x20</div>
+              </div>
+              <div class="miniHand" aria-hidden="true">
+                <div class="miniCard miniCard--red"><div class="miniCard__corner"><div class="miniCard__rank">8</div></div><div class="miniCard__pip">♦</div></div>
+                <div class="miniCard miniCard--black"><div class="miniCard__corner"><div class="miniCard__rank">8</div></div><div class="miniCard__pip">♣</div></div>
+                <div class="miniCard miniCard--black"><div class="miniCard__corner"><div class="miniCard__rank">8</div></div><div class="miniCard__pip">♠</div></div>
+                <div class="miniCard miniCard--red"><div class="miniCard__corner"><div class="miniCard__rank">8</div></div><div class="miniCard__pip">♥</div></div>
+                <div class="miniCard miniCard--black miniCard--kicker"><div class="miniCard__corner"><div class="miniCard__rank">2</div></div><div class="miniCard__pip">♣</div></div>
+              </div>
+            </div>
+
+            <div class="handRow" role="listitem">
+              <div class="handRow__meta">
+                <div class="handRow__name">Full House</div>
+                <div class="handRow__tag handRow__tag--score">x10</div>
+              </div>
+              <div class="miniHand" aria-hidden="true">
+                <div class="miniCard miniCard--black"><div class="miniCard__corner"><div class="miniCard__rank">K</div></div><div class="miniCard__pip">♣</div></div>
+                <div class="miniCard miniCard--red"><div class="miniCard__corner"><div class="miniCard__rank">K</div></div><div class="miniCard__pip">♦</div></div>
+                <div class="miniCard miniCard--black"><div class="miniCard__corner"><div class="miniCard__rank">K</div></div><div class="miniCard__pip">♠</div></div>
+                <div class="miniCard miniCard--red"><div class="miniCard__corner"><div class="miniCard__rank">7</div></div><div class="miniCard__pip">♥</div></div>
+                <div class="miniCard miniCard--black"><div class="miniCard__corner"><div class="miniCard__rank">7</div></div><div class="miniCard__pip">♣</div></div>
+              </div>
+            </div>
+
+            <div class="handRow" role="listitem">
+              <div class="handRow__meta">
+                <div class="handRow__name">Flush</div>
+                <div class="handRow__tag handRow__tag--score">x5</div>
+              </div>
+              <div class="miniHand" aria-hidden="true">
+                <div class="miniCard miniCard--red"><div class="miniCard__corner"><div class="miniCard__rank">A</div></div><div class="miniCard__pip">♥</div></div>
+                <div class="miniCard miniCard--red"><div class="miniCard__corner"><div class="miniCard__rank">J</div></div><div class="miniCard__pip">♥</div></div>
+                <div class="miniCard miniCard--red"><div class="miniCard__corner"><div class="miniCard__rank">9</div></div><div class="miniCard__pip">♥</div></div>
+                <div class="miniCard miniCard--red"><div class="miniCard__corner"><div class="miniCard__rank">6</div></div><div class="miniCard__pip">♥</div></div>
+                <div class="miniCard miniCard--red"><div class="miniCard__corner"><div class="miniCard__rank">2</div></div><div class="miniCard__pip">♥</div></div>
+              </div>
+            </div>
+
+            <div class="handRow" role="listitem">
+              <div class="handRow__meta">
+                <div class="handRow__name">Straight</div>
+                <div class="handRow__tag handRow__tag--score">x5</div>
+              </div>
+              <div class="miniHand" aria-hidden="true">
+                <div class="miniCard miniCard--black"><div class="miniCard__corner"><div class="miniCard__rank">5</div></div><div class="miniCard__pip">♣</div></div>
+                <div class="miniCard miniCard--red"><div class="miniCard__corner"><div class="miniCard__rank">6</div></div><div class="miniCard__pip">♥</div></div>
+                <div class="miniCard miniCard--black"><div class="miniCard__corner"><div class="miniCard__rank">7</div></div><div class="miniCard__pip">♠</div></div>
+                <div class="miniCard miniCard--red"><div class="miniCard__corner"><div class="miniCard__rank">8</div></div><div class="miniCard__pip">♦</div></div>
+                <div class="miniCard miniCard--black"><div class="miniCard__corner"><div class="miniCard__rank">9</div></div><div class="miniCard__pip">♣</div></div>
+              </div>
+            </div>
+
+            <div class="handRow" role="listitem">
+              <div class="handRow__meta">
+                <div class="handRow__name">Three of a Kind</div>
+                <div class="handRow__tag handRow__tag--score">x3</div>
+              </div>
+              <div class="miniHand" aria-hidden="true">
+                <div class="miniCard miniCard--black"><div class="miniCard__corner"><div class="miniCard__rank">9</div></div><div class="miniCard__pip">♠</div></div>
+                <div class="miniCard miniCard--red"><div class="miniCard__corner"><div class="miniCard__rank">9</div></div><div class="miniCard__pip">♥</div></div>
+                <div class="miniCard miniCard--red"><div class="miniCard__corner"><div class="miniCard__rank">9</div></div><div class="miniCard__pip">♦</div></div>
+                <div class="miniCard miniCard--black miniCard--kicker"><div class="miniCard__corner"><div class="miniCard__rank">K</div></div><div class="miniCard__pip">♣</div></div>
+                <div class="miniCard miniCard--black miniCard--kicker"><div class="miniCard__corner"><div class="miniCard__rank">2</div></div><div class="miniCard__pip">♠</div></div>
+              </div>
+            </div>
+
+            <div class="handRow" role="listitem">
+              <div class="handRow__meta">
+                <div class="handRow__name">Two Pair</div>
+                <div class="handRow__tag handRow__tag--score">x1</div>
+              </div>
+              <div class="miniHand" aria-hidden="true">
+                <div class="miniCard miniCard--red"><div class="miniCard__corner"><div class="miniCard__rank">A</div></div><div class="miniCard__pip">♦</div></div>
+                <div class="miniCard miniCard--black"><div class="miniCard__corner"><div class="miniCard__rank">A</div></div><div class="miniCard__pip">♣</div></div>
+                <div class="miniCard miniCard--red"><div class="miniCard__corner"><div class="miniCard__rank">7</div></div><div class="miniCard__pip">♥</div></div>
+                <div class="miniCard miniCard--black"><div class="miniCard__corner"><div class="miniCard__rank">7</div></div><div class="miniCard__pip">♠</div></div>
+                <div class="miniCard miniCard--black miniCard--kicker"><div class="miniCard__corner"><div class="miniCard__rank">K</div></div><div class="miniCard__pip">♣</div></div>
+              </div>
+            </div>
+          </div>
+        </aside>
+
+        <div class="gameColumn">
+          <div class="playArea">
+            <div class="table">
+              <div class="boardWrap" aria-label="Card grid">
+                <div class="board" id="board"></div>
+                <div class="lineLayer" id="lineLayer" aria-hidden="true"></div>
+              </div>
+              <div class="toast" id="toast" aria-live="polite"></div>
+            </div>
+            <div class="belowGameArea">
+              <button class="btn btn--ghost" id="hintBtn" type="button">Hint (-300)</button>
+            </div>
+          </div>
+
+          <div class="creditDock" id="creditDock">
+            <div class="scorePopup scorePopup--feed scoreFeedPanel" id="scoreFeedPanel" aria-live="polite">
+              <div class="totalScoreBlock">
+                <div class="totalScoreBlock__label">TOTAL CREDITS</div>
+                <div class="totalScoreBlock__value" id="totalScoreBig">0</div>
+              </div>
+              <div class="scorePopup__hand scorePopup__hand--gold" id="feedHand">—</div>
+              <div class="scorePopup__mult scorePopup__mult--hand is-quiet" id="feedHandMult">HAND x1</div>
+              <div class="scorePopup__subLabel">CREDITS</div>
+              <div class="scorePopup__score scorePopup__score--green" id="feedRunning">0</div>
+              <div class="scorePopup__calc" id="feedCalc"></div>
+              <div class="scoreFeedLast" id="feedLast">Last credits —</div>
+            </div>
+
+            <div class="howToPlayPanel" id="howToPlayPanel" aria-label="How to play">
+              <div class="howToPlayPanel__title">How to play</div>
+              <div class="howToPlayPanel__text">
+                Swap any two cards to try to make poker hands. Each swap attempt costs <b>100</b> credits.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <aside class="panel" id="rulesPanel" hidden>
+          <div class="panel__title">How it works</div>
+          <div class="panel__text">
+            Swap any two cards. After each swap, every row and column is evaluated as a 5-card
+            poker hand. Any hand that’s at least <b>TWO PAIR</b> clears, cards fall, and new cards
+            deal from the top—cascades can chain.
+          </div>
+          <div class="panel__text panel__text--muted">
+            Straights support A-2-3-4-5 and 10-J-Q-K-A. Duplicate ranks can’t form a straight.
+          </div>
+        </aside>
+      </main>
+    </div>
+
+    <div class="modal" id="runEndModal" hidden>
+      <div class="modal__backdrop"></div>
+      <div class="modal__card" role="dialog" aria-modal="true" aria-labelledby="runEndTitle" aria-describedby="runEndReason">
+        <div class="modal__title" id="runEndTitle">Run ended</div>
+        <p class="modal__reason" id="runEndReason"></p>
+        <div class="modal__stats">
+          <div class="modalStat">
+            <div class="modalStat__label">TOTAL CREDITS</div>
+            <div class="modalStat__value" id="finalScoreValue">0</div>
+          </div>
+          <div class="modalStat">
+            <div class="modalStat__label">SUCCESSFUL MOVES</div>
+            <div class="modalStat__value" id="finalMovesValue">0</div>
+          </div>
+        </div>
+        <div class="modal__actions">
+          <button class="btn" id="restartBtn" type="button">Restart</button>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
+
