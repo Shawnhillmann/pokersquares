@@ -29,14 +29,7 @@ const ui = {
   runEndReason: /** @type {HTMLElement|null} */ (document.getElementById("runEndReason")),
   finalScoreValue: /** @type {HTMLElement} */ (document.getElementById("finalScoreValue")),
   finalMovesValue: /** @type {HTMLElement} */ (document.getElementById("finalMovesValue")),
-  restartBtn: /** @type {HTMLButtonElement} */ (document.getElementById("restartBtn"))
-  ,
-  scoreFeedPanel: /** @type {HTMLElement} */ (document.getElementById("scoreFeedPanel")),
-  feedHand: /** @type {HTMLElement} */ (document.getElementById("feedHand")),
-  feedHandMult: /** @type {HTMLElement} */ (document.getElementById("feedHandMult")),
-  feedRunning: /** @type {HTMLElement} */ (document.getElementById("feedRunning")),
-  feedCalc: /** @type {HTMLElement} */ (document.getElementById("feedCalc")),
-  feedLast: /** @type {HTMLElement} */ (document.getElementById("feedLast")),
+  restartBtn: /** @type {HTMLButtonElement} */ (document.getElementById("restartBtn")),
   totalScoreBig: /** @type {HTMLElement} */ (document.getElementById("totalScoreBig")),
   howToPlayPanel: /** @type {HTMLElement} */ (document.getElementById("howToPlayPanel"))
 };
@@ -145,44 +138,7 @@ function rerender() {
 }
 
 function positionScoreFeed() {
-  if (document.documentElement.classList.contains("is-mobile")) {
-    ui.scoreFeedPanel.style.removeProperty("left");
-    ui.scoreFeedPanel.style.removeProperty("top");
-    ui.scoreFeedPanel.style.removeProperty("right");
-    ui.scoreFeedPanel.style.removeProperty("bottom");
-    ui.scoreFeedPanel.style.removeProperty("transform");
-    ui.scoreFeedPanel.style.removeProperty("width");
-    ui.scoreFeedPanel.style.opacity = "1";
-    if (ui.howToPlayPanel) {
-      ui.howToPlayPanel.style.removeProperty("left");
-      ui.howToPlayPanel.style.removeProperty("top");
-      ui.howToPlayPanel.style.removeProperty("right");
-      ui.howToPlayPanel.style.removeProperty("bottom");
-      ui.howToPlayPanel.style.removeProperty("transform");
-      ui.howToPlayPanel.style.removeProperty("width");
-      ui.howToPlayPanel.style.opacity = "1";
-    }
-    return;
-  }
-
-  const rect = ui.board.getBoundingClientRect();
-  const pos = scoreFeedPosition(rect);
-  ui.scoreFeedPanel.style.left = `${pos.x}px`;
-  ui.scoreFeedPanel.style.top = `${pos.y}px`;
-  ui.scoreFeedPanel.style.transform = "translate(-50%, -50%)";
-  ui.scoreFeedPanel.style.opacity = "1";
-
-  // Place the "How to play" panel below the credits feed (separate container so it
-  // doesn't affect the calculator layout).
-  if (ui.howToPlayPanel) {
-    const feedRect = ui.scoreFeedPanel.getBoundingClientRect();
-    const x = feedRect.left + feedRect.width / 2;
-    const y = feedRect.bottom + 12; // spacing below
-    ui.howToPlayPanel.style.left = `${x}px`;
-    ui.howToPlayPanel.style.top = `${y}px`;
-    ui.howToPlayPanel.style.transform = "translate(-50%, 0)";
-    ui.howToPlayPanel.style.opacity = "1";
-  }
+  /* Credits + how-to live in document flow; nothing to position. */
 }
 
 const MOBILE_MQ = window.matchMedia("(max-width: 720px)");
@@ -401,41 +357,6 @@ function scoreFeedPosition(boardRect) {
   const x = Math.min(vw - safe - 160, boardRect.right + 190);
   const y = Math.max(safe + 80, Math.min(vh - safe - 80, boardRect.top + boardRect.height / 2));
   return { x, y };
-}
-
-let resetFeedTimer = /** @type {number|null} */ (null);
-
-function beginScoreFeed({ handLabel, handMult, total }) {
-  if (resetFeedTimer != null) window.clearTimeout(resetFeedTimer);
-  // Clear previous calculation right before this hand starts counting.
-  ui.feedHand.textContent = handLabel;
-  ui.feedHandMult.textContent = `HAND x${handMult}`;
-  if (handMult <= 1) ui.feedHandMult.classList.add("is-quiet");
-  else ui.feedHandMult.classList.remove("is-quiet");
-  ui.feedRunning.textContent = `+${(total ?? 0).toLocaleString()}`;
-  ui.feedCalc.textContent = "";
-  return {
-    setRunningTotal(total) {
-      // While cards are counting up, show the running pip sum in the calc area
-      // so the big number can stay reserved for the running cascade total.
-      ui.feedCalc.innerHTML = Number.isFinite(total)
-        ? `<span class="calc calc--green">${String(total)}</span>`
-        : `<span class="calc calc--green">…</span>`;
-    },
-    finalize({ gained, pipSum, handMult: hmFinal }) {
-      ui.feedCalc.innerHTML = [
-        "(",
-        `<span class="calc calc--green">${pipSum}</span>`,
-        " × ",
-        `<span class="calc calc--white">HAND x${hmFinal}</span>`,
-        ")",
-        " ",
-        `<span class="calc calc--green">=</span>`,
-        " ",
-        `<span class="calc calc--green">${gained.toLocaleString()}</span>`
-      ].join("");
-    }
-  };
 }
 
 /**
@@ -861,7 +782,7 @@ async function onCellClick(pos) {
   if (state.busy) return;
   // First interaction unlocks audio on most browsers.
   sfx.unlock();
-  sfx.cardTap();
+  sfx.cardFlipTick(0, 1);
   // Any interaction clears hint.
   if (viewFx.hint) {
     viewFx.hint = null;
@@ -929,8 +850,6 @@ async function resolveCascades() {
   state.comboStep = 0;
   state.lastHands = [];
   let gainedTotal = 0;
-  ui.feedRunning.textContent = "+0";
-  ui.feedCalc.textContent = "";
 
   const MAX_COMBO = 80;
   while (state.comboStep < MAX_COMBO) {
@@ -971,23 +890,15 @@ async function resolveCascades() {
       const lineScore = pipSum * hm;
       const gained = lineScore;
 
-      const feed = beginScoreFeed({
-        handLabel: line.label,
-        handMult: hm,
-        total: gainedTotal
-      });
-      feed?.setRunningTotal(0);
       const handBurstEl = showHandBurst({ label: line.label, type: line.type, credits: gained });
       // Ensure the line highlight is visible before the sequential grow starts.
       await sleep(45);
-      await pulseScoredLine(line, 1, contribCells, dimCells, (t) => feed?.setRunningTotal(t), handBurstEl);
+      await pulseScoredLine(line, 1, contribCells, dimCells, () => {}, handBurstEl);
 
       state.credits += gained;
       gainedTotal += gained;
-      ui.feedRunning.textContent = `+${gainedTotal.toLocaleString()}`;
 
       sfx.scoreHand(line.type, 1);
-      feed?.finalize({ gained, pipSum, handMult: hm });
       rerender();
 
       viewFx.dim = null;
@@ -1049,10 +960,7 @@ async function resolveCascades() {
   }
 
   state.comboStep = 0;
-  if (gainedTotal > 0) {
-    ui.feedLast.textContent = `Last credits — +${gainedTotal.toLocaleString()}`;
-    if (gainedTotal >= 1000) showBigWin(gainedTotal);
-  }
+  if (gainedTotal > 0 && gainedTotal >= 1000) showBigWin(gainedTotal);
 }
 
 syncMobileViewportClass();

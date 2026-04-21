@@ -131,19 +131,49 @@ body {
   min-width: 0;
 }
 
-/* Desktop: credit panels stay position:fixed via JS; dock is a non-layout anchor */
 .creditDock {
-  position: absolute;
-  width: 0;
-  height: 0;
-  left: 50%;
-  top: 50%;
-  overflow: visible;
-  pointer-events: none;
+  position: relative;
+  width: 100%;
+  max-width: 440px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+  padding: 0 12px 8px;
 }
 
-.creditDock > * {
-  pointer-events: auto;
+.totalCreditsBar {
+  width: 100%;
+  max-width: 440px;
+  margin: 0 auto;
+  padding: 12px 16px 16px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.totalScoreBlock--solo {
+  width: 100%;
+  max-width: 400px;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+}
+
+.totalCreditsBar .totalScoreBlock__label {
+  font-size: 13px;
+  font-weight: 850;
+  letter-spacing: 0.2em;
+  color: rgba(255, 255, 255, 0.88);
+  text-shadow: 0 1px 12px rgba(0, 0, 0, 0.35);
+}
+
+.totalCreditsBar .totalScoreBlock__value {
+  margin-top: 0;
 }
 
 .hud {
@@ -626,17 +656,6 @@ html.is-mobile .cell.is-swap-success {
   animation: scorePop 1850ms ease forwards;
 }
 
-.scorePopup--feed {
-  opacity: 1;
-  transform: translate(-50%, -50%);
-  animation: none !important;
-}
-
-.scoreFeedPanel {
-  pointer-events: none;
-  z-index: 20;
-}
-
 .totalScoreBlock {
   padding: 10px 10px 12px;
   margin-bottom: 10px;
@@ -661,27 +680,20 @@ html.is-mobile .cell.is-swap-success {
   text-align: center;
 }
 
-.scoreFeedLast {
-  margin-top: 12px;
-  padding-top: 10px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-  font-size: 12px;
-  letter-spacing: 0.08em;
-  color: rgba(255, 255, 255, 0.72);
-}
-
 .howToPlayPanel {
-  position: fixed;
-  z-index: 19;
-  width: 260px;
+  position: relative;
+  z-index: auto;
+  width: 100%;
+  max-width: 440px;
+  margin: 0 auto;
   padding: 12px 12px 12px;
   border-radius: 16px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   background: radial-gradient(600px 160px at 30% 0%, rgba(114, 247, 195, 0.12), transparent 62%),
     linear-gradient(180deg, var(--felt), var(--felt2));
   box-shadow: 0 18px 50px rgba(0, 0, 0, 0.52);
-  pointer-events: none;
-  opacity: 0;
+  pointer-events: auto;
+  opacity: 1;
   backdrop-filter: blur(10px);
 }
 
@@ -1345,12 +1357,32 @@ html.is-mobile .boardWrap {
   max-width: 100%;
 }
 
+html.is-mobile .totalCreditsBar {
+  padding: 16px 14px 14px;
+}
+
+html.is-mobile .totalCreditsBar .totalScoreBlock__label {
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  font-weight: 900;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+html.is-mobile .totalScoreBlock--solo {
+  padding: 12px 14px 14px;
+  margin: 0;
+}
+
+html.is-mobile .totalCreditsBar .totalScoreBlock__value {
+  font-size: 28px;
+}
+
 html.is-mobile .belowGameArea {
   display: flex;
   justify-content: center;
   width: 100%;
-  margin-top: 22px;
-  padding-top: 12px;
+  margin-top: 10px;
+  padding-top: 6px;
   margin-bottom: 10px;
   padding-left: 12px;
   padding-right: 12px;
@@ -1390,84 +1422,6 @@ html.is-mobile .creditDock {
   gap: 12px;
   align-items: stretch;
   z-index: auto;
-}
-
-html.is-mobile .scoreFeedPanel {
-  position: relative !important;
-  left: auto !important;
-  top: auto !important;
-  right: auto !important;
-  bottom: auto !important;
-  transform: none !important;
-  width: 100%;
-  min-width: 0;
-  max-width: none;
-  margin: 0;
-  opacity: 1 !important;
-  padding: 10px 10px 10px;
-  z-index: auto;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
-}
-
-html.is-mobile .scoreFeedPanel.scorePopup {
-  z-index: auto;
-}
-
-html.is-mobile .totalScoreBlock {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 10px 10px;
-  margin-bottom: 14px;
-}
-
-html.is-mobile .totalScoreBlock__label {
-  font-size: 9px;
-  text-align: left;
-  flex: 0 0 auto;
-}
-
-html.is-mobile .totalScoreBlock__value {
-  font-size: 22px;
-  margin-top: 0;
-  text-align: right;
-  line-height: 1;
-}
-
-html.is-mobile .scorePopup__hand {
-  font-size: 11px;
-  margin-top: 0;
-  margin-bottom: 2px;
-  letter-spacing: 0.06em;
-}
-
-html.is-mobile .scorePopup__mult--hand {
-  font-size: 10px;
-  margin-bottom: 2px;
-}
-
-html.is-mobile .scorePopup__subLabel {
-  margin-top: 2px;
-  margin-bottom: 2px;
-  font-size: 8px;
-}
-
-html.is-mobile .scorePopup__score {
-  font-size: 20px;
-  margin-top: 0;
-}
-
-html.is-mobile .scorePopup__calc {
-  margin-top: 4px;
-  font-size: 10px;
-}
-
-html.is-mobile .scoreFeedLast {
-  margin-top: 4px;
-  padding-top: 4px;
-  font-size: 10px;
 }
 
 html.is-mobile .howToPlayPanel {

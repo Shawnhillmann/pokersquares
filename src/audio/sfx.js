@@ -135,12 +135,6 @@ export const sfx = {
     await resumeIfNeeded();
   },
 
-  /** Short tactile click when selecting / tapping a card */
-  cardTap() {
-    playTone({ freq: 360, dur: 0.022, type: "triangle", sweepTo: 520 });
-    playNoise({ dur: 0.014, highpassHz: 1800 });
-  },
-
   swapSuccess() {
     // bright double-click
     playTone({ freq: 740, dur: 0.045, type: "triangle", sweepTo: 980 });
@@ -228,11 +222,7 @@ export const sfx = {
         setTimeout(() => playMetal({ freq: 880, dur: 0.12, strength: 0.9 * strength }), 70);
         break;
       }
-      case "FOUR_OF_A_KIND": {
-        playMetal({ freq: 520, dur: 0.16, strength: 1.15 * strength });
-        setTimeout(() => playTone({ freq: 260, dur: 0.08, type: "square", sweepTo: 220, detune: -10 }), 20);
-        break;
-      }
+      case "FOUR_OF_A_KIND":
       case "STRAIGHT_FLUSH": {
         playMetal({ freq: 980, dur: 0.15, strength: 1.2 * strength });
         setTimeout(() => playTone({ freq: 1180, dur: 0.09, type: "sine", sweepTo: 1560 }), 70);
