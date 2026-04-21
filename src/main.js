@@ -107,6 +107,11 @@ function setChartHidden(hidden) {
   }
   if (ui.toggleChartBtn) ui.toggleChartBtn.textContent = hidden ? "Show hands" : "Hide hands";
   if (ui.toggleChartBtn2) ui.toggleChartBtn2.textContent = hidden ? "Show" : "Hide";
+  if (!hidden && MOBILE_MQ.matches && ui.handChart) {
+    requestAnimationFrame(() => {
+      ui.handChart.scrollIntoView({ behavior: "smooth", block: "end" });
+    });
+  }
 }
 
 function updateHud() {

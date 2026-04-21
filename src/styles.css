@@ -147,7 +147,7 @@ body {
   width: 100%;
   max-width: 440px;
   margin: 0 auto;
-  padding: 12px 16px 16px;
+  padding: 4px 12px 6px;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -160,20 +160,23 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
+  gap: 2px;
   text-align: center;
 }
 
 .totalCreditsBar .totalScoreBlock__label {
-  font-size: 13px;
+  font-size: 10px;
   font-weight: 850;
-  letter-spacing: 0.2em;
+  letter-spacing: 0.16em;
   color: rgba(255, 255, 255, 0.88);
   text-shadow: 0 1px 12px rgba(0, 0, 0, 0.35);
 }
 
 .totalCreditsBar .totalScoreBlock__value {
   margin-top: 0;
+  font-size: 22px;
+  font-weight: 950;
+  text-shadow: 0 0 12px rgba(247, 215, 116, 0.14), 0 10px 28px rgba(0, 0, 0, 0.45);
 }
 
 .hud {
@@ -270,7 +273,17 @@ main.stage {
 .belowGameArea {
   display: flex;
   justify-content: center;
-  margin-top: 14px;
+  margin-top: 6px;
+}
+
+/* Match mobile gold hint treatment on all viewports */
+.belowGameArea .btn--hint {
+  color: rgba(247, 215, 116, 0.96);
+  border-color: rgba(247, 215, 116, 0.42);
+  background: linear-gradient(180deg, rgba(247, 215, 116, 0.14), rgba(247, 215, 116, 0.05));
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  font-size: 13px;
 }
 
 .board {
@@ -1307,22 +1320,41 @@ html.is-mobile .stage {
   overflow: visible;
 }
 
+html.is-mobile .stage > .gameColumn {
+  order: 1;
+}
+
+html.is-mobile .stage > .handChart {
+  order: 2;
+}
+
+html.is-mobile .stage > #rulesPanel {
+  order: 3;
+}
+
 html.is-mobile .handChart.is-collapsed {
   display: none;
 }
 
+/* In-flow at bottom of page — does not cover the board */
 html.is-mobile .handChart:not(.is-collapsed) {
-  position: fixed;
-  left: 10px;
-  right: 10px;
-  top: max(52px, calc(12px + env(safe-area-inset-top, 0px)));
-  width: auto;
-  max-height: min(48vh, 380px);
+  position: relative;
+  left: auto;
+  right: auto;
+  top: auto;
+  width: 100%;
+  max-width: none;
+  margin: 10px 0 0;
+  padding-left: 8px;
+  padding-right: 8px;
+  max-height: min(52vh, 400px);
+  overflow-x: hidden;
   overflow-y: auto;
-  z-index: 42;
-  margin: 0;
+  -webkit-overflow-scrolling: touch;
+  z-index: auto;
   justify-self: stretch;
-  box-shadow: 0 28px 70px rgba(0, 0, 0, 0.72);
+  align-self: stretch;
+  box-shadow: var(--shadow);
 }
 
 html.is-mobile .gameColumn {
@@ -1358,32 +1390,32 @@ html.is-mobile .boardWrap {
 }
 
 html.is-mobile .totalCreditsBar {
-  padding: 16px 14px 14px;
+  padding: 4px 10px 4px;
 }
 
 html.is-mobile .totalCreditsBar .totalScoreBlock__label {
-  font-size: 11px;
-  letter-spacing: 0.22em;
+  font-size: 9px;
+  letter-spacing: 0.18em;
   font-weight: 900;
   color: rgba(255, 255, 255, 0.92);
 }
 
 html.is-mobile .totalScoreBlock--solo {
-  padding: 12px 14px 14px;
+  padding: 2px 6px;
   margin: 0;
 }
 
 html.is-mobile .totalCreditsBar .totalScoreBlock__value {
-  font-size: 28px;
+  font-size: 20px;
 }
 
 html.is-mobile .belowGameArea {
   display: flex;
   justify-content: center;
   width: 100%;
-  margin-top: 10px;
-  padding-top: 6px;
-  margin-bottom: 10px;
+  margin-top: 4px;
+  padding-top: 0;
+  margin-bottom: 8px;
   padding-left: 12px;
   padding-right: 12px;
   flex-shrink: 0;
@@ -1393,15 +1425,6 @@ html.is-mobile .belowGameArea .btn {
   width: 100%;
   max-width: 360px;
   min-height: 46px;
-}
-
-html.is-mobile .belowGameArea .btn--hint {
-  color: rgba(247, 215, 116, 0.96);
-  border-color: rgba(247, 215, 116, 0.42);
-  background: linear-gradient(180deg, rgba(247, 215, 116, 0.14), rgba(247, 215, 116, 0.05));
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  font-size: 13px;
 }
 
 html.is-mobile .creditDock {
