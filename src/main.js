@@ -315,6 +315,10 @@ function flashInvalid(poses) {
   }
 }
 
+function isMobileLayout() {
+  return document.documentElement.classList.contains("is-mobile");
+}
+
 /**
  * Animate an attempted swap that gets rejected:
  * cards slide toward each other, then snap back.
@@ -328,15 +332,17 @@ function animateSwapTry(a, b) {
 
   const dx = b.c - a.c;
   const dy = b.r - a.r;
-  const tx = Math.sign(dx) * 26;
-  const ty = Math.sign(dy) * 26;
+  const nudge = isMobileLayout() ? 12 : 26;
+  const tx = Math.sign(dx) * nudge;
+  const ty = Math.sign(dy) * nudge;
 
   aEl.style.setProperty("--swap-tx", `${tx}px`);
   aEl.style.setProperty("--swap-ty", `${ty}px`);
   bEl.style.setProperty("--swap-tx", `${-tx}px`);
   bEl.style.setProperty("--swap-ty", `${-ty}px`);
-  aEl.style.setProperty("--swap-ms", `260ms`);
-  bEl.style.setProperty("--swap-ms", `260ms`);
+  const tryMs = isMobileLayout() ? "220ms" : "260ms";
+  aEl.style.setProperty("--swap-ms", tryMs);
+  bEl.style.setProperty("--swap-ms", tryMs);
 
   aEl.classList.remove("is-swap-try");
   bEl.classList.remove("is-swap-try");
@@ -366,7 +372,8 @@ function animateSwapSuccess(a, b) {
   const dx = b.c - a.c;
   const dy = b.r - a.r;
   const dist = Math.abs(dx) + Math.abs(dy);
-  const ms = Math.max(200, Math.min(640, 220 + dist * 55));
+  const msCap = isMobileLayout() ? 520 : 640;
+  const ms = Math.max(200, Math.min(msCap, 200 + dist * (isMobileLayout() ? 42 : 55)));
   const stepPx = getCellStepPx();
   const tx = dx * stepPx;
   const ty = dy * stepPx;
