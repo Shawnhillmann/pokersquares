@@ -352,15 +352,10 @@ function animateSwapTry(a, b) {
   bEl.classList.add("is-swap-try");
 }
 
-function getCellStepPx() {
-  const cs = getComputedStyle(ui.board);
-  const cell = Number.parseFloat(cs.getPropertyValue("--cell")) || 96;
-  const gap = Number.parseFloat(cs.getPropertyValue("--gap")) || 10;
-  return cell + gap;
-}
-
 /**
  * Animate a successful swap before committing state.
+ * Uses measured layout distances — `getComputedStyle(--cell)` is often `min(...)` which
+ * `parseFloat` cannot read, which previously fell back to 96px and made mobile swaps fly past.
  * @param {{r:number,c:number}} a
  * @param {{r:number,c:number}} b
  */
@@ -369,14 +364,14 @@ function animateSwapSuccess(a, b) {
   const bEl = ui.board.querySelector(`.cell[data-r="${b.r}"][data-c="${b.c}"]`);
   if (!aEl || !bEl) return;
 
-  const dx = b.c - a.c;
-  const dy = b.r - a.r;
-  const dist = Math.abs(dx) + Math.abs(dy);
+  const ar = aEl.getBoundingClientRect();
+  const br = bEl.getBoundingClientRect();
+  const tx = br.left - ar.left;
+  const ty = br.top - ar.top;
+
+  const dist = Math.abs(b.c - a.c) + Math.abs(b.r - a.r);
   const msCap = isMobileLayout() ? 520 : 640;
   const ms = Math.max(200, Math.min(msCap, 200 + dist * (isMobileLayout() ? 42 : 55)));
-  const stepPx = getCellStepPx();
-  const tx = dx * stepPx;
-  const ty = dy * stepPx;
 
   aEl.style.setProperty("--swap-tx", `${tx}px`);
   aEl.style.setProperty("--swap-ty", `${ty}px`);
