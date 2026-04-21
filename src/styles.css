@@ -1203,27 +1203,27 @@ main.stage {
 
 html.is-mobile {
   -webkit-text-size-adjust: 100%;
-  height: 100%;
-  max-height: 100dvh;
-  /* Board must fit width AND height; dock + header live outside the grid */
+  /* Board scales to width; scroll the page for credits / hint (nothing overlays the grid) */
   --gap: 5px;
-  --mobile-ui-res: calc(210px + env(safe-area-inset-top, 0px) + env(safe-area-inset-bottom, 0px));
   --cell-board-w: calc((100vw - 20px - 4 * var(--gap)) / 5);
-  --cell-board-h: calc((100svh - var(--mobile-ui-res)) / 5.35);
-  --cell: min(76px, var(--cell-board-w), var(--cell-board-h));
+  --cell: min(76px, var(--cell-board-w));
 }
 
 html.is-mobile body {
-  height: 100%;
-  max-height: 100dvh;
-  overflow: hidden;
+  min-height: 100dvh;
+  min-height: 100svh;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 html.is-mobile .app {
-  height: 100%;
-  max-height: 100dvh;
-  overflow: hidden;
-  grid-template-rows: auto minmax(0, 1fr);
+  min-height: 100dvh;
+  min-height: 100svh;
+  height: auto;
+  max-height: none;
+  overflow: visible;
+  grid-template-rows: auto auto;
 }
 
 html.is-mobile .hud {
@@ -1250,15 +1250,15 @@ html.is-mobile .btn {
 html.is-mobile .stage {
   display: flex;
   flex-direction: column;
-  flex: 1 1 auto;
+  flex: 0 0 auto;
+  height: auto;
+  max-height: none;
   min-height: 0;
-  height: 100%;
-  max-height: 100%;
-  padding: 4px 6px 0;
+  padding: 4px 6px 12px;
   gap: 0;
   align-items: stretch;
   justify-content: flex-start;
-  overflow: hidden;
+  overflow: visible;
 }
 
 html.is-mobile .handChart.is-collapsed {
@@ -1280,30 +1280,27 @@ html.is-mobile .handChart:not(.is-collapsed) {
 }
 
 html.is-mobile .gameColumn {
-  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
   width: 100%;
-  min-height: 0;
-  max-height: 100%;
-  justify-content: flex-start;
-  overflow: hidden;
+  flex: 0 0 auto;
+  overflow: visible;
 }
 
 html.is-mobile .playArea {
-  flex: 1 1 0;
-  min-height: 0;
   display: flex;
   flex-direction: column;
-  justify-content: center;
   align-items: center;
+  justify-content: flex-start;
   width: 100%;
-  overflow: hidden;
+  flex: 0 0 auto;
+  overflow: visible;
 }
 
 html.is-mobile .table {
-  flex: 0 1 auto;
-  min-height: 0;
-  max-height: 100%;
-  padding: 6px 6px 8px;
+  flex: 0 0 auto;
+  padding: 8px 8px 10px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1312,13 +1309,21 @@ html.is-mobile .table {
 
 html.is-mobile .boardWrap {
   max-width: 100%;
-  max-height: 100%;
-  flex-shrink: 1;
 }
 
 html.is-mobile .belowGameArea {
-  margin-top: 4px;
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  margin-top: 0;
+  margin-bottom: 8px;
+  padding: 0 12px;
   flex-shrink: 0;
+}
+
+html.is-mobile .belowGameArea .btn {
+  width: 100%;
+  max-width: 360px;
 }
 
 html.is-mobile .creditDock {
@@ -1328,19 +1333,17 @@ html.is-mobile .creditDock {
   width: 100%;
   max-width: none;
   height: auto;
-  max-height: min(42vh, 280px);
+  max-height: none;
   margin: 0 auto;
-  padding: 4px 4px calc(8px + env(safe-area-inset-bottom, 0px));
-  overflow-x: hidden;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
+  padding: 0 8px calc(12px + env(safe-area-inset-bottom, 0px));
+  overflow: visible;
   pointer-events: auto;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 8px;
   align-items: stretch;
-  z-index: 5;
+  z-index: auto;
 }
 
 html.is-mobile .scoreFeedPanel {
@@ -1450,16 +1453,21 @@ html.is-mobile .cell {
   touch-action: manipulation;
 }
 
+html.is-mobile .cardCorner {
+  top: 5px;
+  left: 6px;
+}
+
 html.is-mobile .cardRank {
-  font-size: clamp(13px, calc(var(--cell) * 0.38), 24px);
+  font-size: clamp(12px, calc(var(--cell) * 0.34), 22px);
 }
 
 html.is-mobile .cardRank.cardRank--ten {
-  font-size: clamp(11px, calc(var(--cell) * 0.32), 20px);
+  font-size: clamp(10px, calc(var(--cell) * 0.28), 18px);
 }
 
 html.is-mobile .cardPip {
-  font-size: clamp(22px, calc(var(--cell) * 0.72), 52px);
-  top: 60%;
+  font-size: clamp(18px, calc(var(--cell) * 0.48), 40px);
+  top: 66%;
 }
 
