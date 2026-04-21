@@ -135,6 +135,12 @@ export const sfx = {
     await resumeIfNeeded();
   },
 
+  /** Short tactile click when selecting / tapping a card */
+  cardTap() {
+    playTone({ freq: 360, dur: 0.022, type: "triangle", sweepTo: 520 });
+    playNoise({ dur: 0.014, highpassHz: 1800 });
+  },
+
   swapSuccess() {
     // bright double-click
     playTone({ freq: 740, dur: 0.045, type: "triangle", sweepTo: 980 });

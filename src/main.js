@@ -861,6 +861,7 @@ async function onCellClick(pos) {
   if (state.busy) return;
   // First interaction unlocks audio on most browsers.
   sfx.unlock();
+  sfx.cardTap();
   // Any interaction clears hint.
   if (viewFx.hint) {
     viewFx.hint = null;
