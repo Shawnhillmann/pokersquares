@@ -1193,21 +1193,43 @@ main.stage {
   }
 }
 
-/* —— Mobile: large board, credits in a bar below the table —— */
+/* —— Mobile: board + dock must fit in viewport (see html.is-mobile for --cell) —— */
 @media (max-width: 720px) {
   :root {
-    --gap: 7px;
-    --cell: min(68px, calc((100vw - 36px - 24px - 4 * var(--gap)) / 5));
+    --gap: 6px;
+    --cell: min(64px, calc((100vw - 28px - 4 * var(--gap)) / 5));
   }
 }
 
 html.is-mobile {
   -webkit-text-size-adjust: 100%;
+  height: 100%;
+  max-height: 100dvh;
+  /* Board must fit width AND height; dock + header live outside the grid */
+  --gap: 5px;
+  --mobile-ui-res: calc(210px + env(safe-area-inset-top, 0px) + env(safe-area-inset-bottom, 0px));
+  --cell-board-w: calc((100vw - 20px - 4 * var(--gap)) / 5);
+  --cell-board-h: calc((100svh - var(--mobile-ui-res)) / 5.35);
+  --cell: min(76px, var(--cell-board-w), var(--cell-board-h));
+}
+
+html.is-mobile body {
+  height: 100%;
+  max-height: 100dvh;
+  overflow: hidden;
+}
+
+html.is-mobile .app {
+  height: 100%;
+  max-height: 100dvh;
+  overflow: hidden;
+  grid-template-rows: auto minmax(0, 1fr);
 }
 
 html.is-mobile .hud {
-  padding: 10px 12px;
-  gap: 10px;
+  padding: 8px 10px;
+  padding-top: max(8px, env(safe-area-inset-top, 0px));
+  gap: 8px;
 }
 
 html.is-mobile .brand__subtitle {
@@ -1225,20 +1247,18 @@ html.is-mobile .btn {
   font-size: 12px;
 }
 
-html.is-mobile .app {
-  min-height: 100dvh;
-  min-height: 100svh;
-}
-
 html.is-mobile .stage {
   display: flex;
   flex-direction: column;
-  flex: 1;
+  flex: 1 1 auto;
   min-height: 0;
-  padding: 6px 8px 8px;
+  height: 100%;
+  max-height: 100%;
+  padding: 4px 6px 0;
   gap: 0;
   align-items: stretch;
   justify-content: flex-start;
+  overflow: hidden;
 }
 
 html.is-mobile .handChart.is-collapsed {
@@ -1249,7 +1269,7 @@ html.is-mobile .handChart:not(.is-collapsed) {
   position: fixed;
   left: 10px;
   right: 10px;
-  top: 52px;
+  top: max(52px, calc(12px + env(safe-area-inset-top, 0px)));
   width: auto;
   max-height: min(48vh, 380px);
   overflow-y: auto;
@@ -1260,28 +1280,44 @@ html.is-mobile .handChart:not(.is-collapsed) {
 }
 
 html.is-mobile .gameColumn {
-  flex: 1;
+  flex: 1 1 0;
   width: 100%;
   min-height: 0;
+  max-height: 100%;
   justify-content: flex-start;
+  overflow: hidden;
 }
 
 html.is-mobile .playArea {
-  flex: 1;
+  flex: 1 1 0;
   min-height: 0;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
   width: 100%;
+  overflow: hidden;
 }
 
 html.is-mobile .table {
-  padding: 10px 10px 12px;
+  flex: 0 1 auto;
+  min-height: 0;
+  max-height: 100%;
+  padding: 6px 6px 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+html.is-mobile .boardWrap {
+  max-width: 100%;
+  max-height: 100%;
+  flex-shrink: 1;
 }
 
 html.is-mobile .belowGameArea {
-  margin-top: 8px;
+  margin-top: 4px;
   flex-shrink: 0;
 }
 
@@ -1290,17 +1326,21 @@ html.is-mobile .creditDock {
   left: auto;
   top: auto;
   width: 100%;
-  max-width: 520px;
+  max-width: none;
   height: auto;
+  max-height: min(42vh, 280px);
   margin: 0 auto;
-  padding: 0 2px calc(6px + env(safe-area-inset-bottom, 0px));
-  overflow: visible;
+  padding: 4px 4px calc(8px + env(safe-area-inset-bottom, 0px));
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   pointer-events: auto;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 4px;
   align-items: stretch;
+  z-index: 5;
 }
 
 html.is-mobile .scoreFeedPanel {
@@ -1315,11 +1355,70 @@ html.is-mobile .scoreFeedPanel {
   max-width: none;
   margin: 0;
   opacity: 1 !important;
-  padding: 10px 12px 10px;
+  padding: 6px 8px 6px;
+  z-index: auto;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+html.is-mobile .scoreFeedPanel.scorePopup {
+  z-index: auto;
+}
+
+html.is-mobile .totalScoreBlock {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 8px;
+  margin-bottom: 4px;
+}
+
+html.is-mobile .totalScoreBlock__label {
+  font-size: 9px;
+  text-align: left;
+  flex: 0 0 auto;
 }
 
 html.is-mobile .totalScoreBlock__value {
-  font-size: 30px;
+  font-size: 22px;
+  margin-top: 0;
+  text-align: right;
+  line-height: 1;
+}
+
+html.is-mobile .scorePopup__hand {
+  font-size: 11px;
+  margin-top: 0;
+  margin-bottom: 2px;
+  letter-spacing: 0.06em;
+}
+
+html.is-mobile .scorePopup__mult--hand {
+  font-size: 10px;
+  margin-bottom: 2px;
+}
+
+html.is-mobile .scorePopup__subLabel {
+  margin-top: 2px;
+  margin-bottom: 2px;
+  font-size: 8px;
+}
+
+html.is-mobile .scorePopup__score {
+  font-size: 20px;
+  margin-top: 0;
+}
+
+html.is-mobile .scorePopup__calc {
+  margin-top: 4px;
+  font-size: 10px;
+}
+
+html.is-mobile .scoreFeedLast {
+  margin-top: 4px;
+  padding-top: 4px;
+  font-size: 10px;
 }
 
 html.is-mobile .howToPlayPanel {
@@ -1331,9 +1430,36 @@ html.is-mobile .howToPlayPanel {
   max-width: none;
   opacity: 1;
   margin: 0;
+  padding: 6px 8px;
+  flex-shrink: 0;
+}
+
+html.is-mobile .howToPlayPanel__title {
+  font-size: 9px;
+  margin-bottom: 2px;
+}
+
+html.is-mobile .howToPlayPanel__text {
+  margin-top: 0;
+  padding: 6px 8px;
+  font-size: 10px;
+  line-height: 1.3;
 }
 
 html.is-mobile .cell {
   touch-action: manipulation;
+}
+
+html.is-mobile .cardRank {
+  font-size: clamp(13px, calc(var(--cell) * 0.38), 24px);
+}
+
+html.is-mobile .cardRank.cardRank--ten {
+  font-size: clamp(11px, calc(var(--cell) * 0.32), 20px);
+}
+
+html.is-mobile .cardPip {
+  font-size: clamp(22px, calc(var(--cell) * 0.72), 52px);
+  top: 60%;
 }
 
