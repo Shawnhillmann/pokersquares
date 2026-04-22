@@ -49,14 +49,29 @@ export function renderBoard(root, board, view, onCellClick) {
           cell.style.setProperty("--drop-rows", String(dropRows));
         }
         const face = el("div", "cardFace");
-        const corner = el("div", "cardCorner");
         const rankText = String(card.rank);
+        const corner = el("div", "cardCorner");
         const rank = el("div", "cardRank", rankText);
         if (rankText === "10") rank.classList.add("cardRank--ten");
         corner.append(rank);
 
-        const pip = el("div", "cardPip", suitSymbol(card.suit));
-        face.append(corner, pip);
+        /** @type {HTMLElement} */
+        let pip;
+        if (card.rank === "K" && card.suit === "S") {
+          const cornerSuit = el("div", "cardCornerSuit", suitSymbol(card.suit));
+          corner.append(cornerSuit);
+          face.classList.add("cardFace--kingSpades");
+          pip = /** @type {HTMLImageElement} */ (document.createElement("img"));
+          pip.className = "cardPip cardPip--kingArt cardPip--kingSpades";
+          pip.src = "/images/king-of-spades.svg";
+          pip.alt = "King of Spades";
+          pip.draggable = false;
+          /* SVG: suit + portrait only; HTML supplies corner K */
+          face.append(corner, pip);
+        } else {
+          pip = el("div", "cardPip", suitSymbol(card.suit));
+          face.append(corner, pip);
+        }
         if (isRedSuit(card.suit)) face.classList.add("is-red");
         cell.append(face);
       }
