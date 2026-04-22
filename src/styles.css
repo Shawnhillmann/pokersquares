@@ -147,6 +147,13 @@ body {
   align-items: stretch;
   gap: 10px;
   padding: 0 12px 8px;
+  box-sizing: border-box;
+}
+
+@media (min-width: 721px) {
+  .creditDock.is-howto-collapsed {
+    display: none;
+  }
 }
 
 .totalCreditsBar {
@@ -221,6 +228,22 @@ body {
   justify-content: flex-end;
   gap: 10px;
   align-items: center;
+  flex-wrap: wrap;
+}
+
+/* Tips toggle: desktop / tablet only (see html.is-mobile) */
+.toggleHowToBtn {
+  display: none;
+}
+
+@media (min-width: 721px) {
+  .toggleHowToBtn {
+    display: inline-flex;
+  }
+}
+
+html.is-mobile .toggleHowToBtn {
+  display: none !important;
 }
 
 .btn {
@@ -294,40 +317,35 @@ main.stage {
   margin-top: 8px;
 }
 
-/* Hint: high-contrast “press me” CTA (overrides btn + btn--ghost) */
+/* Hint: gold-on-felt (readable default); :active darkens — no filter/brightness inversion */
 .belowGameArea .btn.btn--hint {
-  color: #2a1f0a;
-  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.45);
-  border: 1px solid rgba(255, 255, 255, 0.42);
-  background: linear-gradient(180deg, #fff6c8 0%, #f0cf52 38%, #d4a41a 100%);
-  font-weight: 850;
-  letter-spacing: 0.06em;
+  color: rgba(255, 250, 235, 0.98);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(247, 215, 116, 0.5);
+  background: linear-gradient(180deg, rgba(247, 215, 116, 0.26), rgba(247, 215, 116, 0.08)),
+    linear-gradient(180deg, rgba(14, 38, 28, 0.95), rgba(6, 22, 16, 0.92));
+  font-weight: 800;
+  letter-spacing: 0.05em;
   font-size: 14px;
-  padding: 12px 22px;
-  border-radius: 14px;
-  box-shadow:
-    0 3px 0 rgba(110, 75, 12, 0.58),
-    0 10px 26px rgba(0, 0, 0, 0.38),
-    inset 0 1px 0 rgba(255, 255, 255, 0.55);
-  transition: transform 120ms ease, filter 120ms ease, box-shadow 120ms ease, border-color 120ms ease;
+  padding: 11px 20px;
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.28);
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 120ms ease, border-color 120ms ease, background 120ms ease, box-shadow 120ms ease;
 }
 
 .belowGameArea .btn.btn--hint:hover {
-  transform: translateY(-2px);
-  filter: brightness(1.05);
-  border-color: rgba(255, 255, 255, 0.6);
-  box-shadow:
-    0 4px 0 rgba(110, 75, 12, 0.52),
-    0 14px 32px rgba(0, 0, 0, 0.4),
-    inset 0 1px 0 rgba(255, 255, 255, 0.65);
+  transform: translateY(-1px);
+  border-color: rgba(247, 215, 116, 0.68);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.32);
 }
 
 .belowGameArea .btn.btn--hint:active {
-  transform: translateY(2px);
-  box-shadow:
-    0 1px 0 rgba(110, 75, 12, 0.55),
-    0 6px 16px rgba(0, 0, 0, 0.32),
-    inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  transform: translateY(1px);
+  border-color: rgba(247, 215, 116, 0.42);
+  background: linear-gradient(180deg, rgba(247, 215, 116, 0.14), rgba(247, 215, 116, 0.04)),
+    linear-gradient(180deg, rgba(6, 18, 14, 0.98), rgba(4, 12, 10, 0.98));
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
 }
 
 .board {
@@ -1297,17 +1315,30 @@ html.is-mobile .cell.is-swap-success {
     justify-content: flex-start;
   }
 
-  .stage > #rulesPanel {
+  .creditDock {
     order: 3;
+    flex: 0 0 300px;
+    width: 300px;
+    max-width: min(300px, 30vw);
+    margin: 0;
+    padding: 0;
+    align-self: flex-start;
+  }
+
+  .howToPlayPanel {
+    max-width: none;
+    width: 100%;
+  }
+
+  .stage > #rulesPanel {
+    order: 4;
     flex: 0 1 340px;
     max-width: 340px;
     align-self: flex-start;
   }
 
   .belowGameArea .btn.btn--hint {
-    min-width: 260px;
-    font-size: 15px;
-    padding: 14px 32px;
+    min-width: 200px;
   }
 }
 
@@ -1317,6 +1348,19 @@ html.is-mobile .cell.is-swap-success {
   }
   .stage {
     grid-template-columns: 1fr;
+  }
+  /* Same visual stack as mobile: board → how-to → hand chart → rules */
+  .stage > .gameColumn {
+    order: 1;
+  }
+  .stage > .creditDock {
+    order: 2;
+  }
+  .stage > .handChart {
+    order: 3;
+  }
+  .stage > #rulesPanel {
+    order: 4;
   }
   .panel {
     width: min(720px, calc(100vw - 40px));
@@ -1340,6 +1384,9 @@ html.is-mobile {
   --gap: 5px;
   --cell-board-w: calc((100vw - 36px - 4 * var(--gap)) / 5);
   --cell: min(76px, var(--cell-board-w));
+  --board-inner-w: calc(5 * var(--cell) + 4 * var(--gap));
+  --table-pad-x: 10px;
+  --game-stack-w: calc(var(--board-inner-w) + 2 * var(--table-pad-x));
 }
 
 html.is-mobile body {
@@ -1415,12 +1462,16 @@ html.is-mobile .stage > .gameColumn {
   order: 1;
 }
 
-html.is-mobile .stage > .handChart {
+html.is-mobile .stage > .creditDock {
   order: 2;
 }
 
-html.is-mobile .stage > #rulesPanel {
+html.is-mobile .stage > .handChart {
   order: 3;
+}
+
+html.is-mobile .stage > #rulesPanel {
+  order: 4;
 }
 
 html.is-mobile .handChart.is-collapsed {
@@ -1464,7 +1515,10 @@ html.is-mobile .playArea {
   flex-direction: column;
   align-items: center;
   justify-content: flex-start;
-  width: 100%;
+  width: var(--game-stack-w);
+  max-width: 100%;
+  margin-left: auto;
+  margin-right: auto;
   flex: 0 0 auto;
   overflow: visible;
   padding-top: 6px;
@@ -1506,37 +1560,40 @@ html.is-mobile .totalCreditsBar .totalScoreBlock__value {
 html.is-mobile .belowGameArea {
   display: flex;
   justify-content: center;
-  width: 100%;
+  width: var(--game-stack-w);
+  max-width: 100%;
+  margin-left: auto;
+  margin-right: auto;
   margin-top: 4px;
   padding-top: 0;
   margin-bottom: 8px;
-  padding-left: 12px;
-  padding-right: 12px;
+  padding-left: 0;
+  padding-right: 0;
   flex-shrink: 0;
 }
 
 html.is-mobile .belowGameArea .btn {
   width: 100%;
-  max-width: 360px;
   min-height: 46px;
 }
 
 html.is-mobile .belowGameArea .btn.btn--hint {
   font-size: 15px;
-  padding: 14px 18px;
-  border-radius: 16px;
+  padding: 13px 16px;
+  border-radius: 14px;
 }
 
 html.is-mobile .creditDock {
   position: relative;
   left: auto;
   top: auto;
-  width: 100%;
-  max-width: none;
+  width: var(--game-stack-w);
+  max-width: 100%;
   height: auto;
   max-height: none;
-  margin: 0 auto;
-  padding: 0 8px calc(12px + env(safe-area-inset-bottom, 0px));
+  margin-left: auto;
+  margin-right: auto;
+  padding: 0 0 calc(12px + env(safe-area-inset-bottom, 0px));
   overflow: visible;
   pointer-events: auto;
   flex-shrink: 0;

@@ -31,7 +31,9 @@ const ui = {
   finalMovesValue: /** @type {HTMLElement} */ (document.getElementById("finalMovesValue")),
   restartBtn: /** @type {HTMLButtonElement} */ (document.getElementById("restartBtn")),
   totalScoreBig: /** @type {HTMLElement} */ (document.getElementById("totalScoreBig")),
-  howToPlayPanel: /** @type {HTMLElement} */ (document.getElementById("howToPlayPanel"))
+  howToPlayPanel: /** @type {HTMLElement} */ (document.getElementById("howToPlayPanel")),
+  creditDock: /** @type {HTMLElement|null} */ (document.getElementById("creditDock")),
+  toggleHowToBtn: /** @type {HTMLButtonElement|null} */ (document.getElementById("toggleHowToBtn"))
 };
 
 const state = createGameState({ seed: null });
@@ -148,12 +150,37 @@ function positionScoreFeed() {
 
 const MOBILE_MQ = window.matchMedia("(max-width: 720px)");
 
+let isHowToHidden = false;
+
+function setHowToHidden(hidden) {
+  isHowToHidden = hidden;
+  if (ui.creditDock) {
+    ui.creditDock.classList.toggle("is-howto-collapsed", hidden);
+    if (hidden) ui.creditDock.setAttribute("aria-hidden", "true");
+    else ui.creditDock.removeAttribute("aria-hidden");
+  }
+  if (ui.toggleHowToBtn) {
+    ui.toggleHowToBtn.textContent = hidden ? "Show tips" : "Hide tips";
+    ui.toggleHowToBtn.setAttribute("aria-pressed", hidden ? "true" : "false");
+  }
+}
+
+function syncHowToPanelForViewport() {
+  if (MOBILE_MQ.matches) setHowToHidden(false);
+}
+
 function syncMobileViewportClass() {
   document.documentElement.classList.toggle("is-mobile", MOBILE_MQ.matches);
+  syncHowToPanelForViewport();
   positionScoreFeed();
 }
 
 if (MOBILE_MQ.matches) setChartHidden(true);
+
+ui.toggleHowToBtn?.addEventListener("click", () => {
+  if (MOBILE_MQ.matches) return;
+  setHowToHidden(!isHowToHidden);
+});
 
 /**
  * Pick a random screen position that avoids the board rect.
@@ -969,7 +996,9 @@ async function resolveCascades() {
 }
 
 syncMobileViewportClass();
-MOBILE_MQ.addEventListener("change", syncMobileViewportClass);
+MOBILE_MQ.addEventListener("change", () => {
+  syncMobileViewportClass();
+});
 window.addEventListener("resize", () => positionScoreFeed());
 rerender();
 
