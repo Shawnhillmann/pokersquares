@@ -352,57 +352,8 @@ ui.helpBtn.addEventListener("click", () => {
   else ui.rulesPanel.setAttribute("hidden", "");
 });
 
-/**
- * Mark a couple cells as invalid with a shake.
- * @param {{r:number,c:number}[]} poses
- */
-function flashInvalid(poses) {
-  for (const p of poses) {
-    const btn = ui.board.querySelector(`.cell[data-r="${p.r}"][data-c="${p.c}"]`);
-    if (btn) {
-      btn.classList.remove("is-invalid");
-      // eslint-disable-next-line no-unused-expressions
-      btn.offsetHeight;
-      btn.classList.add("is-invalid");
-    }
-  }
-}
-
 function isMobileLayout() {
   return document.documentElement.classList.contains("is-mobile");
-}
-
-/**
- * Animate an attempted swap that gets rejected:
- * cards slide toward each other, then snap back.
- * @param {{r:number,c:number}} a
- * @param {{r:number,c:number}} b
- */
-function animateSwapTry(a, b) {
-  const aEl = ui.board.querySelector(`.cell[data-r="${a.r}"][data-c="${a.c}"]`);
-  const bEl = ui.board.querySelector(`.cell[data-r="${b.r}"][data-c="${b.c}"]`);
-  if (!aEl || !bEl) return;
-
-  const dx = b.c - a.c;
-  const dy = b.r - a.r;
-  const nudge = isMobileLayout() ? 12 : 26;
-  const tx = Math.sign(dx) * nudge;
-  const ty = Math.sign(dy) * nudge;
-
-  aEl.style.setProperty("--swap-tx", `${tx}px`);
-  aEl.style.setProperty("--swap-ty", `${ty}px`);
-  bEl.style.setProperty("--swap-tx", `${-tx}px`);
-  bEl.style.setProperty("--swap-ty", `${-ty}px`);
-  const tryMs = isMobileLayout() ? "220ms" : "260ms";
-  aEl.style.setProperty("--swap-ms", tryMs);
-  bEl.style.setProperty("--swap-ms", tryMs);
-
-  aEl.classList.remove("is-swap-try");
-  bEl.classList.remove("is-swap-try");
-  // eslint-disable-next-line no-unused-expressions
-  aEl.offsetHeight;
-  aEl.classList.add("is-swap-try");
-  bEl.classList.add("is-swap-try");
 }
 
 /**
@@ -416,6 +367,10 @@ function animateSwapSuccess(a, b) {
   const aEl = ui.board.querySelector(`.cell[data-r="${a.r}"][data-c="${a.c}"]`);
   const bEl = ui.board.querySelector(`.cell[data-r="${b.r}"][data-c="${b.c}"]`);
   if (!aEl || !bEl) return;
+
+  // Defensive: ensure no "fail" classes ever leak into Speed Poker.
+  aEl.classList.remove("is-invalid", "is-swap-try", "is-fail-pulse");
+  bEl.classList.remove("is-invalid", "is-swap-try", "is-fail-pulse");
 
   const ar = aEl.getBoundingClientRect();
   const br = bEl.getBoundingClientRect();
@@ -686,18 +641,6 @@ function showBigWin(amount) {
     n.classList.add("is-fading");
     setTimeout(() => n.remove(), 260);
   }, duration + 900);
-}
-
-function pulseFailSwap(a, b) {
-  for (const p of [a, b]) {
-    const el = ui.board.querySelector(`.cell[data-r="${p.r}"][data-c="${p.c}"]`);
-    if (!el) continue;
-    el.classList.remove("is-fail-pulse");
-    // eslint-disable-next-line no-unused-expressions
-    el.offsetHeight;
-    el.classList.add("is-fail-pulse");
-    setTimeout(() => el.classList.remove("is-fail-pulse"), 360);
-  }
 }
 
 function rankToValue14(rank) {
