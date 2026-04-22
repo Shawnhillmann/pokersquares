@@ -561,6 +561,12 @@ img.cardPip--faceArt {
   transform: none;
 }
 
+/* Mobile: avoid any bottom-right “spill” artifacts */
+html.is-mobile img.cardPip--faceArt {
+  right: 0;
+  bottom: 0;
+}
+
 /* Make red suits pop more at a distance */
 .cardFace.is-red .cardPip:not(.cardPip--faceArt),
 .cardFace.is-red .cardRank {
