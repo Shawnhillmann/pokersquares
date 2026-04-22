@@ -300,7 +300,7 @@ ui.newGameBtn.addEventListener("click", () => {
   state.credits = STARTING_POINTS;
   showToast(ui.toast, "New deal");
   rerender();
-  showCenterTip("Tap 2 cards to change their positions");
+  showCenterTip("Swap any 2 cards to make vertical or horizontal poker hands");
   checkCantAffordSwapAndEnd();
 });
 
@@ -315,7 +315,7 @@ ui.restartBtn.addEventListener("click", () => {
   newGame(state);
   state.credits = STARTING_POINTS;
   rerender();
-  showCenterTip("Tap 2 cards to change their positions");
+  showCenterTip("Swap any 2 cards to make vertical or horizontal poker hands");
   checkCantAffordSwapAndEnd();
 });
 
@@ -351,6 +351,114 @@ ui.helpBtn.addEventListener("click", () => {
   if (isHidden) ui.rulesPanel.removeAttribute("hidden");
   else ui.rulesPanel.setAttribute("hidden", "");
 });
+
+function getCellPosFromEl(el) {
+  const r = Number(el?.dataset?.r);
+  const c = Number(el?.dataset?.c);
+  if (!Number.isFinite(r) || !Number.isFinite(c)) return null;
+  return { r, c };
+}
+
+function cellAtPoint(x, y) {
+  const el = document.elementFromPoint(x, y);
+  const cell = el ? el.closest?.(".cell") : null;
+  return /** @type {HTMLElement|null} */ (cell);
+}
+
+// Drag-to-swap support (mouse + touch via Pointer Events).
+let dragPointerId = /** @type {number|null} */ (null);
+let dragStartPos = /** @type {{r:number,c:number}|null} */ (null);
+let dragStartX = 0;
+let dragStartY = 0;
+let dragIsActive = false;
+
+ui.board.addEventListener("pointerdown", (e) => {
+  if (state.busy) return;
+  if (e.button != null && e.button !== 0) return;
+  const target = /** @type {HTMLElement|null} */ (e.target instanceof HTMLElement ? e.target : null);
+  const cell = target ? target.closest(".cell") : null;
+  if (!cell) return;
+  // Avoid starting a drag when clicking UI overlays.
+  if (!(cell instanceof HTMLElement)) return;
+
+  dragPointerId = e.pointerId;
+  dragStartPos = getCellPosFromEl(cell);
+  dragStartX = e.clientX;
+  dragStartY = e.clientY;
+  dragIsActive = false;
+
+  try {
+    cell.setPointerCapture(e.pointerId);
+  } catch {
+    // ignore
+  }
+});
+
+ui.board.addEventListener("pointermove", (e) => {
+  if (dragPointerId == null || e.pointerId !== dragPointerId) return;
+  const dx = e.clientX - dragStartX;
+  const dy = e.clientY - dragStartY;
+  const dist = Math.hypot(dx, dy);
+  if (!dragIsActive && dist < 8) return;
+  dragIsActive = true;
+
+  const start = dragStartPos;
+  if (!start) return;
+  const cell = /** @type {HTMLElement|null} */ (ui.board.querySelector(`.cell[data-r="${start.r}"][data-c="${start.c}"]`));
+  if (!cell) return;
+  const face = /** @type {HTMLElement|null} */ (cell.querySelector(".cardFace"));
+  if (!face) return;
+
+  cell.classList.add("is-dragging");
+  face.style.transform = `translate(${dx}px, ${dy}px)`;
+});
+
+async function finishDrag(e) {
+  if (dragPointerId == null || e.pointerId !== dragPointerId) return;
+  const start = dragStartPos;
+  dragPointerId = null;
+  dragStartPos = null;
+
+  if (!start) return;
+  const startCell = /** @type {HTMLElement|null} */ (ui.board.querySelector(`.cell[data-r="${start.r}"][data-c="${start.c}"]`));
+  const startFace = startCell ? startCell.querySelector(".cardFace") : null;
+  if (startCell) startCell.classList.remove("is-dragging");
+  if (startFace instanceof HTMLElement) startFace.style.transform = "";
+
+  // If it wasn't really a drag, let normal click handler run.
+  if (!dragIsActive) return;
+  dragIsActive = false;
+
+  const over = cellAtPoint(e.clientX, e.clientY);
+  const endPos = over ? getCellPosFromEl(over) : null;
+  if (!endPos) return;
+  if (endPos.r === start.r && endPos.c === start.c) return;
+
+  // Perform a swap like the normal tap flow.
+  await onDragSwap(start, endPos);
+}
+
+ui.board.addEventListener("pointerup", (e) => finishDrag(e));
+ui.board.addEventListener("pointercancel", (e) => finishDrag(e));
+
+async function onDragSwap(a, b) {
+  if (state.busy) return;
+  dismissCenterTip();
+  if (checkCantAffordSwapAndEnd()) return;
+  if (!spendSwapCost()) {
+    endRun("bankrupt");
+    rerender();
+    return;
+  }
+  state.busy = true;
+  await swapWithFlipAnimation(a, b);
+  sfx.swapSuccess();
+  successfulMoves += 1;
+  await resolveCascades();
+  if (checkCantAffordSwapAndEnd()) return;
+  state.busy = false;
+  rerender();
+}
 
 function isMobileLayout() {
   return document.documentElement.classList.contains("is-mobile");
@@ -1011,6 +1119,8 @@ async function pulseScoredLine(line, combo, contribCells, dimCells, onTotal, han
  */
 async function onCellClick(pos) {
   if (state.busy) return;
+  // If a drag gesture just occurred, ignore the synthetic click.
+  if (dragIsActive) return;
   dismissCenterTip();
   if (checkCantAffordSwapAndEnd()) return;
   // First interaction unlocks audio on most browsers.

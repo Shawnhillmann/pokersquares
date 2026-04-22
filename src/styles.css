@@ -300,6 +300,7 @@ main.stage {
   position: relative;
   width: fit-content;
   height: fit-content;
+  overflow: visible;
 }
 
 .playArea {
@@ -353,6 +354,7 @@ main.stage {
   grid-template-columns: repeat(var(--board-size), var(--cell));
   grid-template-rows: repeat(var(--board-size), var(--cell));
   gap: var(--gap);
+  touch-action: manipulation;
 }
 
 .lineLayer {
@@ -1718,6 +1720,19 @@ html.is-mobile .howToPlayPanel__text {
 
 html.is-mobile .cell {
   touch-action: manipulation;
+}
+
+.cell.is-dragging {
+  position: relative;
+  z-index: 50;
+  overflow: visible;
+}
+
+.cell.is-dragging .cardFace {
+  z-index: 60;
+  transition: none;
+  opacity: 1;
+  filter: none;
 }
 
 html.is-mobile .cardCorner {
