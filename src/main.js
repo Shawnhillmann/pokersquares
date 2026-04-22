@@ -400,6 +400,94 @@ function animateSwapSuccess(a, b) {
 }
 
 /**
+ * Commit the swap immediately, then animate the cells from their old positions to their new ones (FLIP).
+ * This prevents the post-animation "snap" that happens when we re-render after a keyframed swap.
+ * @param {{r:number,c:number}} a
+ * @param {{r:number,c:number}} b
+ */
+async function swapWithFlipAnimation(a, b) {
+  const aEl = ui.board.querySelector(`.cell[data-r="${a.r}"][data-c="${a.c}"]`);
+  const bEl = ui.board.querySelector(`.cell[data-r="${b.r}"][data-c="${b.c}"]`);
+
+  // If we can't find elements (rare), just commit the swap.
+  if (!aEl || !bEl) {
+    swapCells(state.board, a, b);
+    rerender();
+    return;
+  }
+
+  // Measure starting positions.
+  const aFrom = aEl.getBoundingClientRect();
+  const bFrom = bEl.getBoundingClientRect();
+
+  // Commit state + rerender to final layout immediately.
+  swapCells(state.board, a, b);
+  rerender();
+
+  // Re-select after render (cells are reused but be safe).
+  const aEl2 = ui.board.querySelector(`.cell[data-r="${a.r}"][data-c="${a.c}"]`);
+  const bEl2 = ui.board.querySelector(`.cell[data-r="${b.r}"][data-c="${b.c}"]`);
+  if (!aEl2 || !bEl2) return;
+
+  // Clear any leftover swap animation classes.
+  aEl2.classList.remove("is-swap-success");
+  bEl2.classList.remove("is-swap-success");
+
+  const aTo = aEl2.getBoundingClientRect();
+  const bTo = bEl2.getBoundingClientRect();
+
+  const aDx = aFrom.left - aTo.left;
+  const aDy = aFrom.top - aTo.top;
+  const bDx = bFrom.left - bTo.left;
+  const bDy = bFrom.top - bTo.top;
+
+  const dist = Math.abs(b.c - a.c) + Math.abs(b.r - a.r);
+  const msCap = isMobileLayout() ? 520 : 640;
+  const ms = Math.max(200, Math.min(msCap, 200 + dist * (isMobileLayout() ? 42 : 55)));
+
+  aEl2.style.setProperty("--swap-ms", `${ms}ms`);
+  bEl2.style.setProperty("--swap-ms", `${ms}ms`);
+
+  // Invert: keep them visually where they started.
+  aEl2.classList.add("is-swap-flip");
+  bEl2.classList.add("is-swap-flip");
+  aEl2.style.transform = `translate(${aDx}px, ${aDy}px)`;
+  bEl2.style.transform = `translate(${bDx}px, ${bDy}px)`;
+
+  // Force the inverted transform to apply, then play to 0.
+  // eslint-disable-next-line no-unused-expressions
+  aEl2.offsetHeight;
+
+  await new Promise((resolve) => {
+    let remaining = 2;
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      resolve();
+    };
+    const onEnd = (ev) => {
+      if (ev.propertyName !== "transform") return;
+      remaining -= 1;
+      if (remaining <= 0) finish();
+    };
+    aEl2.addEventListener("transitionend", onEnd, { once: true });
+    bEl2.addEventListener("transitionend", onEnd, { once: true });
+    setTimeout(finish, ms + 120);
+    requestAnimationFrame(() => {
+      aEl2.style.transform = "";
+      bEl2.style.transform = "";
+    });
+  });
+
+  // Clean up.
+  aEl2.classList.remove("is-swap-flip");
+  bEl2.classList.remove("is-swap-flip");
+  aEl2.style.removeProperty("transform");
+  bEl2.style.removeProperty("transform");
+}
+
+/**
  * Fixed credits popup position: center-right of the board.
  * @param {DOMRect} boardRect
  * @returns {{ x:number, y:number }}
@@ -959,14 +1047,9 @@ async function onCellClick(pos) {
   // Allow any swap (including setup swaps that don't score immediately).
   state.busy = true;
 
-  // Animate the swap completing, then commit it and resolve cascades/credits.
-  const swapMs = animateSwapSuccess(a, b) ?? 220;
-  // On mobile, committing state before the CSS animation finishes can look like a "snap back".
-  // Wait for the animation to complete before re-rendering the swapped positions.
-  await sleep(Math.max(150, swapMs + 10));
-  swapCells(state.board, a, b);
-  rerender();
-  await sleep(50);
+  // Commit the swap immediately and animate to the new positions (FLIP),
+  // which avoids the post-animation snap/jitter.
+  await swapWithFlipAnimation(a, b);
   sfx.swapSuccess();
   successfulMoves += 1;
   await resolveCascades();

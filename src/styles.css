@@ -459,6 +459,13 @@ html.is-mobile .cell.is-swap-success {
   animation-timing-function: ease-out;
 }
 
+/* FLIP swap (used to prevent post-animation snapping on mobile/desktop) */
+.cell.is-swap-flip {
+  z-index: 3;
+  will-change: transform;
+  transition: transform var(--swap-ms, 220ms) ease-out;
+}
+
 .cardFace {
   position: absolute;
   inset: 7px;
