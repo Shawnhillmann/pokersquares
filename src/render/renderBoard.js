@@ -62,8 +62,21 @@ export function renderBoard(root, board, view, onCellClick) {
         cell.classList.add("is-empty");
         cell.removeAttribute("data-card-id");
         cell.style.removeProperty("--drop-rows");
-        const oldFace = cell.querySelector(".cardFace");
+        // Remove face (and any cached refs) when empty.
+        const oldFace = /** @type {HTMLElement|null} */ (cell.__face ?? cell.querySelector(".cardFace"));
         if (oldFace) oldFace.remove();
+        // @ts-ignore
+        cell.__face = null;
+        // @ts-ignore
+        cell.__corner = null;
+        // @ts-ignore
+        cell.__rank = null;
+        // @ts-ignore
+        cell.__cornerSuit = null;
+        // @ts-ignore
+        cell.__pip = null;
+        // @ts-ignore
+        cell.__faceImg = null;
       } else {
         cell.dataset.cardId = card.id;
         const dropRows = view.dropRowsById?.get(card.id) ?? 0;
@@ -73,46 +86,103 @@ export function renderBoard(root, board, view, onCellClick) {
         } else {
           cell.style.removeProperty("--drop-rows");
         }
-        let face = /** @type {HTMLElement|null} */ (cell.querySelector(".cardFace"));
+        // Build face DOM once per cell; update text/classes in place to prevent SVG flicker.
+        let face = /** @type {HTMLElement|null} */ (cell.__face ?? cell.querySelector(".cardFace"));
         if (!face) {
           face = el("div", "cardFace");
           cell.append(face);
-        } else {
-          face.className = "cardFace";
-          face.innerHTML = "";
-        }
+          // @ts-ignore
+          cell.__face = face;
 
-        const rankText = String(card.rank);
-        const corner = el("div", "cardCorner");
-        const rank = el("div", "cardRank", rankText);
-        if (rankText === "10") rank.classList.add("cardRank--ten");
-        corner.append(rank);
+          const corner = el("div", "cardCorner");
+          const rankEl = el("div", "cardRank", "");
+          corner.append(rankEl);
 
-        /** @type {HTMLElement} */
-        let pip;
-        if (FACE_RANKS.has(rankText) && ["S", "H", "D", "C"].includes(String(card.suit))) {
-          const cornerSuit = el("div", "cardCornerSuit", suitSymbol(card.suit));
+          const cornerSuit = el("div", "cardCornerSuit", "");
           corner.append(cornerSuit);
-          face.classList.add("cardFace--faceArt");
-          const img = /** @type {HTMLImageElement} */ (
-            face.querySelector("img.cardPip--faceArt") ?? document.createElement("img")
-          );
+
+          const pipDiv = el("div", "cardPip", "");
+          const img = /** @type {HTMLImageElement} */ (document.createElement("img"));
           img.className = "cardPip cardPip--faceArt";
-          const nextSrc = `/images/faces/${rankText}${String(card.suit)}.svg`;
-          if (img.src !== `${location.origin}${nextSrc}`) img.src = nextSrc;
           img.alt = "";
           img.draggable = false;
-          img.onerror = () => {
-            const fallback = el("div", "cardPip", suitSymbol(card.suit));
-            img.replaceWith(fallback);
-          };
-          pip = img;
-          /* SVG: portrait only; HTML supplies corner rank + suit */
-          face.append(corner, pip);
-        } else {
-          pip = el("div", "cardPip", suitSymbol(card.suit));
-          face.append(corner, pip);
+          img.decoding = "async";
+          img.loading = "eager";
+          img.addEventListener(
+            "error",
+            () => {
+              // If a face SVG is missing, flip to text pip for this cell.
+              // @ts-ignore
+              cell.__pip = "pip";
+              face.classList.remove("cardFace--faceArt");
+              if (img.parentElement) img.remove();
+              if (!pipDiv.parentElement) face.append(corner, pipDiv);
+            },
+            { once: false }
+          );
+
+          face.append(corner, pipDiv);
+
+          // @ts-ignore
+          cell.__corner = corner;
+          // @ts-ignore
+          cell.__rank = rankEl;
+          // @ts-ignore
+          cell.__cornerSuit = cornerSuit;
+          // @ts-ignore
+          cell.__pipDiv = pipDiv;
+          // @ts-ignore
+          cell.__faceImg = img;
+          // @ts-ignore
+          cell.__pip = "pip";
         }
+
+        // @ts-ignore
+        const corner = cell.__corner;
+        // @ts-ignore
+        const rankEl = cell.__rank;
+        // @ts-ignore
+        const cornerSuit = cell.__cornerSuit;
+        // @ts-ignore
+        const pipDiv = cell.__pipDiv;
+        // @ts-ignore
+        const img = cell.__faceImg;
+
+        face.className = "cardFace";
+        const rankText = String(card.rank);
+        rankEl.textContent = rankText;
+        rankEl.classList.toggle("cardRank--ten", rankText === "10");
+        cornerSuit.textContent = suitSymbol(card.suit);
+
+        const isFace = FACE_RANKS.has(rankText) && ["S", "H", "D", "C"].includes(String(card.suit));
+        if (isFace) {
+          face.classList.add("cardFace--faceArt");
+          const nextSrc = `/images/faces/${rankText}${String(card.suit)}.svg`;
+          // Only touch src if it actually changes (avoids iOS SVG repaint).
+          const absoluteNext = `${location.origin}${nextSrc}`;
+          if (img.src !== absoluteNext) img.src = nextSrc;
+
+          // Ensure img is the active pip node.
+          // @ts-ignore
+          if (cell.__pip !== "img") {
+            // Remove text pip if present, insert img.
+            if (pipDiv.parentElement) pipDiv.remove();
+            if (!img.parentElement) face.append(corner, img);
+            // @ts-ignore
+            cell.__pip = "img";
+          }
+        } else {
+          // Text suit pip.
+          pipDiv.textContent = suitSymbol(card.suit);
+          // @ts-ignore
+          if (cell.__pip !== "pip") {
+            if (img.parentElement) img.remove();
+            if (!pipDiv.parentElement) face.append(corner, pipDiv);
+            // @ts-ignore
+            cell.__pip = "pip";
+          }
+        }
+
         if (isRedSuit(card.suit)) face.classList.add("is-red");
       }
     }
