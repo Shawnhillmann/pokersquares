@@ -97,8 +97,17 @@ function checkNoMovesAndEnd() {
   return false;
 }
 
-/** @type {{ clearing:Set<string>|null, scoredLines: any[]|null, scoring:Set<string>|null, dim:Set<string>|null, dropRowsById: Map<string,number>|null, hint:Set<string>|null }} */
-const viewFx = { clearing: null, scoredLines: null, scoring: null, dim: null, dropRowsById: null, hint: null };
+/** @type {{ clearing:Set<string>|null, scoredLines: any[]|null, scoring:Set<string>|null, dim:Set<string>|null, dropRowsById: Map<string,number>|null, dropMsById: Map<string,number>|null, hint:Set<string>|null, dropMode: "gravity"|"refill"|null }} */
+const viewFx = {
+  clearing: null,
+  scoredLines: null,
+  scoring: null,
+  dim: null,
+  dropRowsById: null,
+  dropMsById: null,
+  hint: null,
+  dropMode: null
+};
 
 let isChartHidden = false;
 function setChartHidden(hidden) {
@@ -130,7 +139,9 @@ function rerender() {
       scoring: viewFx.scoring,
       dim: viewFx.dim,
       hint: viewFx.hint,
-      dropRowsById: viewFx.dropRowsById ?? undefined
+      dropRowsById: viewFx.dropRowsById ?? undefined,
+      dropMsById: viewFx.dropMsById ?? undefined,
+      dropMode: viewFx.dropMode ?? undefined
     },
     (pos) => onCellClick(pos)
   );
@@ -732,8 +743,46 @@ async function kickDropAnimation() {
   // Two frames ensures the "from" transform is painted before we remove it.
   await nextFrame();
   await nextFrame();
-  ui.board.querySelectorAll(".cell.is-dropping").forEach((n) => n.classList.remove("is-dropping"));
+  const dropping = /** @type {HTMLElement[]} */ ([...ui.board.querySelectorAll(".cell.is-dropping")]);
+  if (dropping.length === 0) {
+    viewFx.dropRowsById = null;
+    viewFx.dropMsById = null;
+    return;
+  }
+
+  // Removing the class starts the CSS transform transition back to 0.
+  for (const n of dropping) n.classList.remove("is-dropping");
+
+  // Wait for the *actual* transition end so scoring checks start immediately
+  // after the drop finishes (no extra hidden delay).
+  const maxMs = Math.max(
+    0,
+    ...dropping.map((n) => {
+      const ms = parseFloat(getComputedStyle(n).getPropertyValue("--drop-ms"));
+      return Number.isFinite(ms) ? ms : 0;
+    })
+  );
+
+  await new Promise((resolve) => {
+    let remaining = dropping.length;
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      resolve();
+    };
+    const onEnd = (ev) => {
+      if (ev.propertyName !== "transform") return;
+      remaining -= 1;
+      if (remaining <= 0) finish();
+    };
+    for (const n of dropping) n.addEventListener("transitionend", onEnd, { once: true });
+    // Safety: if an event is missed, don't hang.
+    setTimeout(finish, maxMs + 80);
+  });
+
   viewFx.dropRowsById = null;
+  viewFx.dropMsById = null;
 }
 
 /**
@@ -904,6 +953,9 @@ async function resolveCascades() {
   state.comboStep = 0;
   state.lastHands = [];
   let gainedTotal = 0;
+  // The single “breather” between a cascade landing and the next scoring check.
+  // Tweak this number to change how fast scoring starts after a fill.
+  const CASCADE_EVAL_DELAY_MS = 26;
 
   const MAX_COMBO = 80;
   while (state.comboStep < MAX_COMBO) {
@@ -989,35 +1041,50 @@ async function resolveCascades() {
 
     await sleep(70);
 
-    // Fall + refill (two phase): existing cards fall first, then new cards deal in row-by-row.
+    // Fall + refill (two phase): existing cards fall first, then new cards deal in a column at a time.
+    viewFx.dropMode = "gravity";
     const drops = applyGravity(state.board);
     viewFx.dropRowsById = drops;
+    // Make gravity land as a unified "batch" (avoids the look of rows settling one-by-one).
+    const maxDrop = Math.max(0, ...drops.values());
+    const gravityMs = Math.min(360, 160 + maxDrop * 38);
+    viewFx.dropMsById = new Map([...drops.keys()].map((id) => [id, gravityMs]));
     rerender();
     sfx.shuffle();
     await kickDropAnimation();
-    await sleep(110);
+    await sleep(CASCADE_EVAL_DELAY_MS);
 
-    // Deal-in: fill one card at a time (smooth), columns left->right.
+    // Deal-in: fill all empty cells in ONE batch so rows don't appear left->right.
     // IMPORTANT: only animate the *new* cards during refill; re-animating settled cards causes jitter.
-    for (let cc = 0; cc < 5; cc++) {
-      for (let rr = 0; rr < 5; rr++) {
+    viewFx.dropMode = "refill";
+    const REFILL_SPAWN_PAD = 2; // extra height above the board for deal-in feel
+    /** @type {Map<string, number>} */
+    const dropsNew = new Map();
+    let maxRefillDrop = 0;
+    for (let rr = 0; rr < 5; rr++) {
+      for (let cc = 0; cc < 5; cc++) {
         if (state.board[rr][cc]) continue;
-        state.board[rr][cc] = state.deck.draw();
-
-        /** @type {Map<string, number>} */
-        const dropsOne = new Map();
-        const card = state.board[rr][cc];
-        if (card) dropsOne.set(card.id, rr + 1);
-        viewFx.dropRowsById = dropsOne;
-        rerender();
-        sfx.shuffle();
-        await kickDropAnimation();
-        await sleep(55);
+        const card = state.deck.draw();
+        state.board[rr][cc] = card;
+        const dropRows = rr + 1 + REFILL_SPAWN_PAD;
+        dropsNew.set(card.id, dropRows);
+        maxRefillDrop = Math.max(maxRefillDrop, dropRows);
       }
     }
+    if (dropsNew.size > 0) {
+      const refillMs = Math.min(440, 210 + maxRefillDrop * 34);
+      viewFx.dropRowsById = dropsNew;
+      viewFx.dropMsById = new Map([...dropsNew.keys()].map((id) => [id, refillMs]));
+      rerender();
+      sfx.shuffle();
+      await kickDropAnimation();
+      await sleep(CASCADE_EVAL_DELAY_MS);
+    }
 
-    // Extra beat before the next evaluation (makes cascades feel punchier).
-    await sleep(60);
+    viewFx.dropMode = null;
+    viewFx.dropMsById = null;
+    // Tight: allow microtask/paint, then evaluate next cascade.
+    await sleep(0);
   }
 
   state.comboStep = 0;

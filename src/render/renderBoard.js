@@ -18,7 +18,7 @@ import { isRedSuit, suitSymbol } from "../game/cards.js";
 /**
  * @param {HTMLElement} root
  * @param {Board} board
- * @param {{ selected: {r:number,c:number}|null, clearing:Set<string>|null, scoring:Set<string>|null, dim:Set<string>|null, hint:Set<string>|null, dropRowsById?: Map<string,number> }} view
+ * @param {{ selected: {r:number,c:number}|null, clearing:Set<string>|null, scoring:Set<string>|null, dim:Set<string>|null, hint:Set<string>|null, dropRowsById?: Map<string,number>, dropMsById?: Map<string,number>, dropMode?: "gravity"|"refill" }} view
  * @param {(pos:{r:number,c:number})=>void} onCellClick
  */
 export function renderBoard(root, board, view, onCellClick) {
@@ -84,7 +84,11 @@ export function renderBoard(root, board, view, onCellClick) {
         if (dropRows > 0) {
           cell.classList.add("is-dropping");
           cell.style.setProperty("--drop-rows", String(dropRows));
-          const ms = Math.min(380, 150 + dropRows * 45);
+          const overrideMs = view.dropMsById?.get(card.id);
+          const ms =
+            typeof overrideMs === "number"
+              ? overrideMs
+              : Math.min(380, 150 + dropRows * 45);
           cell.style.setProperty("--drop-ms", `${ms}ms`);
         } else {
           cell.style.removeProperty("--drop-rows");

@@ -586,8 +586,8 @@ img.cardPip--faceArt {
   right: auto;
   bottom: auto;
   transform: translate(-50%, -50%);
-  width: 88%;
-  height: 88%;
+  width: 75%;
+  height: 75%;
   object-position: center center;
 }
 
