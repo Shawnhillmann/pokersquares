@@ -3,7 +3,6 @@ import {
   applyGravity,
   cellsToClear,
   findScoringLines,
-  hasAnyScoringSwap,
   refill,
   swapCells
 } from "./game/board.js";
@@ -38,13 +37,13 @@ const ui = {
 
 const state = createGameState({ seed: null });
 newGame(state);
-state.credits = 1000;
+state.credits = 500;
 
 let successfulMoves = 0;
 
 const SCORE_OPTS = { minType: HAND_TYPE.TWO_PAIR };
 
-const STARTING_POINTS = 1000;
+const STARTING_POINTS = 500;
 const SWAP_COST = 100;
 const HINT_COST = 300;
 
@@ -52,11 +51,10 @@ function clampNonNegative(n) {
   return Math.max(0, Math.floor(n));
 }
 
-/** @typedef {"bankrupt" | "no_scoring_moves"} RunEndKind */
+/** @typedef {"bankrupt"} RunEndKind */
 
 const RUN_END_COPY = /** @type {const} */ ({
-  bankrupt: "You ran out of credits.",
-  no_scoring_moves: "No two pair or better is possible on the board—no valid swaps remain."
+  bankrupt: "Not enough credits to swap."
 });
 
 /**
@@ -78,24 +76,26 @@ function endRun(kind) {
  * We apply the cost immediately, but only end the run when the move produces no credits
  * (or after cascades resolve), so the player isn't "killed" mid-resolution.
  */
-function spendSwapCost() {
-  state.credits = clampNonNegative(state.credits - SWAP_COST);
-  rerender();
+function canAffordSwap() {
+  return state.credits >= SWAP_COST;
 }
 
-function checkBankruptAndEnd() {
-  if (state.credits > 0) return false;
+function spendSwapCost() {
+  if (!canAffordSwap()) return false;
+  state.credits = clampNonNegative(state.credits - SWAP_COST);
+  rerender();
+  // Swap costs should feel instant (rewards can animate).
+  setCreditsInstant(state.credits);
+  return true;
+}
+
+function checkCantAffordSwapAndEnd() {
+  if (canAffordSwap()) return false;
   endRun("bankrupt");
   return true;
 }
 
-function checkNoMovesAndEnd() {
-  if (!hasAnyScoringSwap(state.board, baseScoreForType, SCORE_OPTS)) {
-    endRun("no_scoring_moves");
-    return true;
-  }
-  return false;
-}
+// Removed: "no moves / no two-pair possible" game-over.
 
 /** @type {{ clearing:Set<string>|null, scoredLines: any[]|null, scoring:Set<string>|null, dim:Set<string>|null, dropRowsById: Map<string,number>|null, dropMsById: Map<string,number>|null, hint:Set<string>|null, dropMode: "gravity"|"refill"|null }} */
 const viewFx = {
@@ -126,7 +126,59 @@ function setChartHidden(hidden) {
 }
 
 function updateHud() {
-  ui.totalScoreBig.textContent = state.credits.toLocaleString();
+  const target = Math.max(0, Math.floor(state.credits));
+  animateCreditsTo(target);
+}
+
+let creditsDisplayValue = Math.max(0, Math.floor(state.credits));
+let creditsAnimRaf = /** @type {number|null} */ (null);
+let creditsAnimTo = creditsDisplayValue;
+
+function setCreditsInstant(n) {
+  const v = Math.max(0, Math.floor(n));
+  if (creditsAnimRaf != null) cancelAnimationFrame(creditsAnimRaf);
+  creditsAnimRaf = null;
+  creditsAnimTo = v;
+  creditsDisplayValue = v;
+  ui.totalScoreBig.textContent = v.toLocaleString();
+}
+
+/**
+ * Animate TOTAL CREDITS value to the next target.
+ * @param {number} to
+ */
+function animateCreditsTo(to) {
+  // If this is the first render, snap.
+  if (!ui.totalScoreBig.textContent || ui.totalScoreBig.textContent.trim() === "0") {
+    creditsDisplayValue = to;
+    creditsAnimTo = to;
+    ui.totalScoreBig.textContent = to.toLocaleString();
+    return;
+  }
+
+  if (creditsAnimRaf != null) cancelAnimationFrame(creditsAnimRaf);
+  const from = creditsDisplayValue;
+  creditsAnimTo = to;
+  const start = performance.now();
+  const duration = 360;
+
+  const tick = (t) => {
+    // If something else updated the target mid-flight, keep animating toward the latest.
+    const currentTo = creditsAnimTo;
+    const p = Math.min(1, (t - start) / duration);
+    const e = 1 - Math.pow(1 - p, 2.2);
+    const v = Math.floor(from + (currentTo - from) * e);
+    creditsDisplayValue = v;
+    ui.totalScoreBig.textContent = v.toLocaleString();
+    if (p < 1) creditsAnimRaf = requestAnimationFrame(tick);
+    else {
+      creditsAnimRaf = null;
+      creditsDisplayValue = currentTo;
+      ui.totalScoreBig.textContent = currentTo.toLocaleString();
+    }
+  };
+
+  creditsAnimRaf = requestAnimationFrame(tick);
 }
 
 function rerender() {
@@ -248,7 +300,8 @@ ui.newGameBtn.addEventListener("click", () => {
   state.credits = STARTING_POINTS;
   showToast(ui.toast, "New deal");
   rerender();
-  checkNoMovesAndEnd();
+  showCenterTip("Tap 2 cards to change their positions");
+  checkCantAffordSwapAndEnd();
 });
 
 for (const btn of [ui.toggleChartBtn, ui.toggleChartBtn2]) {
@@ -262,7 +315,8 @@ ui.restartBtn.addEventListener("click", () => {
   newGame(state);
   state.credits = STARTING_POINTS;
   rerender();
-  checkNoMovesAndEnd();
+  showCenterTip("Tap 2 cards to change their positions");
+  checkCantAffordSwapAndEnd();
 });
 
 ui.hintBtn.addEventListener("click", async () => {
@@ -272,7 +326,7 @@ ui.hintBtn.addEventListener("click", async () => {
   state.credits = clampNonNegative(state.credits - HINT_COST);
   rerender();
   sfx.hintPurchase();
-  if (checkBankruptAndEnd()) return;
+  if (checkCantAffordSwapAndEnd()) return;
 
   viewFx.hint = null;
   rerender();
@@ -280,7 +334,7 @@ ui.hintBtn.addEventListener("click", async () => {
 
   const move = findBestScoringSwap(state.board);
   if (!move) {
-    endRun("no_scoring_moves");
+    showToast(ui.toast, "No scoring hint found");
     return;
   }
   viewFx.hint = new Set([`${move.a.r},${move.a.c}`, `${move.b.r},${move.b.c}`]);
@@ -548,6 +602,47 @@ function showHandBurst({ label, type, credits }) {
   else if (type === HAND_TYPE.STRAIGHT_FLUSH) burstRoyalGold(x, y, 0.35);
   else if ((HAND_PRIORITY[type] ?? 0) >= (HAND_PRIORITY[HAND_TYPE.FULL_HOUSE] ?? 6)) burstGoldWin(x, y, 0.9);
   return n;
+}
+
+/**
+ * Center tip prompt (new game helper).
+ * @param {string} text
+ */
+function showCenterTip(text) {
+  const host = ui.board.parentElement;
+  if (!host) return;
+  if (host.__centerTipEl) {
+    // @ts-ignore
+    host.__centerTipEl.remove();
+    // @ts-ignore
+    host.__centerTipEl = null;
+  }
+  const rect = ui.board.getBoundingClientRect();
+  const x = rect.left + rect.width / 2;
+  const y = rect.top + rect.height / 2;
+
+  const n = document.createElement("div");
+  n.className = "handBurst handBurst--tip";
+  n.style.left = `${x}px`;
+  n.style.top = `${y}px`;
+  n.innerHTML = `<div class="handBurst__label">${text}</div>`;
+  host.append(n);
+  requestAnimationFrame(() => n.classList.add("is-showing"));
+  // Persist until first interaction with the board.
+  // @ts-ignore
+  host.__centerTipEl = n;
+}
+
+function dismissCenterTip() {
+  const host = ui.board.parentElement;
+  if (!host) return;
+  // @ts-ignore
+  const n = host.__centerTipEl;
+  if (!n) return;
+  // @ts-ignore
+  host.__centerTipEl = null;
+  n.classList.add("is-fading");
+  setTimeout(() => n.remove(), 260);
 }
 
 function showBigWin(amount) {
@@ -883,6 +978,8 @@ async function pulseScoredLine(line, combo, contribCells, dimCells, onTotal, han
  */
 async function onCellClick(pos) {
   if (state.busy) return;
+  dismissCenterTip();
+  if (checkCantAffordSwapAndEnd()) return;
   // First interaction unlocks audio on most browsers.
   sfx.unlock();
   sfx.cardFlipTick(0, 1);
@@ -908,29 +1005,14 @@ async function onCellClick(pos) {
   }
 
   // Every attempted swap costs credits (stakes).
-  spendSwapCost();
-
-  // Check swap outcome without visually swapping first.
-  state.busy = true;
-  swapCells(state.board, a, b);
-  const wouldScore = findScoringLines(state.board, baseScoreForType, SCORE_OPTS).length > 0;
-  swapCells(state.board, a, b);
-
-  if (!wouldScore) {
-    showRightFeedMessage("Need TWO PAIR+");
-    sfx.swapFail();
-    // Show the attempted swap clearly, then snap back.
-    animateSwapTry(a, b);
-    pulseFailSwap(a, b);
-    await sleep(130);
-    flashInvalid([a, b]);
-    state.busy = false;
+  if (!spendSwapCost()) {
+    endRun("bankrupt");
     rerender();
-    // If you spent your last credits on a dead swap, the run ends now.
-    if (checkBankruptAndEnd()) return;
-    checkNoMovesAndEnd();
     return;
   }
+
+  // Allow any swap (including setup swaps that don't score immediately).
+  state.busy = true;
 
   // Animate the swap completing, then commit it and resolve cascades/credits.
   const swapMs = animateSwapSuccess(a, b) ?? 220;
@@ -941,9 +1023,8 @@ async function onCellClick(pos) {
   sfx.swapSuccess();
   successfulMoves += 1;
   await resolveCascades();
-  // If the cost pushed you to 0 and you didn't earn it back during cascades, end the run.
-  if (checkBankruptAndEnd()) return;
-  if (checkNoMovesAndEnd()) return;
+  // End only if the player can no longer afford a swap.
+  if (checkCantAffordSwapAndEnd()) return;
   state.busy = false;
   rerender();
 }

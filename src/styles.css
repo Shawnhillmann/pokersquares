@@ -1091,6 +1091,20 @@ html.is-mobile img.cardPip--faceArt {
   transition: opacity 220ms ease, transform 220ms ease;
 }
 
+.handBurst--tip {
+  border-color: rgba(114, 247, 195, 0.26);
+  background: radial-gradient(700px 170px at 30% 0%, rgba(114, 247, 195, 0.14), transparent 60%),
+    linear-gradient(180deg, var(--felt), var(--felt2));
+}
+
+.handBurst--tip .handBurst__label {
+  font-size: 16px;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  color: rgba(255, 255, 255, 0.92);
+  text-shadow: 0 0 20px rgba(114, 247, 195, 0.14), 0 18px 44px rgba(0, 0, 0, 0.62);
+}
+
 .handBurst--royal {
   text-shadow: 0 0 28px rgba(247, 215, 116, 0.26), 0 22px 60px rgba(0, 0, 0, 0.68);
 }
