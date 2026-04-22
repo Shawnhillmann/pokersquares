@@ -562,6 +562,7 @@ img.cardPip--kingArt.cardPip--kingSpades {
   transform: none;
   object-fit: contain;
   object-position: right bottom;
+  border-radius: inherit;
 }
 
 /* Make red suits pop more at a distance */
@@ -1693,6 +1694,7 @@ html.is-mobile .cardCornerSuit {
   font-size: clamp(11px, calc(var(--cell) * 0.24), 17px);
   width: 100%;
   text-align: center;
+  transform: translateX(-2px);
 }
 
 html.is-mobile .cardRank.cardRank--ten {
@@ -1713,8 +1715,8 @@ html.is-mobile img.cardPip--kingArt:not(.cardPip--kingSpades) {
 html.is-mobile img.cardPip--kingArt.cardPip--kingSpades {
   left: auto;
   top: auto;
-  right: -3px;
-  bottom: -5px;
+  right: 0;
+  bottom: 0;
   width: 84%;
   height: 84%;
 }
