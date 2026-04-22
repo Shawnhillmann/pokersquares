@@ -23,17 +23,34 @@ import { isRedSuit, suitSymbol } from "../game/cards.js";
  */
 export function renderBoard(root, board, view, onCellClick) {
   root.style.setProperty("--board-size", String(BOARD_SIZE));
-  root.innerHTML = "";
 
   const FACE_RANKS = new Set(["J", "Q", "K"]);
+  const cells = /** @type {HTMLButtonElement[]} */ (root.__cells ?? []);
+
+  // Build fixed 5x5 button grid once; update in place to avoid image flicker on mobile Safari.
+  if (cells.length !== BOARD_SIZE * BOARD_SIZE) {
+    root.innerHTML = "";
+    cells.length = 0;
+    for (let r = 0; r < BOARD_SIZE; r++) {
+      for (let c = 0; c < BOARD_SIZE; c++) {
+        const cell = /** @type {HTMLButtonElement} */ (el("button", "cell"));
+        cell.type = "button";
+        cell.dataset.r = String(r);
+        cell.dataset.c = String(c);
+        cell.addEventListener("click", () => onCellClick({ r, c }));
+        root.append(cell);
+        cells.push(cell);
+      }
+    }
+    // @ts-ignore - stash on DOM node for reuse
+    root.__cells = cells;
+  }
 
   for (let r = 0; r < BOARD_SIZE; r++) {
     for (let c = 0; c < BOARD_SIZE; c++) {
       const card = board[r][c];
-      const cell = el("button", "cell");
-      cell.type = "button";
-      cell.dataset.r = String(r);
-      cell.dataset.c = String(c);
+      const cell = cells[r * BOARD_SIZE + c];
+      cell.className = "cell";
 
       const selected = view.selected && view.selected.r === r && view.selected.c === c;
       if (selected) cell.classList.add("is-selected");
@@ -43,14 +60,28 @@ export function renderBoard(root, board, view, onCellClick) {
 
       if (!card) {
         cell.classList.add("is-empty");
+        cell.removeAttribute("data-card-id");
+        cell.style.removeProperty("--drop-rows");
+        const oldFace = cell.querySelector(".cardFace");
+        if (oldFace) oldFace.remove();
       } else {
         cell.dataset.cardId = card.id;
         const dropRows = view.dropRowsById?.get(card.id) ?? 0;
         if (dropRows > 0) {
           cell.classList.add("is-dropping");
           cell.style.setProperty("--drop-rows", String(dropRows));
+        } else {
+          cell.style.removeProperty("--drop-rows");
         }
-        const face = el("div", "cardFace");
+        let face = /** @type {HTMLElement|null} */ (cell.querySelector(".cardFace"));
+        if (!face) {
+          face = el("div", "cardFace");
+          cell.append(face);
+        } else {
+          face.className = "cardFace";
+          face.innerHTML = "";
+        }
+
         const rankText = String(card.rank);
         const corner = el("div", "cardCorner");
         const rank = el("div", "cardRank", rankText);
@@ -63,20 +94,19 @@ export function renderBoard(root, board, view, onCellClick) {
           const cornerSuit = el("div", "cardCornerSuit", suitSymbol(card.suit));
           corner.append(cornerSuit);
           face.classList.add("cardFace--faceArt");
-          pip = /** @type {HTMLImageElement} */ (document.createElement("img"));
-          pip.className = "cardPip cardPip--faceArt";
-          pip.src = `/images/faces/${rankText}${String(card.suit)}.svg`;
-          pip.alt = "";
-          pip.draggable = false;
-          // If the SVG doesn't exist yet, fall back to the normal suit pip.
-          pip.addEventListener(
-            "error",
-            () => {
-              const fallback = el("div", "cardPip", suitSymbol(card.suit));
-              pip.replaceWith(fallback);
-            },
-            { once: true }
+          const img = /** @type {HTMLImageElement} */ (
+            face.querySelector("img.cardPip--faceArt") ?? document.createElement("img")
           );
+          img.className = "cardPip cardPip--faceArt";
+          const nextSrc = `/images/faces/${rankText}${String(card.suit)}.svg`;
+          if (img.src !== `${location.origin}${nextSrc}`) img.src = nextSrc;
+          img.alt = "";
+          img.draggable = false;
+          img.onerror = () => {
+            const fallback = el("div", "cardPip", suitSymbol(card.suit));
+            img.replaceWith(fallback);
+          };
+          pip = img;
           /* SVG: portrait only; HTML supplies corner rank + suit */
           face.append(corner, pip);
         } else {
@@ -84,11 +114,7 @@ export function renderBoard(root, board, view, onCellClick) {
           face.append(corner, pip);
         }
         if (isRedSuit(card.suit)) face.classList.add("is-red");
-        cell.append(face);
       }
-
-      cell.addEventListener("click", () => onCellClick({ r, c }));
-      root.append(cell);
     }
   }
 }
