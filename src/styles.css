@@ -514,6 +514,12 @@ html.is-mobile .cell.is-swap-success {
   width: 100%;
   text-align: center;
   transform: translateX(-2px);
+  display: none;
+}
+
+/* Corner suit only for face cards (J/Q/K) */
+.cardFace--faceArt .cardCornerSuit {
+  display: block;
 }
 
 .cardRank.cardRank--ten {

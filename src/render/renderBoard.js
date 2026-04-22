@@ -152,10 +152,9 @@ export function renderBoard(root, board, view, onCellClick) {
         const rankText = String(card.rank);
         rankEl.textContent = rankText;
         rankEl.classList.toggle("cardRank--ten", rankText === "10");
-        cornerSuit.textContent = suitSymbol(card.suit);
-
         const isFace = FACE_RANKS.has(rankText) && ["S", "H", "D", "C"].includes(String(card.suit));
         if (isFace) {
+          cornerSuit.textContent = suitSymbol(card.suit);
           face.classList.add("cardFace--faceArt");
           const nextSrc = `/images/faces/${rankText}${String(card.suit)}.svg`;
           // Only touch src if it actually changes (avoids iOS SVG repaint).
@@ -172,6 +171,7 @@ export function renderBoard(root, board, view, onCellClick) {
             cell.__pip = "img";
           }
         } else {
+          cornerSuit.textContent = "";
           // Text suit pip.
           pipDiv.textContent = suitSymbol(card.suit);
           // @ts-ignore
