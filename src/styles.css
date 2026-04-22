@@ -283,14 +283,22 @@ main.stage {
   margin-top: 6px;
 }
 
-/* Match mobile gold hint treatment on all viewports */
+/* Primary call-to-action — strong gold on dark (overrides btn--ghost wash) */
 .belowGameArea .btn--hint {
-  color: rgba(247, 215, 116, 0.96);
-  border-color: rgba(247, 215, 116, 0.42);
-  background: linear-gradient(180deg, rgba(247, 215, 116, 0.14), rgba(247, 215, 116, 0.05));
+  color: #fff8ec;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(247, 215, 116, 0.62);
+  background: linear-gradient(180deg, rgba(247, 215, 116, 0.32), rgba(247, 215, 116, 0.1)),
+    linear-gradient(180deg, rgba(14, 36, 28, 0.92), rgba(8, 22, 18, 0.88));
   font-weight: 800;
   letter-spacing: 0.04em;
   font-size: 13px;
+  box-shadow: 0 4px 18px rgba(247, 215, 116, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.belowGameArea .btn--hint:hover {
+  border-color: rgba(255, 230, 160, 0.78);
+  filter: brightness(1.07);
 }
 
 .board {
@@ -444,12 +452,12 @@ html.is-mobile .cell.is-swap-success {
 }
 
 .cardRank {
-  font-size: 32px;
+  font-size: 28px;
   letter-spacing: -0.03em;
 }
 
 .cardRank.cardRank--ten {
-  font-size: 26px;
+  font-size: 22px;
   letter-spacing: -0.06em;
 }
 
@@ -458,7 +466,7 @@ html.is-mobile .cell.is-swap-success {
   left: 50%;
   top: 63%;
   transform: translate(-50%, -50%);
-  font-size: 64px;
+  font-size: 56px;
   line-height: 1;
   opacity: 1;
   filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.45));
@@ -1492,15 +1500,15 @@ html.is-mobile .cardCorner {
 }
 
 html.is-mobile .cardRank {
-  font-size: clamp(12px, calc(var(--cell) * 0.34), 22px);
+  font-size: clamp(11px, calc(var(--cell) * 0.3), 20px);
 }
 
 html.is-mobile .cardRank.cardRank--ten {
-  font-size: clamp(10px, calc(var(--cell) * 0.28), 18px);
+  font-size: clamp(9px, calc(var(--cell) * 0.25), 16px);
 }
 
 html.is-mobile .cardPip {
-  font-size: clamp(14px, calc(var(--cell) * 0.384), 32px);
+  font-size: clamp(12px, calc(var(--cell) * 0.34), 28px);
   top: 67%;
 }
 
