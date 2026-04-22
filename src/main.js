@@ -494,6 +494,27 @@ function burstRoyalGold(x, y, intensity = 1) {
   }
 }
 
+function burstGoldWin(x, y, intensity = 1) {
+  const host = ui.board.parentElement;
+  if (!host) return;
+  const count = Math.floor(28 + intensity * 18);
+  for (let i = 0; i < count; i++) {
+    const n = document.createElement("div");
+    n.className = "goldSpark";
+    n.style.left = `${x}px`;
+    n.style.top = `${y}px`;
+    const ang = Math.random() * Math.PI * 2;
+    const r = 26 + Math.random() * 72;
+    const dx = Math.cos(ang) * r * (0.75 + Math.random() * 0.65);
+    const dy = Math.sin(ang) * r * (0.75 + Math.random() * 0.65) - (18 + Math.random() * 38);
+    n.style.setProperty("--dx", `${dx}px`);
+    n.style.setProperty("--dy", `${dy}px`);
+    n.style.setProperty("--rot", `${(Math.random() * 2 - 1) * 260}deg`);
+    host.append(n);
+    setTimeout(() => n.remove(), 760);
+  }
+}
+
 function showHandBurst({ label, type, credits }) {
   const host = ui.board.parentElement;
   if (!host) return;
@@ -514,6 +535,7 @@ function showHandBurst({ label, type, credits }) {
 
   if (type === HAND_TYPE.ROYAL_FLUSH) burstRoyalGold(x, y, 1.2);
   else if (type === HAND_TYPE.STRAIGHT_FLUSH) burstRoyalGold(x, y, 0.35);
+  else if ((HAND_PRIORITY[type] ?? 0) >= (HAND_PRIORITY[HAND_TYPE.FULL_HOUSE] ?? 6)) burstGoldWin(x, y, 0.9);
   return n;
 }
 
@@ -967,7 +989,7 @@ async function resolveCascades() {
 
     await sleep(70);
 
-    // Fall + refill
+    // Fall + refill (two phase): existing cards fall first, then new cards deal in row-by-row.
     const drops = applyGravity(state.board);
     viewFx.dropRowsById = drops;
     rerender();
@@ -975,17 +997,24 @@ async function resolveCascades() {
     await kickDropAnimation();
     await sleep(110);
 
-    const filled = refill(state.board, state.deck);
-    const drops2 = new Map(drops);
-    for (const p of filled) {
-      const card = state.board[p.r][p.c];
-      if (card) drops2.set(card.id, p.r + 1);
+    // Deal-in: fill one card at a time (smooth), columns left->right.
+    // IMPORTANT: only animate the *new* cards during refill; re-animating settled cards causes jitter.
+    for (let cc = 0; cc < 5; cc++) {
+      for (let rr = 0; rr < 5; rr++) {
+        if (state.board[rr][cc]) continue;
+        state.board[rr][cc] = state.deck.draw();
+
+        /** @type {Map<string, number>} */
+        const dropsOne = new Map();
+        const card = state.board[rr][cc];
+        if (card) dropsOne.set(card.id, rr + 1);
+        viewFx.dropRowsById = dropsOne;
+        rerender();
+        sfx.shuffle();
+        await kickDropAnimation();
+        await sleep(55);
+      }
     }
-    viewFx.dropRowsById = drops2;
-    rerender();
-    sfx.shuffle();
-    await kickDropAnimation();
-    await sleep(130);
 
     // Extra beat before the next evaluation (makes cascades feel punchier).
     await sleep(60);

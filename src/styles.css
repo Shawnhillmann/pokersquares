@@ -364,8 +364,8 @@ main.stage {
 .scoreLine {
   position: absolute;
   border-radius: 999px;
-  background: linear-gradient(90deg, transparent, rgba(114, 247, 195, 0.65), transparent);
-  filter: drop-shadow(0 0 10px rgba(114, 247, 195, 0.25));
+  background: linear-gradient(90deg, transparent, rgba(90, 255, 235, 0.86), transparent);
+  filter: drop-shadow(0 0 12px rgba(90, 255, 235, 0.38));
   opacity: 0;
   animation: scoreLine 320ms ease forwards;
 }
@@ -382,7 +382,7 @@ main.stage {
   bottom: -10px;
   width: 3px;
   left: calc((var(--i) * (var(--cell) + var(--gap))) + (var(--cell) / 2));
-  background: linear-gradient(180deg, transparent, rgba(114, 247, 195, 0.65), transparent);
+  background: linear-gradient(180deg, transparent, rgba(90, 255, 235, 0.86), transparent);
 }
 
 .cell {
@@ -399,8 +399,8 @@ main.stage {
 }
 
 .cell.is-dropping {
-  transform: translateY(calc(var(--drop-rows, 0) * (var(--cell) + var(--gap)) * -1));
-  transition: transform 200ms cubic-bezier(0.2, 0.9, 0.2, 1);
+  transform: translate3d(0, calc(var(--drop-rows, 0) * (var(--cell) + var(--gap)) * -1), 0);
+  transition: transform var(--drop-ms, 220ms) cubic-bezier(0.16, 0.86, 0.22, 1);
   will-change: transform;
 }
 
@@ -522,6 +522,10 @@ html.is-mobile .cell.is-swap-success {
   display: block;
 }
 
+.cardFace--aceArt .cardCornerSuit {
+  display: none;
+}
+
 .cardRank.cardRank--ten {
   font-size: 22px;
   letter-spacing: -0.06em;
@@ -558,6 +562,15 @@ img.cardPip--faceArt {
   overflow: hidden;
 }
 
+/* Ace art: no corner suit, center the SVG */
+.cardFace.cardFace--aceArt {
+  overflow: hidden;
+}
+
+html.is-mobile .cardFace.cardFace--aceArt {
+  overflow: hidden;
+}
+
 img.cardPip--faceArt {
   left: auto;
   top: auto;
@@ -565,6 +578,17 @@ img.cardPip--faceArt {
   bottom: -6px;
   margin: 0;
   transform: none;
+}
+
+.cardFace--aceArt img.cardPip--faceArt {
+  left: 50%;
+  top: 58%;
+  right: auto;
+  bottom: auto;
+  transform: translate(-50%, -50%);
+  width: 88%;
+  height: 88%;
+  object-position: center center;
 }
 
 /* Mobile: avoid any bottom-right “spill” artifacts */
@@ -1084,6 +1108,36 @@ html.is-mobile img.cardPip--faceArt {
   opacity: 0;
   animation: royalSpark 720ms ease-out forwards;
   box-shadow: 0 12px 22px rgba(0, 0, 0, 0.28);
+}
+
+/* Full House+ gold burst (center of board) */
+.goldSpark {
+  position: fixed;
+  z-index: 11;
+  width: 8px;
+  height: 8px;
+  border-radius: 3px;
+  background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.92), rgba(247, 215, 116, 0.95) 55%, transparent 72%),
+    linear-gradient(180deg, rgba(255, 239, 170, 0.95), rgba(214, 160, 30, 0.95));
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  opacity: 0;
+  animation: goldSpark 760ms ease-out forwards;
+  box-shadow: 0 12px 22px rgba(0, 0, 0, 0.26);
+}
+
+@keyframes goldSpark {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) translate(0px, 0px) rotate(0deg) scale(0.95);
+  }
+  12% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) translate(var(--dx), var(--dy)) rotate(var(--rot)) scale(0.7);
+  }
 }
 
 @keyframes royalSpark {

@@ -24,7 +24,8 @@ import { isRedSuit, suitSymbol } from "../game/cards.js";
 export function renderBoard(root, board, view, onCellClick) {
   root.style.setProperty("--board-size", String(BOARD_SIZE));
 
-  const FACE_RANKS = new Set(["J", "Q", "K"]);
+  const ART_RANKS = new Set(["A", "J", "Q", "K"]);
+  const CORNER_SUIT_RANKS = new Set(["J", "Q", "K"]);
   const cells = /** @type {HTMLButtonElement[]} */ (root.__cells ?? []);
 
   // Build fixed 5x5 button grid once; update in place to avoid image flicker on mobile Safari.
@@ -83,8 +84,11 @@ export function renderBoard(root, board, view, onCellClick) {
         if (dropRows > 0) {
           cell.classList.add("is-dropping");
           cell.style.setProperty("--drop-rows", String(dropRows));
+          const ms = Math.min(380, 150 + dropRows * 45);
+          cell.style.setProperty("--drop-ms", `${ms}ms`);
         } else {
           cell.style.removeProperty("--drop-rows");
+          cell.style.removeProperty("--drop-ms");
         }
         // Build face DOM once per cell; update text/classes in place to prevent SVG flicker.
         let face = /** @type {HTMLElement|null} */ (cell.__face ?? cell.querySelector(".cardFace"));
@@ -114,7 +118,7 @@ export function renderBoard(root, board, view, onCellClick) {
               // If a face SVG is missing, flip to text pip for this cell.
               // @ts-ignore
               cell.__pip = "pip";
-              face.classList.remove("cardFace--faceArt");
+              face.classList.remove("cardFace--faceArt", "cardFace--aceArt");
               if (img.parentElement) img.remove();
               if (!pipDiv.parentElement) face.append(corner, pipDiv);
             },
@@ -152,10 +156,12 @@ export function renderBoard(root, board, view, onCellClick) {
         const rankText = String(card.rank);
         rankEl.textContent = rankText;
         rankEl.classList.toggle("cardRank--ten", rankText === "10");
-        const isFace = FACE_RANKS.has(rankText) && ["S", "H", "D", "C"].includes(String(card.suit));
-        if (isFace) {
-          cornerSuit.textContent = suitSymbol(card.suit);
-          face.classList.add("cardFace--faceArt");
+        const suit = String(card.suit);
+        const isAceSpades = rankText === "A" && suit === "S";
+        const isArt = (rankText === "J" || rankText === "Q" || rankText === "K" || isAceSpades) && ["S", "H", "D", "C"].includes(suit);
+        if (isArt) {
+          cornerSuit.textContent = CORNER_SUIT_RANKS.has(rankText) ? suitSymbol(card.suit) : "";
+          face.classList.add(rankText === "A" ? "cardFace--aceArt" : "cardFace--faceArt");
           const nextSrc = `/images/faces/${rankText}${String(card.suit)}.svg`;
           // Only touch src if it actually changes (avoids iOS SVG repaint).
           const absoluteNext = `${location.origin}${nextSrc}`;
