@@ -129,6 +129,10 @@ body {
   justify-content: center;
   justify-self: center;
   min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
+  padding-left: 8px;
+  padding-right: 8px;
 }
 
 .creditDock {
@@ -147,7 +151,7 @@ body {
   width: 100%;
   max-width: 440px;
   margin: 0 auto;
-  padding: 4px 12px 6px;
+  padding: 6px 12px 10px;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -268,6 +272,9 @@ main.stage {
   display: grid;
   justify-items: center;
   justify-self: center;
+  width: 100%;
+  padding-top: 4px;
+  box-sizing: border-box;
 }
 
 .belowGameArea {
@@ -848,7 +855,7 @@ html.is-mobile .cell.is-swap-success {
   font-weight: 900;
   letter-spacing: 0.04em;
   font-size: 17px;
-  transform: translate(0, -50%) translateY(6px);
+  transform: translate(-50%, -50%) translateY(6px);
   opacity: 0;
   pointer-events: none;
   box-shadow: 0 14px 40px rgba(0, 0, 0, 0.5);
@@ -857,12 +864,12 @@ html.is-mobile .cell.is-swap-success {
 
 .pipPopup.is-showing {
   opacity: 1;
-  transform: translate(0, -50%) translateY(0px);
+  transform: translate(-50%, -50%) translateY(0px);
 }
 
 .pipPopup.is-fading {
   opacity: 0;
-  transform: translate(0, -50%) translateY(-10px);
+  transform: translate(-50%, -50%) translateY(-10px);
   transition: opacity 220ms ease, transform 220ms ease;
 }
 
@@ -1239,7 +1246,7 @@ html.is-mobile .cell.is-swap-success {
 @media (max-width: 720px) {
   :root {
     --gap: 6px;
-    --cell: min(64px, calc((100vw - 28px - 4 * var(--gap)) / 5));
+    --cell: min(64px, calc((100vw - 36px - 4 * var(--gap)) / 5));
   }
 }
 
@@ -1247,7 +1254,7 @@ html.is-mobile {
   -webkit-text-size-adjust: 100%;
   /* Board scales to width; scroll the page for credits / hint (nothing overlays the grid) */
   --gap: 5px;
-  --cell-board-w: calc((100vw - 20px - 4 * var(--gap)) / 5);
+  --cell-board-w: calc((100vw - 36px - 4 * var(--gap)) / 5);
   --cell: min(76px, var(--cell-board-w));
 }
 
@@ -1364,6 +1371,8 @@ html.is-mobile .gameColumn {
   width: 100%;
   flex: 0 0 auto;
   overflow: visible;
+  padding-left: 10px;
+  padding-right: 10px;
 }
 
 html.is-mobile .playArea {
@@ -1374,11 +1383,12 @@ html.is-mobile .playArea {
   width: 100%;
   flex: 0 0 auto;
   overflow: visible;
+  padding-top: 6px;
 }
 
 html.is-mobile .table {
   flex: 0 0 auto;
-  padding: 8px 8px 10px;
+  padding: 10px 10px 10px;
   display: flex;
   align-items: center;
   justify-content: center;

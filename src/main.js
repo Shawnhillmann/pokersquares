@@ -381,7 +381,7 @@ function showCardValuePopup(p, value, opts = {}) {
   if (opts.variant === "zero") pop.classList.add("pipPopup--zero");
   pop.textContent = opts.variant === "zero" ? "0" : `+${value}`;
 
-  const x = rect.right + 10;
+  const x = rect.left + rect.width / 2;
   const y = rect.top + rect.height / 2;
   pop.style.left = `${x}px`;
   pop.style.top = `${y}px`;

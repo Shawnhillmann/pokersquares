@@ -147,6 +147,13 @@
         </aside>
 
         <div class="gameColumn">
+          <div class="totalCreditsBar" id="totalCreditsBar" aria-live="polite">
+            <div class="totalScoreBlock totalScoreBlock--solo">
+              <div class="totalScoreBlock__label">TOTAL CREDITS</div>
+              <div class="totalScoreBlock__value" id="totalScoreBig">0</div>
+            </div>
+          </div>
+
           <div class="playArea">
             <div class="table">
               <div class="boardWrap" aria-label="Card grid">
@@ -157,23 +164,16 @@
             </div>
           </div>
 
-          <div class="totalCreditsBar" id="totalCreditsBar" aria-live="polite">
-            <div class="totalScoreBlock totalScoreBlock--solo">
-              <div class="totalScoreBlock__label">TOTAL CREDITS</div>
-              <div class="totalScoreBlock__value" id="totalScoreBig">0</div>
-            </div>
-          </div>
-
           <div class="belowGameArea">
-            <button class="btn btn--ghost btn--hint" id="hintBtn" type="button">Hint? - 300 Credits</button>
+            <button class="btn btn--ghost btn--hint" id="hintBtn" type="button">Hint - 300 Credits</button>
           </div>
 
           <div class="creditDock" id="creditDock">
             <div class="howToPlayPanel" id="howToPlayPanel" aria-label="How to play">
               <div class="howToPlayPanel__title">How to play</div>
               <div class="howToPlayPanel__text">
-                Swap any two cards to build poker hands in <b>every row and column</b>—each line of five is a
-                horizontal or vertical hand. Each swap attempt costs <b>100</b> credits.
+                Swap any two cards to make poker hands. Hands can be either vertical or horizontal. Each attempt
+                costs <b>100</b> credits.
               </div>
             </div>
           </div>
