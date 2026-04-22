@@ -532,46 +532,42 @@ html.is-mobile .cell.is-swap-success {
   filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.45));
 }
 
-img.cardPip--kingArt {
+img.cardPip--faceArt {
   font-size: unset;
   line-height: unset;
-  width: min(78%, calc(var(--cell) * 0.72));
-  height: auto;
-  max-height: 68%;
-  object-fit: contain;
-  pointer-events: none;
-  user-select: none;
-  -webkit-user-drag: none;
-}
-
-/* King of Spades: HTML corner K; SVG = suit + portrait (~70% size, bottom-right) */
-.cardFace.cardFace--kingSpades {
-  overflow: hidden;
-}
-
-img.cardPip--kingArt.cardPip--kingSpades {
-  left: auto;
-  top: auto;
-  right: -4px;
-  bottom: -6px;
   width: 84%;
   height: 84%;
   max-width: none;
   max-height: none;
-  margin: 0;
-  transform: none;
   object-fit: contain;
   object-position: right bottom;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
   border-radius: inherit;
 }
 
+/* Face art: HTML corner rank + suit; SVG = portrait only */
+.cardFace.cardFace--faceArt {
+  overflow: hidden;
+}
+
+img.cardPip--faceArt {
+  left: auto;
+  top: auto;
+  right: -4px;
+  bottom: -6px;
+  margin: 0;
+  transform: none;
+}
+
 /* Make red suits pop more at a distance */
-.cardFace.is-red .cardPip:not(.cardPip--kingArt),
+.cardFace.is-red .cardPip:not(.cardPip--faceArt),
 .cardFace.is-red .cardRank {
   color: #b91c1c;
 }
 
-.cardFace:not(.is-red) .cardPip:not(.cardPip--kingArt),
+.cardFace:not(.is-red) .cardPip:not(.cardPip--faceArt),
 .cardFace:not(.is-red) .cardRank {
   color: rgba(14, 18, 26, 0.92);
 }
@@ -1694,30 +1690,17 @@ html.is-mobile .cardCornerSuit {
   font-size: clamp(11px, calc(var(--cell) * 0.24), 17px);
   width: 100%;
   text-align: center;
-  transform: translateX(-2px);
+  transform: translateX(-5px);
 }
 
 html.is-mobile .cardRank.cardRank--ten {
   font-size: clamp(9px, calc(var(--cell) * 0.25), 16px);
 }
 
-html.is-mobile .cardPip:not(.cardPip--kingArt) {
+html.is-mobile .cardPip:not(.cardPip--faceArt) {
   font-size: clamp(12px, calc(var(--cell) * 0.34), 28px);
   top: 67%;
 }
 
-html.is-mobile img.cardPip--kingArt:not(.cardPip--kingSpades) {
-  width: min(80%, calc(var(--cell) * 0.68));
-  max-height: 62%;
-  top: 64%;
-}
-
-html.is-mobile img.cardPip--kingArt.cardPip--kingSpades {
-  left: auto;
-  top: auto;
-  right: 0;
-  bottom: 0;
-  width: 84%;
-  height: 84%;
-}
+/* Face art image uses the same base rule on mobile (img.cardPip--faceArt). */
 

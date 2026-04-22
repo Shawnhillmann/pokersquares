@@ -25,6 +25,8 @@ export function renderBoard(root, board, view, onCellClick) {
   root.style.setProperty("--board-size", String(BOARD_SIZE));
   root.innerHTML = "";
 
+  const FACE_RANKS = new Set(["J", "Q", "K"]);
+
   for (let r = 0; r < BOARD_SIZE; r++) {
     for (let c = 0; c < BOARD_SIZE; c++) {
       const card = board[r][c];
@@ -57,16 +59,25 @@ export function renderBoard(root, board, view, onCellClick) {
 
         /** @type {HTMLElement} */
         let pip;
-        if (card.rank === "K" && card.suit === "S") {
+        if (FACE_RANKS.has(rankText) && ["S", "H", "D", "C"].includes(String(card.suit))) {
           const cornerSuit = el("div", "cardCornerSuit", suitSymbol(card.suit));
           corner.append(cornerSuit);
-          face.classList.add("cardFace--kingSpades");
+          face.classList.add("cardFace--faceArt");
           pip = /** @type {HTMLImageElement} */ (document.createElement("img"));
-          pip.className = "cardPip cardPip--kingArt cardPip--kingSpades";
-          pip.src = "/images/king-of-spades.svg";
-          pip.alt = "King of Spades";
+          pip.className = "cardPip cardPip--faceArt";
+          pip.src = `/images/faces/${rankText}${String(card.suit)}.svg`;
+          pip.alt = "";
           pip.draggable = false;
-          /* SVG: suit + portrait only; HTML supplies corner K */
+          // If the SVG doesn't exist yet, fall back to the normal suit pip.
+          pip.addEventListener(
+            "error",
+            () => {
+              const fallback = el("div", "cardPip", suitSymbol(card.suit));
+              pip.replaceWith(fallback);
+            },
+            { once: true }
+          );
+          /* SVG: portrait only; HTML supplies corner rank + suit */
           face.append(corner, pip);
         } else {
           pip = el("div", "cardPip", suitSymbol(card.suit));
