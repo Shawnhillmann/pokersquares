@@ -147,6 +147,13 @@ export const sfx = {
     playNoise({ dur: 0.06, highpassHz: 900 });
   },
 
+  gameOver() {
+    // Soft "run ended" thud + tail (not harsh).
+    playTone({ freq: 220, dur: 0.12, type: "triangle", sweepTo: 160, detune: -6 });
+    setTimeout(() => playTone({ freq: 140, dur: 0.13, type: "sine", sweepTo: 120 }), 60);
+    setTimeout(() => playNoise({ dur: 0.06, highpassHz: 1000 }), 40);
+  },
+
   hintPurchase() {
     // Short "purchase" chirp: bright + a little metallic tail.
     playTone({ freq: 980, dur: 0.045, type: "triangle", sweepTo: 1320 });
