@@ -392,6 +392,8 @@ function animateSwapSuccess(a, b) {
   bEl.classList.remove("is-swap-success");
   // eslint-disable-next-line no-unused-expressions
   aEl.offsetHeight;
+  // eslint-disable-next-line no-unused-expressions
+  bEl.offsetHeight;
   aEl.classList.add("is-swap-success");
   bEl.classList.add("is-swap-success");
   return ms;
@@ -959,7 +961,9 @@ async function onCellClick(pos) {
 
   // Animate the swap completing, then commit it and resolve cascades/credits.
   const swapMs = animateSwapSuccess(a, b) ?? 220;
-  await sleep(Math.max(150, swapMs - 40));
+  // On mobile, committing state before the CSS animation finishes can look like a "snap back".
+  // Wait for the animation to complete before re-rendering the swapped positions.
+  await sleep(Math.max(150, swapMs + 10));
   swapCells(state.board, a, b);
   rerender();
   await sleep(50);
