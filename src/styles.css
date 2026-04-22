@@ -23,9 +23,8 @@
   box-sizing: border-box;
 }
 
-html,
-body {
-  height: 100%;
+html {
+  min-height: 100%;
 }
 
 .modal {
@@ -111,11 +110,14 @@ body {
   font-family: var(--font);
   color: var(--text);
   background: var(--bg0);
-  overflow: hidden;
+  min-height: 100%;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .app {
-  height: 100%;
+  min-height: 100%;
   min-height: 100dvh;
   display: grid;
   grid-template-rows: auto 1fr;
@@ -174,6 +176,15 @@ body {
   letter-spacing: 0.16em;
   color: rgba(255, 255, 255, 0.88);
   text-shadow: 0 1px 12px rgba(0, 0, 0, 0.35);
+}
+
+@media (min-width: 721px) {
+  .totalCreditsBar .totalScoreBlock__label {
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    font-weight: 900;
+    color: rgba(255, 255, 255, 0.94);
+  }
 }
 
 .totalCreditsBar .totalScoreBlock__value {
@@ -280,25 +291,43 @@ main.stage {
 .belowGameArea {
   display: flex;
   justify-content: center;
-  margin-top: 6px;
+  margin-top: 8px;
 }
 
-/* Primary call-to-action — strong gold on dark (overrides btn--ghost wash) */
-.belowGameArea .btn--hint {
-  color: #fff8ec;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
-  border: 1px solid rgba(247, 215, 116, 0.62);
-  background: linear-gradient(180deg, rgba(247, 215, 116, 0.32), rgba(247, 215, 116, 0.1)),
-    linear-gradient(180deg, rgba(14, 36, 28, 0.92), rgba(8, 22, 18, 0.88));
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  font-size: 13px;
-  box-shadow: 0 4px 18px rgba(247, 215, 116, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+/* Hint: high-contrast “press me” CTA (overrides btn + btn--ghost) */
+.belowGameArea .btn.btn--hint {
+  color: #2a1f0a;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.42);
+  background: linear-gradient(180deg, #fff6c8 0%, #f0cf52 38%, #d4a41a 100%);
+  font-weight: 850;
+  letter-spacing: 0.06em;
+  font-size: 14px;
+  padding: 12px 22px;
+  border-radius: 14px;
+  box-shadow:
+    0 3px 0 rgba(110, 75, 12, 0.58),
+    0 10px 26px rgba(0, 0, 0, 0.38),
+    inset 0 1px 0 rgba(255, 255, 255, 0.55);
+  transition: transform 120ms ease, filter 120ms ease, box-shadow 120ms ease, border-color 120ms ease;
 }
 
-.belowGameArea .btn--hint:hover {
-  border-color: rgba(255, 230, 160, 0.78);
-  filter: brightness(1.07);
+.belowGameArea .btn.btn--hint:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.05);
+  border-color: rgba(255, 255, 255, 0.6);
+  box-shadow:
+    0 4px 0 rgba(110, 75, 12, 0.52),
+    0 14px 32px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.65);
+}
+
+.belowGameArea .btn.btn--hint:active {
+  transform: translateY(2px);
+  box-shadow:
+    0 1px 0 rgba(110, 75, 12, 0.55),
+    0 6px 16px rgba(0, 0, 0, 0.32),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35);
 }
 
 .board {
@@ -1235,6 +1264,53 @@ html.is-mobile .cell.is-swap-success {
   }
 }
 
+/* Wide desktop: keep hand chart beside the board — no empty 1fr side gutters */
+@media (min-width: 1101px) {
+  .stage {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: flex-start;
+    align-content: flex-start;
+    gap: 22px 32px;
+    padding: 16px 20px 28px;
+    min-height: 0;
+  }
+
+  .handChart {
+    flex: 0 0 auto;
+    width: 260px;
+    margin-left: 0;
+    justify-self: unset;
+    order: 1;
+  }
+
+  .handChart.is-collapsed {
+    display: none;
+  }
+
+  .gameColumn {
+    order: 2;
+    flex: 0 1 auto;
+    max-width: min(720px, 100%);
+    justify-content: flex-start;
+  }
+
+  .stage > #rulesPanel {
+    order: 3;
+    flex: 0 1 340px;
+    max-width: 340px;
+    align-self: flex-start;
+  }
+
+  .belowGameArea .btn.btn--hint {
+    min-width: 260px;
+    font-size: 15px;
+    padding: 14px 32px;
+  }
+}
+
 @media (max-width: 1100px) {
   :root {
     --cell: 88px;
@@ -1443,6 +1519,12 @@ html.is-mobile .belowGameArea .btn {
   width: 100%;
   max-width: 360px;
   min-height: 46px;
+}
+
+html.is-mobile .belowGameArea .btn.btn--hint {
+  font-size: 15px;
+  padding: 14px 18px;
+  border-radius: 16px;
 }
 
 html.is-mobile .creditDock {
