@@ -148,10 +148,17 @@
         </aside>
 
         <div class="gameColumn">
-          <div class="totalCreditsBar" id="totalCreditsBar" aria-live="polite">
-            <div class="totalScoreBlock totalScoreBlock--solo">
-              <div class="totalScoreBlock__label">TOTAL CREDITS</div>
-              <div class="totalScoreBlock__value" id="totalScoreBig">0</div>
+          <div class="goalBar" id="goalBar" aria-live="polite">
+            <div class="goalBlock">
+              <div class="goalBlock__top">
+                <div class="goalBlock__label">GOAL <span id="goalIndex">1</span></div>
+                <div class="goalBlock__value">
+                  <span id="goalCurrent">0</span>/<span id="goalTarget">1,000</span> Credits
+                </div>
+              </div>
+              <div class="goalBlock__track" role="progressbar" aria-valuemin="0" aria-valuemax="1000" aria-valuenow="0">
+                <div class="goalBlock__fill" id="goalFill"></div>
+              </div>
             </div>
           </div>
 
@@ -166,6 +173,10 @@
           </div>
 
           <div class="belowGameArea">
+            <div class="totalCreditsMini" id="totalCreditsMini" aria-live="polite">
+              <div class="totalCreditsMini__label">TOTAL CREDITS</div>
+              <div class="totalCreditsMini__value" id="totalCreditsValue">0</div>
+            </div>
             <button class="btn btn--ghost btn--hint" id="hintBtn" type="button">Hint - 300 Credits</button>
           </div>
         </div>

@@ -29,7 +29,12 @@ const ui = {
   finalScoreValue: /** @type {HTMLElement} */ (document.getElementById("finalScoreValue")),
   finalMovesValue: /** @type {HTMLElement} */ (document.getElementById("finalMovesValue")),
   restartBtn: /** @type {HTMLButtonElement} */ (document.getElementById("restartBtn")),
-  totalScoreBig: /** @type {HTMLElement} */ (document.getElementById("totalScoreBig")),
+  goalBar: /** @type {HTMLElement|null} */ (document.getElementById("goalBar")),
+  goalIndex: /** @type {HTMLElement|null} */ (document.getElementById("goalIndex")),
+  goalCurrent: /** @type {HTMLElement|null} */ (document.getElementById("goalCurrent")),
+  goalTarget: /** @type {HTMLElement|null} */ (document.getElementById("goalTarget")),
+  goalFill: /** @type {HTMLElement|null} */ (document.getElementById("goalFill")),
+  totalCreditsValue: /** @type {HTMLElement} */ (document.getElementById("totalCreditsValue")),
   howToPlayPanel: /** @type {HTMLElement} */ (document.getElementById("howToPlayPanel")),
   creditDock: /** @type {HTMLElement|null} */ (document.getElementById("creditDock")),
   toggleHowToBtn: /** @type {HTMLButtonElement|null} */ (document.getElementById("toggleHowToBtn"))
@@ -127,8 +132,9 @@ function setChartHidden(hidden) {
 }
 
 function updateHud() {
-  const target = Math.max(0, Math.floor(state.credits));
-  animateCreditsTo(target);
+  const credits = Math.max(0, Math.floor(state.credits));
+  animateCreditsTo(credits);
+  updateGoalHud(credits);
 }
 
 let creditsDisplayValue = Math.max(0, Math.floor(state.credits));
@@ -141,7 +147,7 @@ function setCreditsInstant(n) {
   creditsAnimRaf = null;
   creditsAnimTo = v;
   creditsDisplayValue = v;
-  ui.totalScoreBig.textContent = v.toLocaleString();
+  ui.totalCreditsValue.textContent = v.toLocaleString();
 }
 
 /**
@@ -150,10 +156,10 @@ function setCreditsInstant(n) {
  */
 function animateCreditsTo(to) {
   // If this is the first render, snap.
-  if (!ui.totalScoreBig.textContent || ui.totalScoreBig.textContent.trim() === "0") {
+  if (!ui.totalCreditsValue.textContent || ui.totalCreditsValue.textContent.trim() === "0") {
     creditsDisplayValue = to;
     creditsAnimTo = to;
-    ui.totalScoreBig.textContent = to.toLocaleString();
+    ui.totalCreditsValue.textContent = to.toLocaleString();
     return;
   }
 
@@ -170,16 +176,52 @@ function animateCreditsTo(to) {
     const e = 1 - Math.pow(1 - p, 2.2);
     const v = Math.floor(from + (currentTo - from) * e);
     creditsDisplayValue = v;
-    ui.totalScoreBig.textContent = v.toLocaleString();
+    ui.totalCreditsValue.textContent = v.toLocaleString();
     if (p < 1) creditsAnimRaf = requestAnimationFrame(tick);
     else {
       creditsAnimRaf = null;
       creditsDisplayValue = currentTo;
-      ui.totalScoreBig.textContent = currentTo.toLocaleString();
+      ui.totalCreditsValue.textContent = currentTo.toLocaleString();
     }
   };
 
   creditsAnimRaf = requestAnimationFrame(tick);
+}
+
+let goalIndex = 1;
+let goalTarget = 1000;
+let hasWon = false;
+
+function updateGoalHud(credits) {
+  // Advance goals: 1k, 2k, 4k, 8k, 16k (up through Goal 5).
+  while (goalIndex < 5 && credits >= goalTarget) {
+    const completed = goalIndex;
+    sfx.goalReached(completed);
+    goalIndex += 1;
+    goalTarget *= 2;
+  }
+
+  // Win state: reaching/passing Goal 5 target.
+  if (!hasWon && goalIndex === 5 && credits >= goalTarget) {
+    hasWon = true;
+    sfx.youWin();
+    showWinBurst();
+  }
+
+  if (ui.goalIndex) ui.goalIndex.textContent = String(goalIndex);
+  if (ui.goalCurrent) ui.goalCurrent.textContent = credits.toLocaleString();
+  if (ui.goalTarget) ui.goalTarget.textContent = goalTarget.toLocaleString();
+  if (ui.goalFill) {
+    const p = Math.max(0, Math.min(1, credits / goalTarget));
+    ui.goalFill.style.width = `${Math.round(p * 1000) / 10}%`;
+  }
+  if (ui.goalBar) {
+    const track = ui.goalBar.querySelector(".goalBlock__track");
+    if (track) {
+      track.setAttribute("aria-valuemax", String(goalTarget));
+      track.setAttribute("aria-valuenow", String(Math.max(0, Math.min(goalTarget, credits))));
+    }
+  }
 }
 
 function rerender() {
@@ -297,6 +339,9 @@ ui.newGameBtn.addEventListener("click", () => {
   successfulMoves = 0;
   ui.runEndModal.setAttribute("hidden", "");
   newGame(state);
+  goalIndex = 1;
+  goalTarget = 1000;
+  hasWon = false;
   // Keep main/gameState.js in sync for the starting bankroll.
   state.credits = STARTING_POINTS;
   showToast(ui.toast, "New deal");
@@ -314,6 +359,9 @@ ui.restartBtn.addEventListener("click", () => {
   successfulMoves = 0;
   ui.runEndModal.setAttribute("hidden", "");
   newGame(state);
+  goalIndex = 1;
+  goalTarget = 1000;
+  hasWon = false;
   state.credits = STARTING_POINTS;
   rerender();
   showCenterTip("Swap any 2 cards to make vertical or horizontal poker hands");
@@ -697,6 +745,24 @@ function dismissCenterTip() {
   host.__centerTipEl = null;
   n.classList.add("is-fading");
   setTimeout(() => n.remove(), 260);
+}
+
+function showWinBurst() {
+  const host = ui.board.parentElement;
+  if (!host) return;
+  const rect = ui.board.getBoundingClientRect();
+  const x = rect.left + rect.width / 2;
+  const y = rect.top + rect.height / 2;
+
+  const n = document.createElement("div");
+  n.className = "handBurst handBurst--royal";
+  n.style.left = `${x}px`;
+  n.style.top = `${y}px`;
+  n.innerHTML = `<div class="handBurst__label" style="font-size:46px">YOU WIN!</div><div class="handBurst__credits">Goal 5 complete</div>`;
+  host.append(n);
+  requestAnimationFrame(() => n.classList.add("is-showing"));
+  setTimeout(() => n.classList.add("is-fading"), 1700);
+  setTimeout(() => n.remove(), 1980);
 }
 
 function showBigWin(amount) {
@@ -1208,7 +1274,7 @@ async function resolveCascades() {
   }
 
   state.comboStep = 0;
-  if (gainedTotal > 0 && gainedTotal >= 1000) showBigWin(gainedTotal);
+  if (gainedTotal > 0 && gainedTotal >= 500) showBigWin(gainedTotal);
 }
 
 syncMobileViewportClass();

@@ -154,6 +154,21 @@ export const sfx = {
     setTimeout(() => playNoise({ dur: 0.06, highpassHz: 1000 }), 40);
   },
 
+  goalReached(goalIdx = 1) {
+    // Bright, satisfying "checkpoint" ping.
+    const g = Math.max(1, Math.min(5, Math.floor(goalIdx)));
+    const base = 760 + g * 70;
+    playMetal({ freq: base, dur: 0.12, strength: 0.9 });
+    setTimeout(() => playTone({ freq: base * 1.25, dur: 0.07, type: "sine", sweepTo: base * 1.55 }), 70);
+  },
+
+  youWin() {
+    // Short celebratory arpeggio.
+    playMetal({ freq: 980, dur: 0.16, strength: 1.1 });
+    setTimeout(() => playMetal({ freq: 1320, dur: 0.14, strength: 1.05 }), 90);
+    setTimeout(() => playTone({ freq: 1760, dur: 0.12, type: "sine", sweepTo: 2200 }), 170);
+  },
+
   hintPurchase() {
     // Short "purchase" chirp: bright + a little metallic tail.
     playTone({ freq: 980, dur: 0.045, type: "triangle", sweepTo: 1320 });
