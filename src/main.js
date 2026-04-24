@@ -62,7 +62,8 @@ const HINT_COST_BASE = 300;
 
 const rewards = {
   randomHints: false, // selected: Random Hints
-  comboMultiplier: false, // Goal 2
+  /** Times Combo Bonus picked; each adds +25% to cascade combo line scores. */
+  comboBonusStacks: 0,
   jokerWildcard: false, // Goal 3
   diagonalsScored: false, // Goal 4
   extraJoker: false // Goal 5
@@ -335,7 +336,7 @@ function rewardNameForGoal(g) {
     case 1:
       return "Random Hints";
     case 2:
-      return "2X Combos";
+      return "Combo Bonus";
     case 3:
       return "Joker Card";
     case 4:
@@ -479,7 +480,7 @@ ui.newGameBtn.addEventListener("click", () => {
   randomHintChance = 0;
   lastPickedRewardName = "____";
   jokerCount = 0;
-  rewards.comboMultiplier = false;
+  rewards.comboBonusStacks = 0;
   rewards.jokerWildcard = false;
   rewards.diagonalsScored = false;
   rewards.extraJoker = false;
@@ -511,7 +512,7 @@ ui.restartBtn.addEventListener("click", () => {
   randomHintChance = 0;
   lastPickedRewardName = "____";
   jokerCount = 0;
-  rewards.comboMultiplier = false;
+  rewards.comboBonusStacks = 0;
   rewards.jokerWildcard = false;
   rewards.diagonalsScored = false;
   rewards.extraJoker = false;
@@ -966,15 +967,15 @@ const REWARD_DEFS = /** @type {const} */ ([
     stack: { kind: "stackable" }
   },
   {
-    id: "combos2x",
-    name: "2X Combos",
-    desc: "Cascade combos score 2x",
-    stack: { kind: "unique" }
+    id: "comboBonus",
+    name: "Combo Bonus",
+    desc: "Cascade combos are worth 25% more (Stackable)",
+    stack: { kind: "stackable" }
   },
   {
     id: "jokerCard",
     name: "Joker Card",
-    desc: "Counts as any card",
+    desc: "Counts as any card — deck limit 2 Jokers",
     stack: { kind: "stackable", max: 2 }
   },
   {
@@ -986,7 +987,6 @@ const REWARD_DEFS = /** @type {const} */ ([
 ]);
 
 function canOfferReward(id) {
-  if (id === "combos2x") return !rewards.comboMultiplier;
   if (id === "diagonals") return !rewards.diagonalsScored;
   if (id === "jokerCard") return jokerCount < 2;
   return true;
@@ -1001,10 +1001,15 @@ function applyReward(id) {
     enqueueRewardBurst("Random Hints", `Chance: ${Math.round(randomHintChance * 100)}%`);
     return;
   }
-  if (id === "combos2x") {
-    rewards.comboMultiplier = true;
-    lastPickedRewardName = "2X Combos";
-    enqueueRewardBurst("2X Combos", "Cascade combos score 2x");
+  if (id === "comboBonus") {
+    rewards.comboBonusStacks += 1;
+    lastPickedRewardName = "Combo Bonus";
+    const pct = 25 * rewards.comboBonusStacks;
+    const stacks = rewards.comboBonusStacks;
+    enqueueRewardBurst(
+      "Combo Bonus",
+      `+${pct}% on cascade lines (${stacks} stack${stacks === 1 ? "" : "s"})`
+    );
     return;
   }
   if (id === "jokerCard") {
@@ -1053,7 +1058,9 @@ function pickRewardOptions3() {
  */
 function rewardStackTagHtml(o) {
   const stackable = o.stack.kind === "stackable";
-  const label = stackable ? "Stackable" : "One-time";
+  const maxSuffix =
+    stackable && "max" in o.stack && o.stack.max != null ? ` · max ${o.stack.max}` : "";
+  const label = stackable ? `Stackable${maxSuffix}` : "One-time";
   const mod = stackable ? "rewardPick__stackTag--stackable" : "rewardPick__stackTag--once";
   return `<span class="rewardPick__stackTag ${mod}">${label}</span>`;
 }
@@ -1624,7 +1631,8 @@ async function resolveCascades() {
         if (card) pipSum += cardScoreValue(card);
       }
       const lineScore = pipSum * hm;
-      const comboMult = rewards.comboMultiplier && state.comboStep > 1 ? 2 : 1;
+      const comboMult =
+        rewards.comboBonusStacks > 0 && state.comboStep > 1 ? 1 + 0.25 * rewards.comboBonusStacks : 1;
       const gained = Math.floor(lineScore * comboMult);
       const handBurstEl = showHandBurst({ label: line.label, type: line.type, credits: gained });
       // Ensure the line highlight is visible before the sequential grow starts.
