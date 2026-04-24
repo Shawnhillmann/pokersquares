@@ -242,7 +242,7 @@ function updateGoalHud(credits) {
   if (!hasWon && goalIndex === 5 && credits >= goalTarget) {
     hasWon = true;
     sfx.youWin();
-    showWinBurst();
+    pendingWinModal = true;
     bumpGoalCelebration(true);
     unlockRewardForGoal(5);
     goalIndex = 6;
@@ -250,7 +250,7 @@ function updateGoalHud(credits) {
   }
 
   if (ui.goalTarget) {
-    ui.goalTarget.textContent = goalIndex >= 6 ? "Highest" : goalTarget.toLocaleString();
+    ui.goalTarget.textContent = goalIndex >= 6 ? "High Score" : goalTarget.toLocaleString();
   }
   updateGoalText(creditsDisplayValue);
   updateRewardLabel();
@@ -322,6 +322,21 @@ function unlockRewardForGoal(g) {
     // Add a second Joker to the cycling deck.
     state.deck?.addJoker?.();
   }
+  // Reward popup for clarity.
+  const name = rewardNameForGoal(g);
+  const desc =
+    g === 1
+      ? "Hints cost less"
+      : g === 2
+        ? "Cascade combos score 2x"
+        : g === 3
+          ? "Counts as any card"
+          : g === 4
+            ? "Diagonal hands score too"
+            : g === 5
+              ? "Another Joker added"
+              : "";
+  if (name && desc) enqueueRewardBurst(name, desc);
   // Update UI immediately (hint cost, reward label).
   ui.hintBtn.textContent = `Hint - ${hintCost()} Credits`;
   updateRewardLabel();
@@ -483,6 +498,7 @@ ui.restartBtn.addEventListener("click", () => {
 
 ui.hintBtn.addEventListener("click", async () => {
   if (state.busy) return;
+  dismissCenterTip();
 
   // Hints cost credits (discourage spam).
   state.credits = clampNonNegative(state.credits - hintCost());
@@ -894,6 +910,8 @@ function showCenterTip(text) {
   n.innerHTML = `<div class="handBurst__label">${text}</div>`;
   host.append(n);
   requestAnimationFrame(() => n.classList.add("is-showing"));
+  // Allow tap/click to dismiss.
+  n.addEventListener("pointerdown", () => dismissCenterTip(), { passive: true });
   // Persist until first interaction with the board.
   // @ts-ignore
   host.__centerTipEl = n;
@@ -911,22 +929,78 @@ function dismissCenterTip() {
   setTimeout(() => n.remove(), 260);
 }
 
-function showWinBurst() {
+let pendingWinModal = false;
+
+/** @type {{ title:string, desc:string }[]} */
+const rewardBurstQueue = [];
+let rewardBurstShowing = false;
+
+async function playRewardBurst({ title, desc }) {
   const host = ui.board.parentElement;
   if (!host) return;
   const rect = ui.board.getBoundingClientRect();
   const x = rect.left + rect.width / 2;
-  const y = rect.top + rect.height / 2;
+  // Higher than hand bursts to avoid overlap.
+  const y = rect.top + rect.height * 0.24;
 
   const n = document.createElement("div");
-  n.className = "handBurst handBurst--royal";
+  n.className = "handBurst handBurst--reward";
   n.style.left = `${x}px`;
   n.style.top = `${y}px`;
-  n.innerHTML = `<div class="handBurst__label" style="font-size:46px">YOU WIN!</div><div class="handBurst__credits">Goal 5 complete</div>`;
+  n.innerHTML = `<div class="handBurst__label">${title}</div><div class="handBurst__credits">${desc}</div>`;
   host.append(n);
   requestAnimationFrame(() => n.classList.add("is-showing"));
-  setTimeout(() => n.classList.add("is-fading"), 1700);
-  setTimeout(() => n.remove(), 1980);
+  const showMs = 2000;
+  await sleep(showMs - 220);
+  n.classList.add("is-fading");
+  await sleep(260);
+  n.remove();
+}
+
+function enqueueRewardBurst(title, desc) {
+  rewardBurstQueue.push({ title, desc });
+  if (rewardBurstShowing) return;
+  rewardBurstShowing = true;
+  (async () => {
+    try {
+      while (rewardBurstQueue.length) {
+        const next = rewardBurstQueue.shift();
+        if (!next) break;
+        // Don't show reward bursts while the win overlay is active; queue will resume after.
+        await playRewardBurst(next);
+      }
+    } finally {
+      rewardBurstShowing = false;
+    }
+  })();
+}
+
+function showWinModal() {
+  return new Promise((resolve) => {
+    const overlay = document.createElement("div");
+    overlay.className = "winOverlay";
+    overlay.innerHTML = `
+      <div class="winOverlay__backdrop"></div>
+      <div class="winOverlay__card" role="dialog" aria-modal="true">
+        <div class="winOverlay__title">YOU WIN!</div>
+        <div class="winOverlay__text">Continue playing in endless mode to reach a new high score!</div>
+        <button class="btn winOverlay__btn" type="button">Continue</button>
+      </div>
+    `;
+    document.body.append(overlay);
+    const btn = overlay.querySelector(".winOverlay__btn");
+    const finish = () => {
+      overlay.remove();
+      resolve(null);
+    };
+    if (btn) btn.addEventListener("click", finish);
+    overlay.addEventListener("click", (ev) => {
+      // Click outside to continue
+      if (ev.target && (ev.target.classList?.contains("winOverlay") || ev.target.classList?.contains("winOverlay__backdrop"))) {
+        finish();
+      }
+    });
+  });
 }
 
 function showBigWin(amount) {
@@ -1371,6 +1445,14 @@ async function resolveCascades() {
 
       sfx.scoreHand(line.type, state.comboStep);
       rerender();
+
+      // If the win condition was reached mid-combo, pause here until dismissed.
+      if (pendingWinModal) {
+        pendingWinModal = false;
+        await showWinModal();
+        // Re-render in case layout changed while modal was open.
+        rerender();
+      }
 
       viewFx.dim = null;
 

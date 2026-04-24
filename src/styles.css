@@ -1302,6 +1302,62 @@ html.is-mobile img.cardPip--faceArt {
   text-shadow: 0 0 28px rgba(247, 215, 116, 0.26), 0 22px 60px rgba(0, 0, 0, 0.68);
 }
 
+.handBurst--reward .handBurst__label {
+  color: rgba(114, 247, 195, 0.98);
+  text-shadow: 0 0 20px rgba(114, 247, 195, 0.18), 0 18px 44px rgba(0, 0, 0, 0.62);
+}
+
+.handBurst--reward .handBurst__credits {
+  color: rgba(255, 255, 255, 0.9);
+  font-weight: 750;
+}
+
+.winOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+}
+
+.winOverlay__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(6px);
+}
+
+.winOverlay__card {
+  position: relative;
+  width: min(92vw, 520px);
+  border-radius: 16px;
+  border: 1px solid rgba(247, 215, 116, 0.28);
+  background: radial-gradient(900px 500px at 50% 20%, rgba(247, 215, 116, 0.14), transparent 55%), var(--felt);
+  box-shadow: var(--shadow);
+  padding: 18px 16px;
+  text-align: center;
+}
+
+.winOverlay__title {
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(247, 215, 116, 0.98);
+  text-shadow: 0 0 22px rgba(247, 215, 116, 0.18), 0 18px 44px rgba(0, 0, 0, 0.62);
+  font-size: 34px;
+}
+
+.winOverlay__text {
+  margin-top: 10px;
+  color: rgba(255, 255, 255, 0.85);
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.winOverlay__btn {
+  margin-top: 14px;
+}
+
 .royalSpark {
   position: fixed;
   z-index: 11;
