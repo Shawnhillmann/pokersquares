@@ -798,6 +798,9 @@ html.is-mobile .cardFace--aceArt img.cardPip--faceArt {
 /* Mobile: tighter/smaller ACE label */
 html.is-mobile .cardFace--aceArt .cardCorner {
   top: 6px;
+  left: 0;
+  width: 100%;
+  text-align: center;
 }
 
 html.is-mobile .cardFace--aceArt .cardRank {
@@ -991,8 +994,8 @@ html.is-mobile img.cardPip--faceArt {
 
 .miniCard--aceArt .miniCard__pipArt,
 .miniCard--jokerArt .miniCard__pipArt {
-  width: 80%;
-  height: 80%;
+  width: 86%;
+  height: 86%;
 }
 
 .miniCard--jokerArt .miniCard__corner {
