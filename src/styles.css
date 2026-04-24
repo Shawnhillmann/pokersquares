@@ -740,12 +740,12 @@ img.cardPip--faceArt {
 
 .cardFace--jokerArt img.cardPip--faceArt {
   left: 50%;
-  top: 62%;
+  top: 58%;
   right: auto;
   bottom: auto;
   transform: translate(-50%, -50%);
-  width: 78%;
-  height: 78%;
+  width: 74%;
+  height: 74%;
   object-position: center center;
 }
 
@@ -775,8 +775,22 @@ img.cardPip--faceArt {
 
 /* Mobile: shrink ace SVG art ~20% */
 html.is-mobile .cardFace--aceArt img.cardPip--faceArt {
-  width: 60%;
-  height: 60%;
+  width: 51%;
+  height: 51%;
+}
+
+/* Ace label: small, centered "ACE" */
+.cardFace--aceArt .cardCorner {
+  left: 0;
+  top: 8px;
+  width: 100%;
+  text-align: center;
+}
+
+.cardFace--aceArt .cardRank {
+  font-size: 14px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 /* Mobile: avoid any bottom-right “spill” artifacts */

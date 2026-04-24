@@ -291,11 +291,11 @@ function rewardNameForGoal(g) {
     case 1:
       return "Cheaper Hints";
     case 2:
-      return "x1.5 Combos";
+      return "2X Combos";
     case 3:
       return "Joker Card";
     case 4:
-      return "Diagonals Scored";
+      return "Diagonals";
     case 5:
       return "Joker Card";
     default:
@@ -1309,7 +1309,7 @@ async function resolveCascades() {
         if (card) pipSum += cardScoreValue(card);
       }
       const lineScore = pipSum * hm;
-      const comboMult = rewards.comboMultiplier && state.comboStep > 1 ? 1.5 : 1;
+      const comboMult = rewards.comboMultiplier && state.comboStep > 1 ? 2 : 1;
       const gained = Math.floor(lineScore * comboMult);
       const handBurstEl = showHandBurst({ label: line.label, type: line.type, credits: gained });
       // Ensure the line highlight is visible before the sequential grow starts.

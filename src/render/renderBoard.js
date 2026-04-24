@@ -159,11 +159,11 @@ export function renderBoard(root, board, view, onCellClick) {
         face.className = "cardFace";
         const rankText = String(card.rank);
         const suit = String(card.suit);
+        const isAce = rankText === "A" && ["S", "H", "D", "C"].includes(suit);
         const isJoker = rankText === "JOKER";
         // Joker should be image-only (no corner label).
-        rankEl.textContent = isJoker ? "" : rankText;
+        rankEl.textContent = isJoker ? "" : isAce ? "ACE" : rankText;
         rankEl.classList.toggle("cardRank--ten", rankText === "10");
-        const isAce = rankText === "A" && ["S", "H", "D", "C"].includes(suit);
         const isJokerArt = isJoker;
         const isArt =
           (rankText === "J" || rankText === "Q" || rankText === "K" || isAce || isJokerArt) &&
