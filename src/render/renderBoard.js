@@ -159,20 +159,19 @@ export function renderBoard(root, board, view, onCellClick) {
         face.className = "cardFace";
         const rankText = String(card.rank);
         const suit = String(card.suit);
-        const isAce = rankText === "A" && ["S", "H", "D", "C"].includes(suit);
         const isJoker = rankText === "JOKER";
         // Joker should be image-only (no corner label).
-        rankEl.textContent = isJoker ? "" : isAce ? "ACE" : rankText;
+        rankEl.textContent = isJoker ? "" : rankText;
         rankEl.classList.toggle("cardRank--ten", rankText === "10");
         const isJokerArt = isJoker;
         const isArt =
-          (rankText === "J" || rankText === "Q" || rankText === "K" || isAce || isJokerArt) &&
+          (rankText === "J" || rankText === "Q" || rankText === "K" || isJokerArt) &&
           (isJokerArt || ["S", "H", "D", "C"].includes(suit));
         if (isArt) {
           cornerSuit.textContent =
             isJokerArt ? "" : CORNER_SUIT_RANKS.has(rankText) ? suitSymbol(card.suit) : "";
           face.classList.add(
-            isJokerArt ? "cardFace--jokerArt" : rankText === "A" ? "cardFace--aceArt" : "cardFace--faceArt"
+            isJokerArt ? "cardFace--jokerArt" : "cardFace--faceArt"
           );
           const nextSrc = isJokerArt ? `/images/faces/Joker.svg` : `/images/faces/${rankText}${String(card.suit)}.svg`;
           // Only touch src if it actually changes (avoids iOS SVG repaint).

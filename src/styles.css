@@ -676,9 +676,7 @@ html.is-mobile .cell.is-swap-success {
   display: block;
 }
 
-.cardFace--aceArt .cardCornerSuit {
-  display: none;
-}
+/* (Aces are standard cards; no ace art mode) */
 
 .cardRank.cardRank--ten {
   font-size: 23px;
@@ -716,11 +714,6 @@ img.cardPip--faceArt {
   overflow: hidden;
 }
 
-/* Ace art: no corner suit, center the SVG */
-.cardFace.cardFace--aceArt {
-  overflow: hidden;
-}
-
 /* Joker art: centered SVG + centered "Joker" label */
 .cardFace.cardFace--jokerArt {
   overflow: hidden;
@@ -749,10 +742,6 @@ img.cardPip--faceArt {
   object-position: center center;
 }
 
-html.is-mobile .cardFace.cardFace--aceArt {
-  overflow: hidden;
-}
-
 img.cardPip--faceArt {
   left: auto;
   top: auto;
@@ -762,52 +751,7 @@ img.cardPip--faceArt {
   transform: none;
 }
 
-.cardFace--aceArt img.cardPip--faceArt {
-  left: 50%;
-  top: 58%;
-  right: auto;
-  bottom: auto;
-  transform: translate(-50%, -50%);
-  width: 75%;
-  height: 75%;
-  object-position: center center;
-}
-
-/* Mobile: shrink ace SVG art ~20% */
-html.is-mobile .cardFace--aceArt img.cardPip--faceArt {
-  width: 51%;
-  height: 51%;
-}
-
-/* Ace label: small, centered "ACE" */
-.cardFace--aceArt .cardCorner {
-  left: 0;
-  top: 7px;
-  width: 100%;
-  text-align: center;
-}
-
-.cardFace--aceArt .cardRank {
-  font-size: 16px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  line-height: 1;
-  opacity: 0.92;
-}
-
-/* Mobile: tighter/smaller ACE label */
-html.is-mobile .cardFace--aceArt .cardCorner {
-  top: 6px;
-  left: 0;
-  width: 100%;
-  text-align: center;
-}
-
-html.is-mobile .cardFace--aceArt .cardRank {
-  font-size: 12px;
-  letter-spacing: 0.04em;
-  opacity: 0.88;
-}
+/* Ace art styles removed */
 
 /* Mobile: avoid any bottom-right “spill” artifacts */
 html.is-mobile img.cardPip--faceArt {
@@ -992,7 +936,6 @@ html.is-mobile img.cardPip--faceArt {
   object-position: center center;
 }
 
-.miniCard--aceArt .miniCard__pipArt,
 .miniCard--jokerArt .miniCard__pipArt {
   width: 86%;
   height: 86%;
