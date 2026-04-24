@@ -28,6 +28,8 @@ const ui = {
   runEndModal: /** @type {HTMLElement} */ (document.getElementById("runEndModal")),
   runEndReason: /** @type {HTMLElement|null} */ (document.getElementById("runEndReason")),
   finalScoreValue: /** @type {HTMLElement} */ (document.getElementById("finalScoreValue")),
+  finalPeakCreditsValue: /** @type {HTMLElement|null} */ (document.getElementById("finalPeakCreditsValue")),
+  finalPeakGoalValue: /** @type {HTMLElement|null} */ (document.getElementById("finalPeakGoalValue")),
   finalMovesValue: /** @type {HTMLElement} */ (document.getElementById("finalMovesValue")),
   restartBtn: /** @type {HTMLButtonElement} */ (document.getElementById("restartBtn")),
   goalBar: /** @type {HTMLElement|null} */ (document.getElementById("goalBar")),
@@ -122,6 +124,10 @@ const RUN_END_COPY = /** @type {const} */ ({
 function endRun(kind) {
   state.busy = true;
   state.selected = null;
+  if (ui.finalPeakCreditsValue) ui.finalPeakCreditsValue.textContent = peakCreditsThisRun.toLocaleString();
+  if (ui.finalPeakGoalValue) {
+    ui.finalPeakGoalValue.textContent = peakGoalClearedThisRun <= 0 ? "—" : `Goal ${peakGoalClearedThisRun}`;
+  }
   ui.finalScoreValue.textContent = state.credits.toLocaleString();
   ui.finalMovesValue.textContent = successfulMoves.toLocaleString();
   const line = RUN_END_COPY[kind];
@@ -185,8 +191,14 @@ function setChartHidden(hidden) {
   }
 }
 
+/** Best credits reached this run (authoritative bankroll, not mid-animation display). */
+let peakCreditsThisRun = 0;
+/** Highest numbered goal cleared this run (1–5); 0 if none yet. */
+let peakGoalClearedThisRun = 0;
+
 function updateHud() {
   const credits = Math.max(0, Math.floor(state.credits));
+  peakCreditsThisRun = Math.max(peakCreditsThisRun, credits);
   updateGoalHud(credits);
   ui.hintBtn.textContent = `Hint - ${hintCost()} Credits`;
   const sc = swapCost().toLocaleString();
@@ -256,6 +268,7 @@ function updateGoalHud(credits) {
   // Advance goals: 1k, 2k, 4k, 8k, 16k (up through Goal 5).
   while (goalIndex < 5 && credits >= goalTarget) {
     const completed = goalIndex;
+    peakGoalClearedThisRun = Math.max(peakGoalClearedThisRun, completed);
     sfx.goalReached(completed);
     bumpGoalCelebration();
     pendingRewardPicks += 1;
@@ -267,6 +280,7 @@ function updateGoalHud(credits) {
   // Win state: reaching/passing Goal 5 target.
   if (!hasWon && goalIndex === 5 && credits >= goalTarget) {
     hasWon = true;
+    peakGoalClearedThisRun = Math.max(peakGoalClearedThisRun, 5);
     sfx.youWin();
     pendingWinModal = true;
     bumpGoalCelebration(true);
@@ -468,8 +482,10 @@ ui.newGameBtn.addEventListener("click", () => {
   rewards.extraJoker = false;
   pendingRewardPicks = 0;
   swapCostTier = 0;
+  peakGoalClearedThisRun = 0;
   // Keep main/gameState.js in sync for the starting bankroll.
   state.credits = STARTING_POINTS;
+  peakCreditsThisRun = STARTING_POINTS;
   showToast(ui.toast, "New deal");
   rerender();
   showCenterTip("Swap any 2 cards to make vertical or horizontal poker hands");
@@ -498,7 +514,9 @@ ui.restartBtn.addEventListener("click", () => {
   rewards.extraJoker = false;
   pendingRewardPicks = 0;
   swapCostTier = 0;
+  peakGoalClearedThisRun = 0;
   state.credits = STARTING_POINTS;
+  peakCreditsThisRun = STARTING_POINTS;
   rerender();
   showCenterTip("Swap any 2 cards to make vertical or horizontal poker hands");
   checkCantAffordSwapAndEnd();
