@@ -782,15 +782,28 @@ html.is-mobile .cardFace--aceArt img.cardPip--faceArt {
 /* Ace label: small, centered "ACE" */
 .cardFace--aceArt .cardCorner {
   left: 0;
-  top: 8px;
+  top: 7px;
   width: 100%;
   text-align: center;
 }
 
 .cardFace--aceArt .cardRank {
-  font-size: 14px;
-  letter-spacing: 0.08em;
+  font-size: 16px;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
+  line-height: 1;
+  opacity: 0.92;
+}
+
+/* Mobile: tighter/smaller ACE label */
+html.is-mobile .cardFace--aceArt .cardCorner {
+  top: 6px;
+}
+
+html.is-mobile .cardFace--aceArt .cardRank {
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  opacity: 0.88;
 }
 
 /* Mobile: avoid any bottom-right “spill” artifacts */
