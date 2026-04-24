@@ -773,6 +773,12 @@ img.cardPip--faceArt {
   object-position: center center;
 }
 
+/* Mobile: shrink ace SVG art ~20% */
+html.is-mobile .cardFace--aceArt img.cardPip--faceArt {
+  width: 60%;
+  height: 60%;
+}
+
 /* Mobile: avoid any bottom-right “spill” artifacts */
 html.is-mobile img.cardPip--faceArt {
   right: 0;

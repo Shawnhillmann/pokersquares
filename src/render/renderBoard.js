@@ -160,7 +160,8 @@ export function renderBoard(root, board, view, onCellClick) {
         const rankText = String(card.rank);
         const suit = String(card.suit);
         const isJoker = rankText === "JOKER";
-        rankEl.textContent = isJoker ? "Joker" : rankText;
+        // Joker should be image-only (no corner label).
+        rankEl.textContent = isJoker ? "" : rankText;
         rankEl.classList.toggle("cardRank--ten", rankText === "10");
         const isAce = rankText === "A" && ["S", "H", "D", "C"].includes(suit);
         const isJokerArt = isJoker;

@@ -291,13 +291,13 @@ function rewardNameForGoal(g) {
     case 1:
       return "Cheaper Hints";
     case 2:
-      return "Combo Multiplier";
+      return "x1.5 Combos";
     case 3:
-      return "Joker Wildcard";
+      return "Joker Card";
     case 4:
       return "Diagonals Scored";
     case 5:
-      return "Joker Wildcard";
+      return "Joker Card";
     default:
       return "Endless";
   }
