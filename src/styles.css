@@ -1303,12 +1303,12 @@ html.is-mobile img.cardPip--faceArt {
 }
 
 .handBurst--reward .handBurst__label {
-  color: rgba(114, 247, 195, 0.98);
-  text-shadow: 0 0 20px rgba(114, 247, 195, 0.18), 0 18px 44px rgba(0, 0, 0, 0.62);
+  color: rgba(247, 215, 116, 0.98);
+  text-shadow: 0 0 22px rgba(247, 215, 116, 0.2), 0 18px 44px rgba(0, 0, 0, 0.62);
 }
 
 .handBurst--reward .handBurst__credits {
-  color: rgba(255, 255, 255, 0.9);
+  color: rgba(247, 215, 116, 0.92);
   font-weight: 750;
 }
 

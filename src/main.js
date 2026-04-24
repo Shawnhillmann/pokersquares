@@ -53,7 +53,7 @@ const SWAP_COST = 100;
 const HINT_COST = 300;
 
 const rewards = {
-  cheaperHints: false, // Goal 1
+  randomHints: false, // Goal 1
   comboMultiplier: false, // Goal 2
   jokerWildcard: false, // Goal 3
   diagonalsScored: false, // Goal 4
@@ -61,7 +61,7 @@ const rewards = {
 };
 
 function hintCost() {
-  return rewards.cheaperHints ? 250 : HINT_COST;
+  return HINT_COST;
 }
 
 function cardScoreValue(card) {
@@ -288,7 +288,7 @@ function bumpGoalCelebration(isWin = false) {
 function rewardNameForGoal(g) {
   switch (g) {
     case 1:
-      return "Cheaper Hints";
+      return "Random Hints";
     case 2:
       return "2X Combos";
     case 3:
@@ -309,7 +309,7 @@ function updateRewardLabel() {
 }
 
 function unlockRewardForGoal(g) {
-  if (g === 1) rewards.cheaperHints = true;
+  if (g === 1) rewards.randomHints = true;
   if (g === 2) rewards.comboMultiplier = true;
   if (g === 3 && !rewards.jokerWildcard) {
     rewards.jokerWildcard = true;
@@ -326,7 +326,7 @@ function unlockRewardForGoal(g) {
   const name = rewardNameForGoal(g);
   const desc =
     g === 1
-      ? "Hints cost less"
+      ? "Hints may appear randomly"
       : g === 2
         ? "Cascade combos score 2x"
         : g === 3
@@ -460,7 +460,7 @@ ui.newGameBtn.addEventListener("click", () => {
   goalIndex = 1;
   goalTarget = 1000;
   hasWon = false;
-  rewards.cheaperHints = false;
+  rewards.randomHints = false;
   rewards.comboMultiplier = false;
   rewards.jokerWildcard = false;
   rewards.diagonalsScored = false;
@@ -485,7 +485,7 @@ ui.restartBtn.addEventListener("click", () => {
   goalIndex = 1;
   goalTarget = 1000;
   hasWon = false;
-  rewards.cheaperHints = false;
+  rewards.randomHints = false;
   rewards.comboMultiplier = false;
   rewards.jokerWildcard = false;
   rewards.diagonalsScored = false;
@@ -515,13 +515,7 @@ ui.hintBtn.addEventListener("click", async () => {
     showToast(ui.toast, "No scoring hint found");
     return;
   }
-  viewFx.hint = new Set([`${move.a.r},${move.a.c}`, `${move.b.r},${move.b.c}`]);
-  rerender();
-  setTimeout(() => {
-    if (state.busy) return;
-    viewFx.hint = null;
-    rerender();
-  }, 1500);
+  showHintHighlightForMove(move, 1500);
 });
 
 ui.helpBtn.addEventListener("click", () => {
@@ -943,6 +937,9 @@ async function playRewardBurst({ title, desc }) {
   // Higher than hand bursts to avoid overlap.
   const y = rect.top + rect.height * 0.24;
 
+  // Gold particle pop on reward.
+  burstGoldWin(x, y, 0.85);
+
   const n = document.createElement("div");
   n.className = "handBurst handBurst--reward";
   n.style.left = `${x}px`;
@@ -950,7 +947,7 @@ async function playRewardBurst({ title, desc }) {
   n.innerHTML = `<div class="handBurst__label">${title}</div><div class="handBurst__credits">${desc}</div>`;
   host.append(n);
   requestAnimationFrame(() => n.classList.add("is-showing"));
-  const showMs = 2000;
+  const showMs = 3000;
   await sleep(showMs - 220);
   n.classList.add("is-fading");
   await sleep(260);
@@ -973,6 +970,29 @@ function enqueueRewardBurst(title, desc) {
       rewardBurstShowing = false;
     }
   })();
+}
+
+function showHintHighlightForMove(move, ms = 1500) {
+  viewFx.hint = new Set([`${move.a.r},${move.a.c}`, `${move.b.r},${move.b.c}`]);
+  rerender();
+  setTimeout(() => {
+    if (state.busy) return;
+    viewFx.hint = null;
+    rerender();
+  }, ms);
+}
+
+function maybeTriggerRandomHint() {
+  if (!rewards.randomHints) return;
+  if (state.busy) return;
+  // Disable during cascades/combos.
+  if (state.comboStep > 0) return;
+  if (viewFx.hint) return;
+  if (Math.random() >= 0.05) return;
+
+  const move = findBestScoringSwap(state.board);
+  if (!move) return;
+  showHintHighlightForMove(move, 1500);
 }
 
 function showWinModal() {
@@ -1385,6 +1405,7 @@ async function onCellClick(pos) {
   if (checkCantAffordSwapAndEnd()) return;
   state.busy = false;
   rerender();
+  maybeTriggerRandomHint();
 }
 
 async function resolveCascades() {
