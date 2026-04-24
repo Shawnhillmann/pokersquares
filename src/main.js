@@ -959,7 +959,7 @@ const REWARD_DEFS = /** @type {const} */ ([
   {
     id: "randomHints",
     name: "Random Hints",
-    desc: "Hints may appear randomly",
+    desc: "10% chance a free hint appears randomly",
     stack: { kind: "stackable" }
   },
   {
@@ -1158,7 +1158,7 @@ function maybeTriggerRandomHint() {
 
   const move = findBestScoringSwap(state.board);
   if (!move) return;
-  enqueueRewardBurst("Free Hint!", "A hint appeared");
+  enqueueRewardBurst("Free Hint!", `${Math.round(randomHintChance * 100)}% random hint chance`);
   showHintHighlightForMove(move);
 }
 
