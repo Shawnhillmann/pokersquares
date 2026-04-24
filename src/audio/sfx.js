@@ -127,6 +127,12 @@ function playNoise({ dur = 0.08, highpassHz = 600 } = {}) {
   src.stop(t + dur + 0.01);
 }
 
+function speedFromCombo(combo) {
+  const c = Math.max(1, Math.floor(combo || 1));
+  const speed = 1 + (c - 1) * 0.03;
+  return Math.min(2.2, speed);
+}
+
 export const sfx = {
   /**
    * Call once on the first user gesture (click) to unlock audio.
@@ -183,8 +189,9 @@ export const sfx = {
   cardFlipTick(i = 0, combo = 1) {
     const c = Math.min(8, Math.max(1, combo));
     const base = 860 + c * 18 + i * 10;
-    playNoise({ dur: 0.012, highpassHz: 2200 });
-    playTone({ freq: base, dur: 0.03, type: "triangle", sweepTo: base * 1.08 });
+    const sp = speedFromCombo(combo);
+    playNoise({ dur: 0.012 / sp, highpassHz: 2200 });
+    playTone({ freq: base, dur: 0.03 / sp, type: "triangle", sweepTo: base * 1.08 });
   },
 
   shuffle() {
@@ -196,13 +203,15 @@ export const sfx = {
   clearStep(combo) {
     // subtle ascending tick; scales slightly with combo
     const base = 520 + Math.min(6, combo) * 45;
-    playTone({ freq: base, dur: 0.06, type: "sine", sweepTo: base * 1.15 });
+    const sp = speedFromCombo(combo);
+    playTone({ freq: base, dur: 0.06 / sp, type: "sine", sweepTo: base * 1.15 });
   },
 
   scoreCoin(combo) {
     // Coin-ish chime layered on clearStep.
     const strength = 0.9 + Math.min(6, combo) * 0.08;
-    playNoise({ dur: 0.03, highpassHz: 1500 });
+    const sp = speedFromCombo(combo);
+    playNoise({ dur: 0.03 / sp, highpassHz: 1500 });
     playMetal({ freq: 880 + Math.min(6, combo) * 60, dur: 0.13, strength });
   },
 
@@ -214,46 +223,47 @@ export const sfx = {
   scoreHand(type, combo) {
     const c = Math.min(8, Math.max(1, combo));
     const strength = 0.85 + c * 0.06;
+    const sp = speedFromCombo(combo);
 
     // Small sparkle on every score
-    playNoise({ dur: 0.02, highpassHz: 1800 });
+    playNoise({ dur: 0.02 / sp, highpassHz: 1800 });
 
     switch (type) {
       case "TWO_PAIR": {
-        playMetal({ freq: 740, dur: 0.11, strength: 0.9 * strength });
-        setTimeout(() => playMetal({ freq: 980, dur: 0.095, strength: 0.75 * strength }), 55);
+        playMetal({ freq: 740, dur: 0.11 / sp, strength: 0.9 * strength });
+        setTimeout(() => playMetal({ freq: 980, dur: 0.095 / sp, strength: 0.75 * strength }), 55 / sp);
         break;
       }
       case "THREE_OF_A_KIND": {
-        playMetal({ freq: 820, dur: 0.12, strength });
-        setTimeout(() => playTone({ freq: 980, dur: 0.07, type: "sine", sweepTo: 1180 }), 55);
+        playMetal({ freq: 820, dur: 0.12 / sp, strength });
+        setTimeout(() => playTone({ freq: 980, dur: 0.07 / sp, type: "sine", sweepTo: 1180 }), 55 / sp);
         break;
       }
       case "STRAIGHT": {
-        playTone({ freq: 560, dur: 0.11, type: "triangle", sweepTo: 980 });
-        setTimeout(() => playTone({ freq: 980, dur: 0.08, type: "sine", sweepTo: 1320 }), 80);
+        playTone({ freq: 560, dur: 0.11 / sp, type: "triangle", sweepTo: 980 });
+        setTimeout(() => playTone({ freq: 980, dur: 0.08 / sp, type: "sine", sweepTo: 1320 }), 80 / sp);
         break;
       }
       case "FLUSH": {
-        playNoise({ dur: 0.06, highpassHz: 1200 });
-        playTone({ freq: 740, dur: 0.11, type: "sine", sweepTo: 860 });
+        playNoise({ dur: 0.06 / sp, highpassHz: 1200 });
+        playTone({ freq: 740, dur: 0.11 / sp, type: "sine", sweepTo: 860 });
         break;
       }
       case "FULL_HOUSE": {
-        playMetal({ freq: 660, dur: 0.14, strength });
-        setTimeout(() => playMetal({ freq: 880, dur: 0.12, strength: 0.9 * strength }), 70);
+        playMetal({ freq: 660, dur: 0.14 / sp, strength });
+        setTimeout(() => playMetal({ freq: 880, dur: 0.12 / sp, strength: 0.9 * strength }), 70 / sp);
         break;
       }
       case "FOUR_OF_A_KIND":
       case "STRAIGHT_FLUSH": {
-        playMetal({ freq: 980, dur: 0.15, strength: 1.2 * strength });
-        setTimeout(() => playTone({ freq: 1180, dur: 0.09, type: "sine", sweepTo: 1560 }), 70);
+        playMetal({ freq: 980, dur: 0.15 / sp, strength: 1.2 * strength });
+        setTimeout(() => playTone({ freq: 1180, dur: 0.09 / sp, type: "sine", sweepTo: 1560 }), 70 / sp);
         break;
       }
       case "ROYAL_FLUSH": {
-        playMetal({ freq: 1040, dur: 0.18, strength: 1.35 * strength });
-        setTimeout(() => playMetal({ freq: 1320, dur: 0.14, strength: 1.2 * strength }), 70);
-        setTimeout(() => playTone({ freq: 1760, dur: 0.12, type: "sine", sweepTo: 2200 }), 130);
+        playMetal({ freq: 1040, dur: 0.18 / sp, strength: 1.35 * strength });
+        setTimeout(() => playMetal({ freq: 1320, dur: 0.14 / sp, strength: 1.2 * strength }), 70 / sp);
+        setTimeout(() => playTone({ freq: 1760, dur: 0.12 / sp, type: "sine", sweepTo: 2200 }), 130 / sp);
         break;
       }
       default: {

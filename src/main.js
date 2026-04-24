@@ -10,6 +10,7 @@ import { renderBoard, renderScoredLines, showToast } from "./render/renderBoard.
 import { el, sleep } from "./render/dom.js";
 import { HAND_PRIORITY, HAND_TYPE } from "./poker/evaluationTypes.js";
 import { evaluateHand } from "./poker/evaluateHand.js";
+import { evaluateHandWild } from "./poker/evaluateHandWild.js";
 import { cardBaseValue, handMultiplier } from "./game/scoring.js";
 import { sfx } from "./audio/sfx.js";
 
@@ -30,11 +31,10 @@ const ui = {
   finalMovesValue: /** @type {HTMLElement} */ (document.getElementById("finalMovesValue")),
   restartBtn: /** @type {HTMLButtonElement} */ (document.getElementById("restartBtn")),
   goalBar: /** @type {HTMLElement|null} */ (document.getElementById("goalBar")),
-  goalIndex: /** @type {HTMLElement|null} */ (document.getElementById("goalIndex")),
   goalCurrent: /** @type {HTMLElement|null} */ (document.getElementById("goalCurrent")),
   goalTarget: /** @type {HTMLElement|null} */ (document.getElementById("goalTarget")),
   goalFill: /** @type {HTMLElement|null} */ (document.getElementById("goalFill")),
-  totalCreditsValue: /** @type {HTMLElement} */ (document.getElementById("totalCreditsValue")),
+  goalReward: /** @type {HTMLElement|null} */ (document.getElementById("goalReward")),
   howToPlayPanel: /** @type {HTMLElement} */ (document.getElementById("howToPlayPanel")),
   creditDock: /** @type {HTMLElement|null} */ (document.getElementById("creditDock")),
   toggleHowToBtn: /** @type {HTMLButtonElement|null} */ (document.getElementById("toggleHowToBtn"))
@@ -51,6 +51,45 @@ const SCORE_OPTS = { minType: HAND_TYPE.TWO_PAIR };
 const STARTING_POINTS = 500;
 const SWAP_COST = 100;
 const HINT_COST = 300;
+
+const rewards = {
+  cheaperHints: false, // Goal 1
+  comboMultiplier: false, // Goal 2
+  jokerWildcard: false, // Goal 3
+  diagonalsScored: false, // Goal 4
+  extraJoker: false // Goal 5
+};
+
+function hintCost() {
+  return rewards.cheaperHints ? 250 : HINT_COST;
+}
+
+function cardScoreValue(card) {
+  if (!card) return 0;
+  if (rewards.jokerWildcard && String(card.rank) === "JOKER") return 10;
+  return cardBaseValue(String(card.rank));
+}
+
+function scoringOpts() {
+  const useWildEval = rewards.jokerWildcard || rewards.extraJoker;
+  return {
+    ...SCORE_OPTS,
+    includeDiagonals: rewards.diagonalsScored,
+    evaluateHand: useWildEval
+      ? (cards) => evaluateHandWild(cards, { jokerWild: true })
+      : evaluateHand
+  };
+}
+
+function comboSpeed(comboStep) {
+  const step = Math.max(1, Math.floor(comboStep || 1));
+  const speed = 1 + (step - 1) * 0.03;
+  return Math.min(2.2, speed); // cap so it doesn't get silly late-game
+}
+
+function comboDelayMs(baseMs, comboStep) {
+  return Math.max(0, Math.round(baseMs / comboSpeed(comboStep)));
+}
 
 function clampNonNegative(n) {
   return Math.max(0, Math.floor(n));
@@ -133,13 +172,14 @@ function setChartHidden(hidden) {
 
 function updateHud() {
   const credits = Math.max(0, Math.floor(state.credits));
-  animateCreditsTo(credits);
   updateGoalHud(credits);
+  ui.hintBtn.textContent = `Hint - ${hintCost()} Credits`;
 }
 
 let creditsDisplayValue = Math.max(0, Math.floor(state.credits));
 let creditsAnimRaf = /** @type {number|null} */ (null);
 let creditsAnimTo = creditsDisplayValue;
+let lastGoalTextCredits = -1;
 
 function setCreditsInstant(n) {
   const v = Math.max(0, Math.floor(n));
@@ -147,7 +187,6 @@ function setCreditsInstant(n) {
   creditsAnimRaf = null;
   creditsAnimTo = v;
   creditsDisplayValue = v;
-  ui.totalCreditsValue.textContent = v.toLocaleString();
 }
 
 /**
@@ -155,14 +194,6 @@ function setCreditsInstant(n) {
  * @param {number} to
  */
 function animateCreditsTo(to) {
-  // If this is the first render, snap.
-  if (!ui.totalCreditsValue.textContent || ui.totalCreditsValue.textContent.trim() === "0") {
-    creditsDisplayValue = to;
-    creditsAnimTo = to;
-    ui.totalCreditsValue.textContent = to.toLocaleString();
-    return;
-  }
-
   if (creditsAnimRaf != null) cancelAnimationFrame(creditsAnimRaf);
   const from = creditsDisplayValue;
   creditsAnimTo = to;
@@ -176,12 +207,12 @@ function animateCreditsTo(to) {
     const e = 1 - Math.pow(1 - p, 2.2);
     const v = Math.floor(from + (currentTo - from) * e);
     creditsDisplayValue = v;
-    ui.totalCreditsValue.textContent = v.toLocaleString();
+    updateGoalText(v);
     if (p < 1) creditsAnimRaf = requestAnimationFrame(tick);
     else {
       creditsAnimRaf = null;
       creditsDisplayValue = currentTo;
-      ui.totalCreditsValue.textContent = currentTo.toLocaleString();
+      updateGoalText(currentTo);
     }
   };
 
@@ -193,10 +224,16 @@ let goalTarget = 1000;
 let hasWon = false;
 
 function updateGoalHud(credits) {
+  // Animate rewards upward, but snap costs downward.
+  if (credits >= creditsDisplayValue) animateCreditsTo(credits);
+  else setCreditsInstant(credits);
+
   // Advance goals: 1k, 2k, 4k, 8k, 16k (up through Goal 5).
   while (goalIndex < 5 && credits >= goalTarget) {
     const completed = goalIndex;
     sfx.goalReached(completed);
+    bumpGoalCelebration();
+    unlockRewardForGoal(completed);
     goalIndex += 1;
     goalTarget *= 2;
   }
@@ -206,11 +243,18 @@ function updateGoalHud(credits) {
     hasWon = true;
     sfx.youWin();
     showWinBurst();
+    bumpGoalCelebration(true);
+    unlockRewardForGoal(5);
+    goalIndex = 6;
+    goalTarget *= 2;
   }
 
-  if (ui.goalIndex) ui.goalIndex.textContent = String(goalIndex);
-  if (ui.goalCurrent) ui.goalCurrent.textContent = credits.toLocaleString();
-  if (ui.goalTarget) ui.goalTarget.textContent = goalTarget.toLocaleString();
+  if (ui.goalTarget) {
+    ui.goalTarget.textContent =
+      goalIndex >= 6 ? "Goal: Highest Score" : `Goal ${goalIndex}: ${goalTarget.toLocaleString()}`;
+  }
+  updateGoalText(creditsDisplayValue);
+  updateRewardLabel();
   if (ui.goalFill) {
     const p = Math.max(0, Math.min(1, credits / goalTarget));
     ui.goalFill.style.width = `${Math.round(p * 1000) / 10}%`;
@@ -222,6 +266,66 @@ function updateGoalHud(credits) {
       track.setAttribute("aria-valuenow", String(Math.max(0, Math.min(goalTarget, credits))));
     }
   }
+}
+
+function updateGoalText(n) {
+  const v = Math.max(0, Math.floor(n));
+  if (v === lastGoalTextCredits) return;
+  lastGoalTextCredits = v;
+  if (ui.goalCurrent) ui.goalCurrent.textContent = v.toLocaleString();
+}
+
+function bumpGoalCelebration(isWin = false) {
+  if (!ui.goalBar) return;
+  const block = ui.goalBar.querySelector(".goalBlock");
+  if (!block) return;
+  block.classList.remove("is-goal-passed", "is-goal-win");
+  // eslint-disable-next-line no-unused-expressions
+  block.offsetHeight;
+  block.classList.add(isWin ? "is-goal-win" : "is-goal-passed");
+  setTimeout(() => block.classList.remove("is-goal-passed", "is-goal-win"), isWin ? 900 : 520);
+}
+
+function rewardNameForGoal(g) {
+  switch (g) {
+    case 1:
+      return "Cheaper Hints";
+    case 2:
+      return "Combo Multiplier";
+    case 3:
+      return "Joker Wildcard";
+    case 4:
+      return "Diagonals Scored";
+    case 5:
+      return "Joker Wildcard";
+    default:
+      return "Endless";
+  }
+}
+
+function updateRewardLabel() {
+  if (!ui.goalReward) return;
+  if (goalIndex >= 6) ui.goalReward.textContent = "Pride";
+  else ui.goalReward.textContent = rewardNameForGoal(goalIndex);
+}
+
+function unlockRewardForGoal(g) {
+  if (g === 1) rewards.cheaperHints = true;
+  if (g === 2) rewards.comboMultiplier = true;
+  if (g === 3 && !rewards.jokerWildcard) {
+    rewards.jokerWildcard = true;
+    // Add one Joker to the cycling deck.
+    state.deck?.addJoker?.();
+  }
+  if (g === 4) rewards.diagonalsScored = true;
+  if (g === 5 && !rewards.extraJoker) {
+    rewards.extraJoker = true;
+    // Add a second Joker to the cycling deck.
+    state.deck?.addJoker?.();
+  }
+  // Update UI immediately (hint cost, reward label).
+  ui.hintBtn.textContent = `Hint - ${hintCost()} Credits`;
+  updateRewardLabel();
 }
 
 function rerender() {
@@ -342,6 +446,11 @@ ui.newGameBtn.addEventListener("click", () => {
   goalIndex = 1;
   goalTarget = 1000;
   hasWon = false;
+  rewards.cheaperHints = false;
+  rewards.comboMultiplier = false;
+  rewards.jokerWildcard = false;
+  rewards.diagonalsScored = false;
+  rewards.extraJoker = false;
   // Keep main/gameState.js in sync for the starting bankroll.
   state.credits = STARTING_POINTS;
   showToast(ui.toast, "New deal");
@@ -362,6 +471,11 @@ ui.restartBtn.addEventListener("click", () => {
   goalIndex = 1;
   goalTarget = 1000;
   hasWon = false;
+  rewards.cheaperHints = false;
+  rewards.comboMultiplier = false;
+  rewards.jokerWildcard = false;
+  rewards.diagonalsScored = false;
+  rewards.extraJoker = false;
   state.credits = STARTING_POINTS;
   rerender();
   showCenterTip("Swap any 2 cards to make vertical or horizontal poker hands");
@@ -372,7 +486,7 @@ ui.hintBtn.addEventListener("click", async () => {
   if (state.busy) return;
 
   // Hints cost credits (discourage spam).
-  state.credits = clampNonNegative(state.credits - HINT_COST);
+  state.credits = clampNonNegative(state.credits - hintCost());
   rerender();
   sfx.hintPurchase();
   if (checkCantAffordSwapAndEnd()) return;
@@ -832,7 +946,21 @@ function getContributionMaskForBoard(board, line) {
     return { contrib: new Set(), dim: new Set(), contribCells: [] };
   }
 
-  const evald = evaluateHand(cards);
+  // With wildcards, "which exact cards contribute" depends on the chosen substitution,
+  // so we treat all 5 as contributing for clearer feedback.
+  if (rewards.jokerWildcard || rewards.extraJoker) {
+    const contrib = new Set();
+    /** @type {{r:number,c:number}[]} */
+    const contribCells = [];
+    for (const p of line.cells) {
+      const k = `${p.r},${p.c}`;
+      contrib.add(k);
+      contribCells.push(p);
+    }
+    return { contrib, dim: new Set(), contribCells, dimCells: [] };
+  }
+
+  const evald = scoringOpts().evaluateHand(cards);
   const vc = evald.meta.valueCounts;
 
   /** @type {Set<number>|null} */
@@ -883,7 +1011,7 @@ function computeImmediateLineScoreForBoard(board, line) {
   for (const p of contribCells) {
     const card = board[p.r][p.c];
     if (!card) continue;
-    pipSum += cardBaseValue(card.rank);
+    pipSum += cardScoreValue(card);
   }
   return pipSum * handMultiplier(line.type);
 }
@@ -902,7 +1030,7 @@ function findBestScoringSwap(board) {
       const a = positions[i];
       const b = positions[j];
       swapCells(board, a, b);
-      const lines = findScoringLines(board, baseScoreForType, SCORE_OPTS);
+      const lines = findScoringLines(board, baseScoreForType, scoringOpts());
       let total = 0;
       let maxP = -1;
       for (const ln of lines) {
@@ -1013,10 +1141,11 @@ async function pulseScoredLine(line, combo, contribCells, dimCells, onTotal, han
   for (const p of ordered) {
     const el = ui.board.querySelector(`.cell[data-r="${p.r}"][data-c="${p.c}"]`);
     if (!el) continue;
+    el.style.setProperty("--combo-speed", String(comboSpeed(combo)));
     // Per-card value popup when it enlarges.
     const card = state.board[p.r]?.[p.c];
     if (card) {
-      const v = cardBaseValue(card.rank);
+      const v = cardScoreValue(card);
       running += v;
       onTotal(running);
       const pop = showCardValuePopup(p, v);
@@ -1067,11 +1196,11 @@ async function pulseScoredLine(line, combo, contribCells, dimCells, onTotal, han
     });
 
     // Delay between cards (now aligned to the end of each grow).
-    await sleep(60);
+    await sleep(comboDelayMs(60, combo));
     i++;
   }
   // small tail so last pulse reads
-  await sleep(60);
+  await sleep(comboDelayMs(60, combo));
 
   // Combo-only localized particles near the scored cards.
   burstComboSparks(ordered, 1);
@@ -1146,7 +1275,7 @@ async function resolveCascades() {
   const MAX_COMBO = 80;
   while (state.comboStep < MAX_COMBO) {
     if (!state.deck) throw new Error("Deck not initialized");
-    const lines = findScoringLines(state.board, baseScoreForType, SCORE_OPTS);
+    const lines = findScoringLines(state.board, baseScoreForType, scoringOpts());
     if (lines.length === 0) break;
     if (state.comboStep >= MAX_COMBO - 1) {
       // Extremely unlikely, but prevents runaway auto-resolve.
@@ -1177,26 +1306,26 @@ async function resolveCascades() {
       let pipSum = 0;
       for (const p of contribCells) {
         const card = state.board[p.r][p.c];
-        if (card) pipSum += cardBaseValue(card.rank);
+        if (card) pipSum += cardScoreValue(card);
       }
       const lineScore = pipSum * hm;
-      const gained = lineScore;
-
+      const comboMult = rewards.comboMultiplier && state.comboStep > 1 ? 1.5 : 1;
+      const gained = Math.floor(lineScore * comboMult);
       const handBurstEl = showHandBurst({ label: line.label, type: line.type, credits: gained });
       // Ensure the line highlight is visible before the sequential grow starts.
-      await sleep(45);
-      await pulseScoredLine(line, 1, contribCells, dimCells, () => {}, handBurstEl);
+      await sleep(comboDelayMs(45, state.comboStep));
+      await pulseScoredLine(line, state.comboStep, contribCells, dimCells, () => {}, handBurstEl);
 
       state.credits += gained;
       gainedTotal += gained;
 
-      sfx.scoreHand(line.type, 1);
+      sfx.scoreHand(line.type, state.comboStep);
       rerender();
 
       viewFx.dim = null;
 
       // Delay between popups for multiple lines (and to let the popup breathe).
-      await sleep(120);
+      await sleep(comboDelayMs(120, state.comboStep));
     }
 
     // Now clear everything that scored this evaluation in one removal step.
@@ -1206,7 +1335,7 @@ async function resolveCascades() {
     viewFx.dim = null;
     viewFx.clearing = clearSetAll;
     rerender();
-    await sleep(120);
+    await sleep(comboDelayMs(120, state.comboStep));
 
     // Remove any persisted "grown" state after we've transitioned into clearing.
     ui.board
@@ -1225,7 +1354,7 @@ async function resolveCascades() {
     viewFx.clearing = null;
     rerender();
 
-    await sleep(70);
+    await sleep(comboDelayMs(70, state.comboStep));
 
     // Fall + refill (two phase): existing cards fall first, then new cards deal in a column at a time.
     viewFx.dropMode = "gravity";

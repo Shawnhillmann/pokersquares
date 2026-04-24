@@ -158,15 +158,22 @@ export function renderBoard(root, board, view, onCellClick) {
 
         face.className = "cardFace";
         const rankText = String(card.rank);
-        rankEl.textContent = rankText;
-        rankEl.classList.toggle("cardRank--ten", rankText === "10");
         const suit = String(card.suit);
-        const isAceSpades = rankText === "A" && suit === "S";
-        const isArt = (rankText === "J" || rankText === "Q" || rankText === "K" || isAceSpades) && ["S", "H", "D", "C"].includes(suit);
+        const isJoker = rankText === "JOKER";
+        rankEl.textContent = isJoker ? "Joker" : rankText;
+        rankEl.classList.toggle("cardRank--ten", rankText === "10");
+        const isAce = rankText === "A" && ["S", "H", "D", "C"].includes(suit);
+        const isJokerArt = isJoker;
+        const isArt =
+          (rankText === "J" || rankText === "Q" || rankText === "K" || isAce || isJokerArt) &&
+          (isJokerArt || ["S", "H", "D", "C"].includes(suit));
         if (isArt) {
-          cornerSuit.textContent = CORNER_SUIT_RANKS.has(rankText) ? suitSymbol(card.suit) : "";
-          face.classList.add(rankText === "A" ? "cardFace--aceArt" : "cardFace--faceArt");
-          const nextSrc = `/images/faces/${rankText}${String(card.suit)}.svg`;
+          cornerSuit.textContent =
+            isJokerArt ? "" : CORNER_SUIT_RANKS.has(rankText) ? suitSymbol(card.suit) : "";
+          face.classList.add(
+            isJokerArt ? "cardFace--jokerArt" : rankText === "A" ? "cardFace--aceArt" : "cardFace--faceArt"
+          );
+          const nextSrc = isJokerArt ? `/images/faces/Joker.svg` : `/images/faces/${rankText}${String(card.suit)}.svg`;
           // Only touch src if it actually changes (avoids iOS SVG repaint).
           const absoluteNext = `${location.origin}${nextSrc}`;
           if (img.src !== absoluteNext) img.src = nextSrc;
@@ -193,7 +200,7 @@ export function renderBoard(root, board, view, onCellClick) {
           }
         }
 
-        if (isRedSuit(card.suit)) face.classList.add("is-red");
+        if (!isJoker && isRedSuit(card.suit)) face.classList.add("is-red");
       }
     }
   }
@@ -202,7 +209,7 @@ export function renderBoard(root, board, view, onCellClick) {
 /**
  * Draw overlay lines for scored rows/cols.
  * @param {HTMLElement} layer
- * @param {{ kind:"row"|"col", index:number, label:string }[]|null} scoredLines
+ * @param {{ kind:"row"|"col"|"diagDown"|"diagUp", index:number, label:string }[]|null} scoredLines
  */
 export function renderScoredLines(layer, scoredLines) {
   layer.innerHTML = "";
@@ -210,7 +217,7 @@ export function renderScoredLines(layer, scoredLines) {
 
   for (const l of scoredLines) {
     const line = el("div", `scoreLine scoreLine--${l.kind}`);
-    line.style.setProperty("--i", String(l.index));
+    if (l.kind === "row" || l.kind === "col") line.style.setProperty("--i", String(l.index));
     line.title = l.label;
     layer.append(line);
   }

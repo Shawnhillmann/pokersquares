@@ -9,7 +9,7 @@ export const BOARD_SIZE = 5;
  * @typedef {{ r:number, c:number }} Pos
  *
  * @typedef {object} LineScore
- * @property {"row"|"col"} kind
+ * @property {"row"|"col"|"diagDown"|"diagUp"} kind
  * @property {number} index
  * @property {import("../poker/evaluationTypes.js").HAND_TYPE[keyof import("../poker/evaluationTypes.js").HAND_TYPE] | string} type
  * @property {string} label
@@ -80,7 +80,7 @@ export function swapCells(board, a, b) {
  * Returns line scores (rows+cols) that are scoring (Pair+).
  * @param {Board} board
  * @param {(type:string)=>number} baseScoreForType
- * @param {{ minType?: keyof typeof HAND_TYPE }} [opts]
+ * @param {{ minType?: keyof typeof HAND_TYPE, includeDiagonals?: boolean, evaluateHand?: (cards:Card[])=>any }} [opts]
  * @returns {LineScore[]}
  */
 export function findScoringLines(board, baseScoreForType, opts = {}) {
@@ -88,6 +88,7 @@ export function findScoringLines(board, baseScoreForType, opts = {}) {
 
   const minType = opts.minType ?? HAND_TYPE.PAIR;
   const minPriority = HAND_PRIORITY[minType] ?? HAND_PRIORITY[HAND_TYPE.PAIR];
+  const evalHand = opts.evaluateHand ?? evaluateHand;
 
   /** @type {LineScore[]} */
   const lines = [];
@@ -96,7 +97,7 @@ export function findScoringLines(board, baseScoreForType, opts = {}) {
   for (let r = 0; r < BOARD_SIZE; r++) {
     const cards = board[r].slice();
     if (cards.some((x) => !x)) continue;
-    const evald = evaluateHand(/** @type {Card[]} */ (cards));
+    const evald = evalHand(/** @type {Card[]} */ (cards));
     if (!evald.isScoring) continue;
     if (evald.priority < minPriority) continue;
     lines.push({
@@ -114,7 +115,7 @@ export function findScoringLines(board, baseScoreForType, opts = {}) {
     const cards = [];
     for (let r = 0; r < BOARD_SIZE; r++) cards.push(board[r][c]);
     if (cards.some((x) => !x)) continue;
-    const evald = evaluateHand(/** @type {Card[]} */ (cards));
+    const evald = evalHand(/** @type {Card[]} */ (cards));
     if (!evald.isScoring) continue;
     if (evald.priority < minPriority) continue;
     lines.push({
@@ -125,6 +126,45 @@ export function findScoringLines(board, baseScoreForType, opts = {}) {
       baseScore: baseScoreForType(evald.type),
       cells: Array.from({ length: BOARD_SIZE }, (_, r) => ({ r, c }))
     });
+  }
+
+  if (opts.includeDiagonals) {
+    // Top-left -> bottom-right
+    {
+      const cards = [];
+      for (let i = 0; i < BOARD_SIZE; i++) cards.push(board[i][i]);
+      if (!cards.some((x) => !x)) {
+        const evald = evalHand(/** @type {Card[]} */ (cards));
+        if (evald.isScoring && evald.priority >= minPriority) {
+          lines.push({
+            kind: "diagDown",
+            index: 0,
+            type: evald.type,
+            label: evald.label,
+            baseScore: baseScoreForType(evald.type),
+            cells: Array.from({ length: BOARD_SIZE }, (_, i) => ({ r: i, c: i }))
+          });
+        }
+      }
+    }
+    // Bottom-left -> top-right
+    {
+      const cards = [];
+      for (let i = 0; i < BOARD_SIZE; i++) cards.push(board[BOARD_SIZE - 1 - i][i]);
+      if (!cards.some((x) => !x)) {
+        const evald = evalHand(/** @type {Card[]} */ (cards));
+        if (evald.isScoring && evald.priority >= minPriority) {
+          lines.push({
+            kind: "diagUp",
+            index: 0,
+            type: evald.type,
+            label: evald.label,
+            baseScore: baseScoreForType(evald.type),
+            cells: Array.from({ length: BOARD_SIZE }, (_, i) => ({ r: BOARD_SIZE - 1 - i, c: i }))
+          });
+        }
+      }
+    }
   }
 
   return lines;

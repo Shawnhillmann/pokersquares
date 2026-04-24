@@ -52,6 +52,13 @@ export function createDeck(rng) {
     recycle(cards) {
       for (const c of cards) queue.push(c);
     },
+    addJoker() {
+      // Add exactly one Joker to the cycling deck.
+      // Id is unique so it won't collide with standard cards.
+      const id = `JOKER-${Math.random().toString(16).slice(2)}`;
+      queue.push({ id, rank: "JOKER", suit: "X" });
+      shuffleInPlace(rng, queue);
+    },
     size() {
       return queue.length;
     }
