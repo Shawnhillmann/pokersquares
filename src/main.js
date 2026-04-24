@@ -40,6 +40,7 @@ const ui = {
   goalLabelTitle: /** @type {HTMLElement|null} */ (document.getElementById("goalLabelTitle")),
   swapCostLine: /** @type {HTMLElement|null} */ (document.getElementById("swapCostLine")),
   howToSwapCost: /** @type {HTMLElement|null} */ (document.getElementById("howToSwapCost")),
+  howToHintCost: /** @type {HTMLElement|null} */ (document.getElementById("howToHintCost")),
   howToPlayPanel: /** @type {HTMLElement} */ (document.getElementById("howToPlayPanel")),
   creditDock: /** @type {HTMLElement|null} */ (document.getElementById("creditDock")),
   toggleHowToBtn: /** @type {HTMLButtonElement|null} */ (document.getElementById("toggleHowToBtn"))
@@ -56,7 +57,8 @@ const SCORE_OPTS = { minType: HAND_TYPE.TWO_PAIR };
 const STARTING_POINTS = 500;
 /** Base swap cost before goal-based scaling. */
 const SWAP_COST_BASE = 100;
-const HINT_COST = 300;
+/** Base hint cost before goal-based scaling (same 20%/goal multiplier as swaps). */
+const HINT_COST_BASE = 300;
 
 const rewards = {
   randomHints: false, // selected: Random Hints
@@ -71,10 +73,10 @@ let lastPickedRewardName = "____";
 let jokerCount = 0;
 
 function hintCost() {
-  return HINT_COST;
+  return Math.max(1, Math.round(HINT_COST_BASE * Math.pow(1.2, swapCostTier)));
 }
 
-/** Number of goals cleared this run; each adds +20% to swap cost (compounding). */
+/** Number of goals cleared this run; each adds +20% to swap and hint costs (compounding). */
 let swapCostTier = 0;
 
 function swapCost() {
@@ -204,6 +206,7 @@ function updateHud() {
   const sc = swapCost().toLocaleString();
   if (ui.swapCostLine) ui.swapCostLine.textContent = `Swap cost: ${sc} credits`;
   if (ui.howToSwapCost) ui.howToSwapCost.textContent = sc;
+  if (ui.howToHintCost) ui.howToHintCost.textContent = hintCost().toLocaleString();
 }
 
 let creditsDisplayValue = Math.max(0, Math.floor(state.credits));
@@ -1058,7 +1061,7 @@ function rewardStackTagHtml(o) {
 function showRewardPickModal() {
   return new Promise((resolve) => {
     const opts = pickRewardOptions3();
-    const swapNotice = `Clearing a goal raises swap cost by <b>20%</b> (compounding). Swaps now cost <b>${swapCost().toLocaleString()}</b> credits.`;
+    const swapNotice = `Clearing a goal raises <b>swap</b> and <b>hint</b> costs by <b>20%</b> (compounding). Swaps: <b>${swapCost().toLocaleString()}</b> credits · Hints: <b>${hintCost().toLocaleString()}</b> credits.`;
     const overlay = document.createElement("div");
     overlay.className = "rewardPickOverlay";
     overlay.innerHTML = `
