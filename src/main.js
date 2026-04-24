@@ -67,7 +67,11 @@ const rewards = {
   comboBonusStacks: 0,
   jokerWildcard: false, // Goal 3
   diagonalsScored: false, // Goal 4
-  extraJoker: false // Goal 5
+  extraJoker: false, // Goal 5
+  /** One-time: two pair lines do not clear (straight+ still does). */
+  noClearTwoPair: false,
+  /** One-time: three of a kind lines do not clear (straight+ still does). */
+  noClearTrips: false
 };
 
 let randomHintChance = 0;
@@ -102,6 +106,15 @@ function scoringOpts() {
       ? (cards) => evaluateHandWild(cards, { jokerWild: true })
       : evaluateHand
   };
+}
+
+/** Options for `findScoringLines` / board regeneration (includes hand types that never clear). */
+function boardLineOpts() {
+  /** @type {Set<string>} */
+  const suppressClearTypes = new Set();
+  if (rewards.noClearTwoPair) suppressClearTypes.add(HAND_TYPE.TWO_PAIR);
+  if (rewards.noClearTrips) suppressClearTypes.add(HAND_TYPE.THREE_OF_A_KIND);
+  return { ...scoringOpts(), suppressClearTypes };
 }
 
 function comboSpeed(comboStep) {
@@ -250,6 +263,8 @@ function updateRewardsTracker() {
     addRow("Jokers", "—");
   }
   addRow("Diagonals", rewards.diagonalsScored ? "Active" : "—");
+  addRow("2-pair clears", rewards.noClearTwoPair ? "Off (held)" : "On");
+  addRow("Trips clear", rewards.noClearTrips ? "Off (held)" : "On");
 }
 
 let creditsDisplayValue = Math.max(0, Math.floor(state.credits));
@@ -527,6 +542,8 @@ ui.newGameBtn.addEventListener("click", () => {
   rewards.jokerWildcard = false;
   rewards.diagonalsScored = false;
   rewards.extraJoker = false;
+  rewards.noClearTwoPair = false;
+  rewards.noClearTrips = false;
   pendingRewardPicks = 0;
   swapCostTier = 0;
   peakGoalClearedThisRun = 0;
@@ -560,6 +577,8 @@ ui.restartBtn.addEventListener("click", () => {
   rewards.jokerWildcard = false;
   rewards.diagonalsScored = false;
   rewards.extraJoker = false;
+  rewards.noClearTwoPair = false;
+  rewards.noClearTrips = false;
   pendingRewardPicks = 0;
   swapCostTier = 0;
   peakGoalClearedThisRun = 0;
@@ -1027,11 +1046,25 @@ const REWARD_DEFS = /** @type {const} */ ([
     name: "Diagonals",
     desc: "Diagonal hands score too",
     stack: { kind: "unique" }
+  },
+  {
+    id: "noClearTwoPair",
+    name: "Hold Two Pair",
+    desc: "Two pair no longer clears a line—keep building toward full house or four of a kind. Straights and stronger still clear.",
+    stack: { kind: "unique" }
+  },
+  {
+    id: "noClearTrips",
+    name: "Hold Three of a Kind",
+    desc: "Three of a kind no longer clears—lines stay until quads, full house, or straight+.",
+    stack: { kind: "unique" }
   }
 ]);
 
 function canOfferReward(id) {
   if (id === "diagonals") return !rewards.diagonalsScored;
+  if (id === "noClearTwoPair") return !rewards.noClearTwoPair;
+  if (id === "noClearTrips") return !rewards.noClearTrips;
   if (id === "jokerCard") return jokerCount < 2;
   return true;
 }
@@ -1072,6 +1105,18 @@ function applyReward(id) {
     rewards.diagonalsScored = true;
     lastPickedRewardName = "Diagonals";
     enqueueRewardBurst("Diagonals", "Diagonal hands score too");
+    return;
+  }
+  if (id === "noClearTwoPair") {
+    rewards.noClearTwoPair = true;
+    lastPickedRewardName = "Hold Two Pair";
+    enqueueRewardBurst("Hold Two Pair", "Two pair lines no longer clear");
+    return;
+  }
+  if (id === "noClearTrips") {
+    rewards.noClearTrips = true;
+    lastPickedRewardName = "Hold Three of a Kind";
+    enqueueRewardBurst("Hold Three of a Kind", "Three of a kind lines no longer clear");
     return;
   }
 }
@@ -1406,7 +1451,7 @@ function findBestScoringSwap(board) {
       const a = positions[i];
       const b = positions[j];
       swapCells(board, a, b);
-      const lines = findScoringLines(board, baseScoreForType, scoringOpts());
+      const lines = findScoringLines(board, baseScoreForType, boardLineOpts());
       let total = 0;
       let maxP = -1;
       for (const ln of lines) {
@@ -1652,11 +1697,11 @@ async function resolveCascades() {
   const MAX_COMBO = 80;
   while (state.comboStep < MAX_COMBO) {
     if (!state.deck) throw new Error("Deck not initialized");
-    const lines = findScoringLines(state.board, baseScoreForType, scoringOpts());
+    const lines = findScoringLines(state.board, baseScoreForType, boardLineOpts());
     if (lines.length === 0) break;
     if (state.comboStep >= MAX_COMBO - 1) {
       // Extremely unlikely, but prevents runaway auto-resolve.
-      regenerateBoardForFairness(state, { maxAttempts: 2500 });
+      regenerateBoardForFairness(state, { maxAttempts: 2500, lineClearOpts: boardLineOpts() });
       showToast(ui.toast, "Fresh deal (runaway cascade)");
       break;
     }

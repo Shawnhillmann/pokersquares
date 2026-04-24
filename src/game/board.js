@@ -80,7 +80,7 @@ export function swapCells(board, a, b) {
  * Returns line scores (rows+cols) that are scoring (Pair+).
  * @param {Board} board
  * @param {(type:string)=>number} baseScoreForType
- * @param {{ minType?: keyof typeof HAND_TYPE, includeDiagonals?: boolean, evaluateHand?: (cards:Card[])=>any }} [opts]
+ * @param {{ minType?: keyof typeof HAND_TYPE, includeDiagonals?: boolean, evaluateHand?: (cards:Card[])=>any, suppressClearTypes?: Set<string> }} [opts]
  * @returns {LineScore[]}
  */
 export function findScoringLines(board, baseScoreForType, opts = {}) {
@@ -89,17 +89,24 @@ export function findScoringLines(board, baseScoreForType, opts = {}) {
   const minType = opts.minType ?? HAND_TYPE.PAIR;
   const minPriority = HAND_PRIORITY[minType] ?? HAND_PRIORITY[HAND_TYPE.PAIR];
   const evalHand = opts.evaluateHand ?? evaluateHand;
+  const suppress = opts.suppressClearTypes;
 
   /** @type {LineScore[]} */
   const lines = [];
+
+  const lineQualifies = (evald) => {
+    if (!evald.isScoring) return false;
+    if (evald.priority < minPriority) return false;
+    if (suppress && suppress.has(evald.type)) return false;
+    return true;
+  };
 
   // Rows
   for (let r = 0; r < BOARD_SIZE; r++) {
     const cards = board[r].slice();
     if (cards.some((x) => !x)) continue;
     const evald = evalHand(/** @type {Card[]} */ (cards));
-    if (!evald.isScoring) continue;
-    if (evald.priority < minPriority) continue;
+    if (!lineQualifies(evald)) continue;
     lines.push({
       kind: "row",
       index: r,
@@ -116,8 +123,7 @@ export function findScoringLines(board, baseScoreForType, opts = {}) {
     for (let r = 0; r < BOARD_SIZE; r++) cards.push(board[r][c]);
     if (cards.some((x) => !x)) continue;
     const evald = evalHand(/** @type {Card[]} */ (cards));
-    if (!evald.isScoring) continue;
-    if (evald.priority < minPriority) continue;
+    if (!lineQualifies(evald)) continue;
     lines.push({
       kind: "col",
       index: c,
@@ -135,7 +141,7 @@ export function findScoringLines(board, baseScoreForType, opts = {}) {
       for (let i = 0; i < BOARD_SIZE; i++) cards.push(board[i][i]);
       if (!cards.some((x) => !x)) {
         const evald = evalHand(/** @type {Card[]} */ (cards));
-        if (evald.isScoring && evald.priority >= minPriority) {
+        if (lineQualifies(evald)) {
           lines.push({
             kind: "diagDown",
             index: 0,
@@ -153,7 +159,7 @@ export function findScoringLines(board, baseScoreForType, opts = {}) {
       for (let i = 0; i < BOARD_SIZE; i++) cards.push(board[BOARD_SIZE - 1 - i][i]);
       if (!cards.some((x) => !x)) {
         const evald = evalHand(/** @type {Card[]} */ (cards));
-        if (evald.isScoring && evald.priority >= minPriority) {
+        if (lineQualifies(evald)) {
           lines.push({
             kind: "diagUp",
             index: 0,

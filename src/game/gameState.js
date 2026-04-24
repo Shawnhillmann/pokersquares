@@ -75,11 +75,11 @@ export function newGame(s) {
  * Keeps credits/combo untouched (caller decides).
  *
  * @param {GameState} s
- * @param {{ maxAttempts?: number }} opts
+ * @param {{ maxAttempts?: number, lineClearOpts?: object }} opts
  * @returns {boolean} whether strict constraints were satisfied
  */
 export function regenerateBoardForFairness(s, opts = {}) {
-  const scoreOpts = { minType: HAND_TYPE.TWO_PAIR };
+  const scoreOpts = opts.lineClearOpts ?? { minType: HAND_TYPE.TWO_PAIR };
   const maxAttempts = opts.maxAttempts ?? 2000;
   for (let i = 0; i < maxAttempts; i++) {
     const deck = createDeck(s.rng);
