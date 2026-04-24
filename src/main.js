@@ -975,7 +975,7 @@ const REWARD_DEFS = /** @type {const} */ ([
   {
     id: "jokerCard",
     name: "Joker Card",
-    desc: "Counts as any card — deck limit 2 Jokers",
+    desc: "Counts as any card.",
     stack: { kind: "stackable", max: 2 }
   },
   {
@@ -1020,7 +1020,7 @@ function applyReward(id) {
       jokerCount += 1;
     }
     lastPickedRewardName = "Joker Card";
-    enqueueRewardBurst("Joker Card", "Counts as any card");
+    enqueueRewardBurst("Joker Card", `${jokerCount}/2 Jokers in the deck`);
     return;
   }
   if (id === "diagonals") {
@@ -1044,13 +1044,23 @@ function pickRewardOptions3() {
     used.add(r.id);
     chosen.push(r);
   }
-  // If we ran out (because pool < 3), pad with repeatables (randomHints/jokerCard).
-  const repeatables = REWARD_DEFS.filter((r) => r.stack.kind === "stackable");
-  while (chosen.length < 3) {
+  // If we ran out (because pool < 3), pad with stackables that are still allowed (respects Joker max, etc.).
+  const repeatables = REWARD_DEFS.filter((r) => r.stack.kind === "stackable" && canOfferReward(r.id));
+  while (chosen.length < 3 && repeatables.length) {
     const r = repeatables[state.rng.int(repeatables.length)];
     chosen.push(r);
   }
   return chosen.slice(0, 3);
+}
+
+/**
+ * @param {typeof REWARD_DEFS[number]} o
+ */
+function rewardPickDescHtml(o) {
+  if (o.id === "jokerCard") {
+    return `${o.desc} You have <strong>${jokerCount}</strong> of <strong>2</strong> in the deck.`;
+  }
+  return o.desc;
 }
 
 /**
@@ -1085,7 +1095,7 @@ function showRewardPickModal() {
                 <div class="rewardPick__name">${o.name}</div>
                 ${rewardStackTagHtml(o)}
               </div>
-              <div class="rewardPick__desc">${o.desc}</div>
+              <div class="rewardPick__desc">${rewardPickDescHtml(o)}</div>
             </button>
           `
             )
