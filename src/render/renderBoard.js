@@ -122,7 +122,7 @@ export function renderBoard(root, board, view, onCellClick) {
               // If a face SVG is missing, flip to text pip for this cell.
               // @ts-ignore
               cell.__pip = "pip";
-              face.classList.remove("cardFace--faceArt", "cardFace--aceArt");
+              face.classList.remove("cardFace--faceArt", "cardFace--aceArt", "cardFace--jokerArt");
               if (img.parentElement) img.remove();
               if (!pipDiv.parentElement) face.append(corner, pipDiv);
             },

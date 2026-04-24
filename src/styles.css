@@ -720,7 +720,12 @@ html.is-mobile .cell.is-swap-windup {
   filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.45));
 }
 
-img.cardPip--faceArt {
+/* Face art: HTML corner rank + suit; SVG = portrait anchored bottom-right (not Joker) */
+.cardFace.cardFace--faceArt {
+  overflow: hidden;
+}
+
+.cardFace:not(.cardFace--jokerArt) img.cardPip--faceArt {
   font-size: unset;
   line-height: unset;
   width: 84%;
@@ -733,42 +738,6 @@ img.cardPip--faceArt {
   user-select: none;
   -webkit-user-drag: none;
   border-radius: inherit;
-}
-
-/* Face art: HTML corner rank + suit; SVG = portrait only */
-.cardFace.cardFace--faceArt {
-  overflow: hidden;
-}
-
-/* Joker art: centered SVG + centered "Joker" label */
-.cardFace.cardFace--jokerArt {
-  overflow: hidden;
-}
-
-.cardFace--jokerArt .cardCorner {
-  left: 0;
-  top: 8px;
-  width: 100%;
-  text-align: center;
-}
-
-.cardFace--jokerArt .cardRank {
-  font-size: 18px;
-  letter-spacing: 0.04em;
-}
-
-.cardFace--jokerArt img.cardPip--faceArt {
-  left: 50%;
-  top: 58%;
-  right: auto;
-  bottom: auto;
-  transform: translate(-50%, -50%);
-  width: 74%;
-  height: 74%;
-  object-position: center center;
-}
-
-img.cardPip--faceArt {
   left: auto;
   top: auto;
   right: -4px;
@@ -777,10 +746,49 @@ img.cardPip--faceArt {
   transform: none;
 }
 
-/* Ace art styles removed */
+/* Joker: flex-center the SVG (corner is empty; avoid face-art bottom-right anchoring) */
+.cardFace.cardFace--jokerArt {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
 
-/* Mobile: avoid any bottom-right “spill” artifacts */
-html.is-mobile img.cardPip--faceArt {
+.cardFace--jokerArt .cardCorner {
+  position: absolute;
+  left: 0;
+  top: 8px;
+  width: 100%;
+  text-align: center;
+  pointer-events: none;
+}
+
+.cardFace--jokerArt .cardRank {
+  font-size: 18px;
+  letter-spacing: 0.04em;
+}
+
+.cardFace--jokerArt img.cardPip--faceArt {
+  position: relative;
+  left: auto;
+  top: auto;
+  right: auto;
+  bottom: auto;
+  margin: 0;
+  transform: none;
+  width: min(78%, 100%);
+  height: auto;
+  max-height: 76%;
+  max-width: none;
+  object-fit: contain;
+  object-position: center center;
+  flex: 0 0 auto;
+  align-self: center;
+}
+
+/* Mobile: avoid bottom-right spill on face cards only */
+html.is-mobile .cardFace:not(.cardFace--jokerArt) img.cardPip--faceArt {
   right: 0;
   bottom: 0;
 }
@@ -1081,6 +1089,69 @@ html.is-mobile img.cardPip--faceArt {
 
 .howToPlayPanel__text b {
   color: rgba(247, 215, 116, 0.98);
+}
+
+.rewardsTrackerPanel {
+  position: relative;
+  z-index: auto;
+  width: 100%;
+  max-width: 440px;
+  margin: 0 auto;
+  padding: 10px 12px 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: radial-gradient(520px 140px at 50% 0%, rgba(247, 215, 116, 0.1), transparent 60%),
+    linear-gradient(180deg, var(--felt), var(--felt2));
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.45);
+  pointer-events: auto;
+}
+
+.rewardsTrackerPanel__title {
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  font-size: 10px;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.72);
+  text-align: center;
+}
+
+.rewardsTrackerPanel__body {
+  margin-top: 8px;
+  padding: 8px 10px 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.16);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.trackerRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  font-size: 11px;
+  line-height: 1.3;
+  color: rgba(255, 255, 255, 0.78);
+  letter-spacing: 0.02em;
+}
+
+.trackerRow__k {
+  flex: 0 1 auto;
+  font-weight: 750;
+  color: rgba(255, 255, 255, 0.62);
+  text-transform: uppercase;
+  font-size: 9px;
+  letter-spacing: 0.08em;
+}
+
+.trackerRow__v {
+  flex: 1 1 auto;
+  text-align: right;
+  font-weight: 700;
+  color: rgba(247, 215, 116, 0.95);
+  font-variant-numeric: tabular-nums;
 }
 
 .scorePopup.is-fading {
@@ -2152,6 +2223,28 @@ html.is-mobile .howToPlayPanel__text {
   padding: 6px 8px;
   font-size: 10px;
   line-height: 1.3;
+}
+
+html.is-mobile .rewardsTrackerPanel {
+  padding: 8px 8px 10px;
+}
+
+html.is-mobile .rewardsTrackerPanel__title {
+  font-size: 9px;
+}
+
+html.is-mobile .rewardsTrackerPanel__body {
+  margin-top: 6px;
+  padding: 6px 8px 8px;
+  gap: 6px;
+}
+
+html.is-mobile .trackerRow {
+  font-size: 10px;
+}
+
+html.is-mobile .trackerRow__k {
+  font-size: 8px;
 }
 
 html.is-mobile .cell {

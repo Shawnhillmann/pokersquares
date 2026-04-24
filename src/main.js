@@ -41,6 +41,7 @@ const ui = {
   swapCostLine: /** @type {HTMLElement|null} */ (document.getElementById("swapCostLine")),
   howToSwapCost: /** @type {HTMLElement|null} */ (document.getElementById("howToSwapCost")),
   howToHintCost: /** @type {HTMLElement|null} */ (document.getElementById("howToHintCost")),
+  rewardsTrackerBody: /** @type {HTMLElement|null} */ (document.getElementById("rewardsTrackerBody")),
   howToPlayPanel: /** @type {HTMLElement} */ (document.getElementById("howToPlayPanel")),
   creditDock: /** @type {HTMLElement|null} */ (document.getElementById("creditDock")),
   toggleHowToBtn: /** @type {HTMLButtonElement|null} */ (document.getElementById("toggleHowToBtn"))
@@ -70,6 +71,8 @@ const rewards = {
 };
 
 let randomHintChance = 0;
+/** Times Random Hints reward was chosen (for run summary). */
+let randomHintsPickCount = 0;
 let lastPickedRewardName = "____";
 let jokerCount = 0;
 
@@ -208,6 +211,45 @@ function updateHud() {
   if (ui.swapCostLine) ui.swapCostLine.textContent = `Swap cost: ${sc} credits`;
   if (ui.howToSwapCost) ui.howToSwapCost.textContent = sc;
   if (ui.howToHintCost) ui.howToHintCost.textContent = hintCost().toLocaleString();
+  updateRewardsTracker();
+}
+
+function updateRewardsTracker() {
+  const b = ui.rewardsTrackerBody;
+  if (!b) return;
+  b.replaceChildren();
+  const addRow = (label, value) => {
+    const row = document.createElement("div");
+    row.className = "trackerRow";
+    const k = document.createElement("span");
+    k.className = "trackerRow__k";
+    k.textContent = label;
+    const v = document.createElement("span");
+    v.className = "trackerRow__v";
+    v.textContent = value;
+    row.append(k, v);
+    b.append(row);
+  };
+  if (rewards.randomHints) {
+    addRow(
+      "Random hints",
+      `${Math.round(randomHintChance * 100)}% roll · ${randomHintsPickCount} picked`
+    );
+  } else {
+    addRow("Random hints", "—");
+  }
+  if (rewards.comboBonusStacks > 0) {
+    const pct = 25 * rewards.comboBonusStacks;
+    addRow("Combo bonus", `+${pct}% cascades · ${rewards.comboBonusStacks}×`);
+  } else {
+    addRow("Combo bonus", "—");
+  }
+  if (rewards.jokerWildcard || jokerCount > 0) {
+    addRow("Jokers", `${jokerCount} / 2 in deck`);
+  } else {
+    addRow("Jokers", "—");
+  }
+  addRow("Diagonals", rewards.diagonalsScored ? "Active" : "—");
 }
 
 let creditsDisplayValue = Math.max(0, Math.floor(state.credits));
@@ -478,6 +520,7 @@ ui.newGameBtn.addEventListener("click", () => {
   hasWon = false;
   rewards.randomHints = false;
   randomHintChance = 0;
+  randomHintsPickCount = 0;
   lastPickedRewardName = "____";
   jokerCount = 0;
   rewards.comboBonusStacks = 0;
@@ -510,6 +553,7 @@ ui.restartBtn.addEventListener("click", () => {
   hasWon = false;
   rewards.randomHints = false;
   randomHintChance = 0;
+  randomHintsPickCount = 0;
   lastPickedRewardName = "____";
   jokerCount = 0;
   rewards.comboBonusStacks = 0;
@@ -997,6 +1041,7 @@ function applyReward(id) {
     rewards.randomHints = true;
     // First pick sets it to 10%, then +10% per additional pick.
     randomHintChance = Math.min(0.9, Math.max(0.1, (randomHintChance || 0) + 0.1));
+    randomHintsPickCount += 1;
     lastPickedRewardName = "Random Hints";
     enqueueRewardBurst("Random Hints", `Chance: ${Math.round(randomHintChance * 100)}%`);
     return;
