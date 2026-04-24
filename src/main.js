@@ -617,6 +617,9 @@ async function swapWithFlipAnimation(a, b) {
 
   aEl2.style.setProperty("--swap-ms", `${ms}ms`);
   bEl2.style.setProperty("--swap-ms", `${ms}ms`);
+  // Small opposing tilt adds "swap" character; kept subtle for readability.
+  aEl2.style.setProperty("--swap-tilt", isMobileLayout() ? "-2deg" : "-3deg");
+  bEl2.style.setProperty("--swap-tilt", isMobileLayout() ? "2deg" : "3deg");
 
   // Invert: keep them visually where they started.
   aEl2.classList.add("is-swap-flip");
@@ -655,6 +658,8 @@ async function swapWithFlipAnimation(a, b) {
   bEl2.classList.remove("is-swap-flip");
   aEl2.style.removeProperty("transform");
   bEl2.style.removeProperty("transform");
+  aEl2.style.removeProperty("--swap-tilt");
+  bEl2.style.removeProperty("--swap-tilt");
 }
 
 /**
