@@ -62,6 +62,7 @@ const rewards = {
 
 let randomHintChance = 0;
 let lastPickedRewardName = "____";
+let jokerCount = 0;
 
 function hintCost() {
   return HINT_COST;
@@ -309,7 +310,7 @@ function rewardNameForGoal(g) {
 function updateRewardLabel() {
   if (!ui.goalReward) return;
   if (goalIndex >= 6) ui.goalReward.textContent = "Pride";
-  else ui.goalReward.textContent = lastPickedRewardName || "____";
+  else ui.goalReward.textContent = "Choose 1 of 3";
 }
 
 function unlockRewardForGoal(g) {
@@ -437,6 +438,7 @@ ui.newGameBtn.addEventListener("click", () => {
   rewards.randomHints = false;
   randomHintChance = 0;
   lastPickedRewardName = "____";
+  jokerCount = 0;
   rewards.comboMultiplier = false;
   rewards.jokerWildcard = false;
   rewards.diagonalsScored = false;
@@ -465,6 +467,7 @@ ui.restartBtn.addEventListener("click", () => {
   rewards.randomHints = false;
   randomHintChance = 0;
   lastPickedRewardName = "____";
+  jokerCount = 0;
   rewards.comboMultiplier = false;
   rewards.jokerWildcard = false;
   rewards.diagonalsScored = false;
@@ -939,6 +942,7 @@ const REWARD_DEFS = /** @type {const} */ ([
 function canOfferReward(id) {
   if (id === "combos2x") return !rewards.comboMultiplier;
   if (id === "diagonals") return !rewards.diagonalsScored;
+  if (id === "jokerCard") return jokerCount < 2;
   return true;
 }
 
@@ -960,7 +964,10 @@ function applyReward(id) {
   if (id === "jokerCard") {
     rewards.jokerWildcard = true;
     // Every pick adds a Joker to the deck.
-    state.deck?.addJoker?.();
+    if (jokerCount < 2) {
+      state.deck?.addJoker?.();
+      jokerCount += 1;
+    }
     lastPickedRewardName = "Joker Card";
     enqueueRewardBurst("Joker Card", "Counts as any card");
     return;

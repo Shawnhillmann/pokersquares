@@ -1377,8 +1377,8 @@ html.is-mobile img.cardPip--faceArt {
   position: relative;
   width: min(94vw, 720px);
   border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: radial-gradient(900px 500px at 50% 20%, rgba(114, 247, 195, 0.1), transparent 55%), var(--felt);
+  border: 1px solid rgba(247, 215, 116, 0.32);
+  background: rgba(10, 12, 18, 0.82);
   box-shadow: var(--shadow);
   padding: 16px;
 }
@@ -1387,14 +1387,14 @@ html.is-mobile img.cardPip--faceArt {
   font-weight: 850;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.88);
+  color: rgba(247, 215, 116, 0.98);
   text-align: center;
 }
 
 .rewardPickOverlay__choices {
   margin-top: 12px;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: 1fr;
   gap: 10px;
 }
 
@@ -1410,7 +1410,7 @@ html.is-mobile img.cardPip--faceArt {
 
 .rewardPick:hover {
   transform: translateY(-1px);
-  border-color: rgba(114, 247, 195, 0.32);
+  border-color: rgba(247, 215, 116, 0.38);
   filter: brightness(1.05);
 }
 
@@ -1434,9 +1434,6 @@ html.is-mobile img.cardPip--faceArt {
 }
 
 @media (max-width: 720px) {
-  .rewardPickOverlay__choices {
-    grid-template-columns: 1fr;
-  }
   .rewardPick__desc {
     font-size: 12px;
   }
