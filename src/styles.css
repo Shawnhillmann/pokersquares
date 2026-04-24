@@ -614,21 +614,20 @@ html.is-mobile .cell.is-swap-success {
 .cell.is-swap-flip {
   z-index: 3;
   will-change: transform;
-  transition: transform var(--swap-ms, 220ms) cubic-bezier(0.18, 0.92, 0.18, 1);
+  transition: transform var(--swap-ms, 220ms) ease-out;
 }
 
-/* Swap "lift" feel: animate the card face itself */
-.cell.is-swap-flip .cardFace {
-  transition: transform var(--swap-ms, 220ms) cubic-bezier(0.18, 0.92, 0.18, 1),
-    box-shadow var(--swap-ms, 220ms) cubic-bezier(0.18, 0.92, 0.18, 1),
-    filter var(--swap-ms, 220ms) cubic-bezier(0.18, 0.92, 0.18, 1);
-  transform: translateY(-2px) scale(1.04) rotate(var(--swap-tilt, 0deg));
-  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.34);
-  filter: brightness(1.02);
+/* Swap wind-up: small pull toward the other card before FLIP swap */
+.cell.is-swap-windup {
+  z-index: 4;
+  will-change: transform;
+  transition: transform var(--windup-ms, 110ms) cubic-bezier(0.18, 0.9, 0.2, 1);
+  transform: translate3d(var(--windup-tx, 0px), var(--windup-ty, 0px), 0) scale(1.02);
 }
 
-html.is-mobile .cell.is-swap-flip .cardFace {
-  transform: translateY(-1px) scale(1.03) rotate(var(--swap-tilt, 0deg));
+html.is-mobile .cell.is-swap-windup {
+  transition-duration: var(--windup-ms, 90ms);
+  transform: translate3d(var(--windup-tx, 0px), var(--windup-ty, 0px), 0) scale(1.015);
 }
 
 .cardFace {

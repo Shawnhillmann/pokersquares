@@ -590,6 +590,57 @@ async function swapWithFlipAnimation(a, b) {
   const aFrom = aEl.getBoundingClientRect();
   const bFrom = bEl.getBoundingClientRect();
 
+  // Wind-up: a short "pull toward each other" before the swap (Bejeweled-ish).
+  {
+    const dx = bFrom.left - aFrom.left;
+    const dy = bFrom.top - aFrom.top;
+    const len = Math.hypot(dx, dy) || 1;
+    const ux = dx / len;
+    const uy = dy / len;
+    const dist = Math.abs(b.c - a.c) + Math.abs(b.r - a.r);
+    const windupPx = Math.min(18, 6 + dist * (isMobileLayout() ? 4 : 5));
+    const windMs = isMobileLayout() ? 90 : 110;
+
+    aEl.style.setProperty("--windup-ms", `${windMs}ms`);
+    bEl.style.setProperty("--windup-ms", `${windMs}ms`);
+    aEl.style.setProperty("--windup-tx", `${ux * windupPx}px`);
+    aEl.style.setProperty("--windup-ty", `${uy * windupPx}px`);
+    bEl.style.setProperty("--windup-tx", `${-ux * windupPx}px`);
+    bEl.style.setProperty("--windup-ty", `${-uy * windupPx}px`);
+
+    aEl.classList.add("is-swap-windup");
+    bEl.classList.add("is-swap-windup");
+    // eslint-disable-next-line no-unused-expressions
+    aEl.offsetHeight;
+
+    await new Promise((resolve) => {
+      let remaining = 2;
+      let done = false;
+      const finish = () => {
+        if (done) return;
+        done = true;
+        resolve();
+      };
+      const onEnd = (ev) => {
+        if (ev.propertyName !== "transform") return;
+        remaining -= 1;
+        if (remaining <= 0) finish();
+      };
+      aEl.addEventListener("transitionend", onEnd, { once: true });
+      bEl.addEventListener("transitionend", onEnd, { once: true });
+      setTimeout(finish, windMs + 80);
+    });
+
+    aEl.classList.remove("is-swap-windup");
+    bEl.classList.remove("is-swap-windup");
+    aEl.style.removeProperty("--windup-tx");
+    aEl.style.removeProperty("--windup-ty");
+    bEl.style.removeProperty("--windup-tx");
+    bEl.style.removeProperty("--windup-ty");
+    aEl.style.removeProperty("--windup-ms");
+    bEl.style.removeProperty("--windup-ms");
+  }
+
   // Commit state + rerender to final layout immediately.
   swapCells(state.board, a, b);
   rerender();
@@ -617,9 +668,6 @@ async function swapWithFlipAnimation(a, b) {
 
   aEl2.style.setProperty("--swap-ms", `${ms}ms`);
   bEl2.style.setProperty("--swap-ms", `${ms}ms`);
-  // Small opposing tilt adds "swap" character; kept subtle for readability.
-  aEl2.style.setProperty("--swap-tilt", isMobileLayout() ? "-2deg" : "-3deg");
-  bEl2.style.setProperty("--swap-tilt", isMobileLayout() ? "2deg" : "3deg");
 
   // Invert: keep them visually where they started.
   aEl2.classList.add("is-swap-flip");
@@ -658,8 +706,6 @@ async function swapWithFlipAnimation(a, b) {
   bEl2.classList.remove("is-swap-flip");
   aEl2.style.removeProperty("transform");
   bEl2.style.removeProperty("transform");
-  aEl2.style.removeProperty("--swap-tilt");
-  bEl2.style.removeProperty("--swap-tilt");
 }
 
 /**
