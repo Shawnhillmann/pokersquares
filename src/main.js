@@ -250,8 +250,7 @@ function updateGoalHud(credits) {
   }
 
   if (ui.goalTarget) {
-    ui.goalTarget.textContent =
-      goalIndex >= 6 ? "Goal: Highest Score" : `Goal ${goalIndex}: ${goalTarget.toLocaleString()}`;
+    ui.goalTarget.textContent = goalIndex >= 6 ? "Highest" : goalTarget.toLocaleString();
   }
   updateGoalText(creditsDisplayValue);
   updateRewardLabel();
