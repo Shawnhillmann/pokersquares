@@ -166,7 +166,7 @@
             <div class="goalBlock">
               <div class="goalBlock__top">
                 <div class="goalMeta goalMeta--goal">
-                  <div class="goalMeta__label">GOAL</div>
+                  <div class="goalMeta__label" id="goalLabelTitle">Goal 1</div>
                   <div class="goalMeta__value" id="goalTarget">1,000</div>
                 </div>
                 <div class="goalMeta goalMeta--score">
@@ -195,7 +195,10 @@
           </div>
 
           <div class="belowGameArea">
-            <button class="btn btn--ghost btn--hint" id="hintBtn" type="button">Hint - 300 Credits</button>
+            <div class="belowGameStack">
+              <button class="btn btn--ghost btn--hint" id="hintBtn" type="button">Hint - 300 Credits</button>
+              <div class="swapCostLine" id="swapCostLine" aria-live="polite">Swap cost: 100 credits</div>
+            </div>
           </div>
         </div>
 
@@ -204,7 +207,7 @@
             <div class="howToPlayPanel__title">How to play</div>
             <div class="howToPlayPanel__text">
               Swap any two cards to make poker hands. Hands can be either vertical or horizontal. Each attempt
-              costs <b>100</b> credits.
+              costs <b><span id="howToSwapCost">100</span></b> credits (goes up by 20% after each goal you clear).
             </div>
           </div>
         </div>

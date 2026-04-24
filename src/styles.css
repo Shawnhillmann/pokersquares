@@ -453,6 +453,21 @@ main.stage {
   margin-top: 10px;
 }
 
+.belowGameStack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.swapCostLine {
+  font-size: 12px;
+  font-weight: 750;
+  letter-spacing: 0.04em;
+  color: rgba(247, 215, 116, 0.88);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+
 /* Hint: gold-on-felt (readable default); :active darkens — no filter/brightness inversion */
 .belowGameArea .btn.btn--hint {
   color: rgba(255, 250, 235, 0.98);
@@ -1384,6 +1399,19 @@ html.is-mobile img.cardPip--faceArt {
   padding: 16px;
 }
 
+.rewardPickOverlay__swapNotice {
+  margin-bottom: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(247, 215, 116, 0.28);
+  background: rgba(247, 180, 64, 0.1);
+  color: rgba(255, 248, 230, 0.92);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.35;
+  text-align: center;
+}
+
 .rewardPickOverlay__title {
   font-weight: 850;
   letter-spacing: 0.1em;
@@ -1419,11 +1447,45 @@ html.is-mobile img.cardPip--faceArt {
   transform: translateY(0px) scale(0.99);
 }
 
+.rewardPick__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
 .rewardPick__name {
   font-weight: 850;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: rgba(247, 215, 116, 0.98);
+  flex: 1;
+  min-width: 0;
+}
+
+.rewardPick__stackTag {
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 4px 7px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: rgba(255, 255, 255, 0.88);
+  background: rgba(0, 0, 0, 0.22);
+}
+
+.rewardPick__stackTag--stackable {
+  border-color: rgba(120, 200, 255, 0.35);
+  color: rgba(186, 228, 255, 0.98);
+  background: rgba(40, 90, 140, 0.25);
+}
+
+.rewardPick__stackTag--once {
+  border-color: rgba(247, 215, 116, 0.35);
+  color: rgba(255, 236, 190, 0.98);
+  background: rgba(90, 70, 20, 0.28);
 }
 
 .rewardPick__desc {

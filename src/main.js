@@ -35,6 +35,9 @@ const ui = {
   goalTarget: /** @type {HTMLElement|null} */ (document.getElementById("goalTarget")),
   goalFill: /** @type {HTMLElement|null} */ (document.getElementById("goalFill")),
   goalReward: /** @type {HTMLElement|null} */ (document.getElementById("goalReward")),
+  goalLabelTitle: /** @type {HTMLElement|null} */ (document.getElementById("goalLabelTitle")),
+  swapCostLine: /** @type {HTMLElement|null} */ (document.getElementById("swapCostLine")),
+  howToSwapCost: /** @type {HTMLElement|null} */ (document.getElementById("howToSwapCost")),
   howToPlayPanel: /** @type {HTMLElement} */ (document.getElementById("howToPlayPanel")),
   creditDock: /** @type {HTMLElement|null} */ (document.getElementById("creditDock")),
   toggleHowToBtn: /** @type {HTMLButtonElement|null} */ (document.getElementById("toggleHowToBtn"))
@@ -49,7 +52,8 @@ let successfulMoves = 0;
 const SCORE_OPTS = { minType: HAND_TYPE.TWO_PAIR };
 
 const STARTING_POINTS = 500;
-const SWAP_COST = 100;
+/** Base swap cost before goal-based scaling. */
+const SWAP_COST_BASE = 100;
 const HINT_COST = 300;
 
 const rewards = {
@@ -66,6 +70,13 @@ let jokerCount = 0;
 
 function hintCost() {
   return HINT_COST;
+}
+
+/** Number of goals cleared this run; each adds +20% to swap cost (compounding). */
+let swapCostTier = 0;
+
+function swapCost() {
+  return Math.max(1, Math.round(SWAP_COST_BASE * Math.pow(1.2, swapCostTier)));
 }
 
 function cardScoreValue(card) {
@@ -126,12 +137,12 @@ function endRun(kind) {
  * (or after cascades resolve), so the player isn't "killed" mid-resolution.
  */
 function canAffordSwap() {
-  return state.credits >= SWAP_COST;
+  return state.credits >= swapCost();
 }
 
 function spendSwapCost() {
   if (!canAffordSwap()) return false;
-  state.credits = clampNonNegative(state.credits - SWAP_COST);
+  state.credits = clampNonNegative(state.credits - swapCost());
   rerender();
   // Swap costs should feel instant (rewards can animate).
   setCreditsInstant(state.credits);
@@ -178,6 +189,9 @@ function updateHud() {
   const credits = Math.max(0, Math.floor(state.credits));
   updateGoalHud(credits);
   ui.hintBtn.textContent = `Hint - ${hintCost()} Credits`;
+  const sc = swapCost().toLocaleString();
+  if (ui.swapCostLine) ui.swapCostLine.textContent = `Swap cost: ${sc} credits`;
+  if (ui.howToSwapCost) ui.howToSwapCost.textContent = sc;
 }
 
 let creditsDisplayValue = Math.max(0, Math.floor(state.credits));
@@ -228,6 +242,12 @@ let goalTarget = 1000;
 let hasWon = false;
 let pendingRewardPicks = 0;
 
+function updateGoalTitleLabel() {
+  if (!ui.goalLabelTitle) return;
+  if (goalIndex >= 6) ui.goalLabelTitle.textContent = "Endless";
+  else ui.goalLabelTitle.textContent = `Goal ${goalIndex}`;
+}
+
 function updateGoalHud(credits) {
   // Animate rewards upward, but snap costs downward.
   if (credits >= creditsDisplayValue) animateCreditsTo(credits);
@@ -239,6 +259,7 @@ function updateGoalHud(credits) {
     sfx.goalReached(completed);
     bumpGoalCelebration();
     pendingRewardPicks += 1;
+    swapCostTier += 1;
     goalIndex += 1;
     goalTarget *= 2;
   }
@@ -250,6 +271,7 @@ function updateGoalHud(credits) {
     pendingWinModal = true;
     bumpGoalCelebration(true);
     pendingRewardPicks += 1;
+    swapCostTier += 1;
     goalIndex = 6;
     goalTarget *= 2;
   }
@@ -259,6 +281,7 @@ function updateGoalHud(credits) {
   }
   updateGoalText(creditsDisplayValue);
   updateRewardLabel();
+  updateGoalTitleLabel();
   if (ui.goalFill) {
     const p = Math.max(0, Math.min(1, credits / goalTarget));
     ui.goalFill.style.width = `${Math.round(p * 1000) / 10}%`;
@@ -444,6 +467,7 @@ ui.newGameBtn.addEventListener("click", () => {
   rewards.diagonalsScored = false;
   rewards.extraJoker = false;
   pendingRewardPicks = 0;
+  swapCostTier = 0;
   // Keep main/gameState.js in sync for the starting bankroll.
   state.credits = STARTING_POINTS;
   showToast(ui.toast, "New deal");
@@ -473,6 +497,7 @@ ui.restartBtn.addEventListener("click", () => {
   rewards.diagonalsScored = false;
   rewards.extraJoker = false;
   pendingRewardPicks = 0;
+  swapCostTier = 0;
   state.credits = STARTING_POINTS;
   rerender();
   showCenterTip("Swap any 2 cards to make vertical or horizontal poker hands");
@@ -1002,21 +1027,36 @@ function pickRewardOptions3() {
   return chosen.slice(0, 3);
 }
 
+/**
+ * @param {typeof REWARD_DEFS[number]} o
+ */
+function rewardStackTagHtml(o) {
+  const stackable = o.stack.kind === "stackable";
+  const label = stackable ? "Stackable" : "One-time";
+  const mod = stackable ? "rewardPick__stackTag--stackable" : "rewardPick__stackTag--once";
+  return `<span class="rewardPick__stackTag ${mod}">${label}</span>`;
+}
+
 function showRewardPickModal() {
   return new Promise((resolve) => {
     const opts = pickRewardOptions3();
+    const swapNotice = `Clearing a goal raises swap cost by <b>20%</b> (compounding). Swaps now cost <b>${swapCost().toLocaleString()}</b> credits.`;
     const overlay = document.createElement("div");
     overlay.className = "rewardPickOverlay";
     overlay.innerHTML = `
       <div class="rewardPickOverlay__backdrop"></div>
       <div class="rewardPickOverlay__card" role="dialog" aria-modal="true">
+        <div class="rewardPickOverlay__swapNotice">${swapNotice}</div>
         <div class="rewardPickOverlay__title">Choose a Reward</div>
         <div class="rewardPickOverlay__choices">
           ${opts
             .map(
               (o) => `
             <button class="rewardPick" type="button" data-id="${o.id}">
-              <div class="rewardPick__name">${o.name}</div>
+              <div class="rewardPick__head">
+                <div class="rewardPick__name">${o.name}</div>
+                ${rewardStackTagHtml(o)}
+              </div>
               <div class="rewardPick__desc">${o.desc}</div>
             </button>
           `
