@@ -195,9 +195,9 @@ body {
 }
 
 .goalBlock__top {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  justify-content: space-between;
   gap: 10px;
   text-align: left;
   position: relative;
@@ -213,7 +213,7 @@ body {
 
 .goalMeta__label {
   font-size: 10px;
-  font-weight: 850;
+  font-weight: 600;
   letter-spacing: 0.16em;
   color: rgba(114, 247, 195, 0.75);
   text-transform: uppercase;
@@ -222,7 +222,7 @@ body {
 
 .goalMeta__value {
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 500;
   letter-spacing: 0.02em;
   color: rgba(255, 255, 255, 0.9);
   white-space: nowrap;
@@ -232,22 +232,24 @@ body {
 .goalMeta--goal {
   align-items: flex-start;
   text-align: left;
+  justify-self: start;
 }
 
 .goalMeta--reward {
   align-items: flex-end;
   text-align: right;
+  justify-self: end;
 }
 
 .goalMeta--score {
   align-items: center;
   text-align: center;
-  flex: 1;
+  justify-self: center;
 }
 
 .goalMeta__value--score {
   font-size: 26px;
-  font-weight: 850;
+  font-weight: 600;
   color: rgba(247, 215, 116, 0.98);
   text-shadow: 0 0 16px rgba(247, 215, 116, 0.18), 0 18px 44px rgba(0, 0, 0, 0.6);
   letter-spacing: 0.02em;
