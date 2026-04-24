@@ -988,10 +988,11 @@ function maybeTriggerRandomHint() {
   // Disable during cascades/combos.
   if (state.comboStep > 0) return;
   if (viewFx.hint) return;
-  if (Math.random() >= 0.05) return;
+  if (Math.random() >= 0.15) return;
 
   const move = findBestScoringSwap(state.board);
   if (!move) return;
+  enqueueRewardBurst("Free Hint!", "A hint appeared");
   showHintHighlightForMove(move, 1500);
 }
 
