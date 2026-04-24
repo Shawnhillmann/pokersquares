@@ -569,9 +569,10 @@ main.stage {
 }
 
 .cell.is-hint {
-  border-color: rgba(247, 215, 116, 0.7);
-  box-shadow: 0 0 0 2px rgba(247, 215, 116, 0.28), 0 0 22px rgba(247, 215, 116, 0.18);
-  animation: hintPulse 700ms ease-in-out infinite;
+  border-color: rgba(247, 215, 116, 0.95);
+  box-shadow: 0 0 0 3px rgba(247, 215, 116, 0.38), 0 0 34px rgba(247, 215, 116, 0.34);
+  filter: brightness(1.12);
+  animation: hintPulse 520ms ease-in-out infinite;
 }
 
 .cell.is-dim .cardFace {
@@ -1375,7 +1376,7 @@ html.is-mobile img.cardPip--faceArt {
 
 .rewardPickOverlay__card {
   position: relative;
-  width: min(94vw, 720px);
+  width: min(var(--game-stack-w), 94vw);
   border-radius: 16px;
   border: 1px solid rgba(247, 215, 116, 0.32);
   background: rgba(10, 12, 18, 0.82);

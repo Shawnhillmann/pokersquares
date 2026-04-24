@@ -498,7 +498,7 @@ ui.hintBtn.addEventListener("click", async () => {
     showToast(ui.toast, "No scoring hint found");
     return;
   }
-  showHintHighlightForMove(move, 1500);
+  showHintHighlightForMove(move);
 });
 
 ui.helpBtn.addEventListener("click", () => {
@@ -917,25 +917,25 @@ const REWARD_DEFS = /** @type {const} */ ([
     id: "randomHints",
     name: "Random Hints",
     desc: "Hints may appear randomly",
-    canRepeat: true
+    stack: { kind: "stackable" }
   },
   {
     id: "combos2x",
     name: "2X Combos",
     desc: "Cascade combos score 2x",
-    canRepeat: false
+    stack: { kind: "unique" }
   },
   {
     id: "jokerCard",
     name: "Joker Card",
     desc: "Counts as any card",
-    canRepeat: true
+    stack: { kind: "stackable", max: 2 }
   },
   {
     id: "diagonals",
     name: "Diagonals",
     desc: "Diagonal hands score too",
-    canRepeat: false
+    stack: { kind: "unique" }
   }
 ]);
 
@@ -994,7 +994,7 @@ function pickRewardOptions3() {
     chosen.push(r);
   }
   // If we ran out (because pool < 3), pad with repeatables (randomHints/jokerCard).
-  const repeatables = REWARD_DEFS.filter((r) => r.canRepeat);
+  const repeatables = REWARD_DEFS.filter((r) => r.stack.kind === "stackable");
   while (chosen.length < 3) {
     const r = repeatables[state.rng.int(repeatables.length)];
     chosen.push(r);
@@ -1083,14 +1083,9 @@ function enqueueRewardBurst(title, desc) {
   })();
 }
 
-function showHintHighlightForMove(move, ms = 1500) {
+function showHintHighlightForMove(move) {
   viewFx.hint = new Set([`${move.a.r},${move.a.c}`, `${move.b.r},${move.b.c}`]);
   rerender();
-  setTimeout(() => {
-    if (state.busy) return;
-    viewFx.hint = null;
-    rerender();
-  }, ms);
 }
 
 function maybeTriggerRandomHint() {
@@ -1106,7 +1101,7 @@ function maybeTriggerRandomHint() {
   const move = findBestScoringSwap(state.board);
   if (!move) return;
   enqueueRewardBurst("Free Hint!", "A hint appeared");
-  showHintHighlightForMove(move, 1500);
+  showHintHighlightForMove(move);
 }
 
 function showWinModal() {
