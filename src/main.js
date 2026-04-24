@@ -53,12 +53,15 @@ const SWAP_COST = 100;
 const HINT_COST = 300;
 
 const rewards = {
-  randomHints: false, // Goal 1
+  randomHints: false, // selected: Random Hints
   comboMultiplier: false, // Goal 2
   jokerWildcard: false, // Goal 3
   diagonalsScored: false, // Goal 4
   extraJoker: false // Goal 5
 };
+
+let randomHintChance = 0;
+let lastPickedRewardName = "____";
 
 function hintCost() {
   return HINT_COST;
@@ -222,6 +225,7 @@ function animateCreditsTo(to) {
 let goalIndex = 1;
 let goalTarget = 1000;
 let hasWon = false;
+let pendingRewardPicks = 0;
 
 function updateGoalHud(credits) {
   // Animate rewards upward, but snap costs downward.
@@ -233,7 +237,7 @@ function updateGoalHud(credits) {
     const completed = goalIndex;
     sfx.goalReached(completed);
     bumpGoalCelebration();
-    unlockRewardForGoal(completed);
+    pendingRewardPicks += 1;
     goalIndex += 1;
     goalTarget *= 2;
   }
@@ -244,7 +248,7 @@ function updateGoalHud(credits) {
     sfx.youWin();
     pendingWinModal = true;
     bumpGoalCelebration(true);
-    unlockRewardForGoal(5);
+    pendingRewardPicks += 1;
     goalIndex = 6;
     goalTarget *= 2;
   }
@@ -305,41 +309,11 @@ function rewardNameForGoal(g) {
 function updateRewardLabel() {
   if (!ui.goalReward) return;
   if (goalIndex >= 6) ui.goalReward.textContent = "Pride";
-  else ui.goalReward.textContent = rewardNameForGoal(goalIndex);
+  else ui.goalReward.textContent = lastPickedRewardName || "____";
 }
 
 function unlockRewardForGoal(g) {
-  if (g === 1) rewards.randomHints = true;
-  if (g === 2) rewards.comboMultiplier = true;
-  if (g === 3 && !rewards.jokerWildcard) {
-    rewards.jokerWildcard = true;
-    // Add one Joker to the cycling deck.
-    state.deck?.addJoker?.();
-  }
-  if (g === 4) rewards.diagonalsScored = true;
-  if (g === 5 && !rewards.extraJoker) {
-    rewards.extraJoker = true;
-    // Add a second Joker to the cycling deck.
-    state.deck?.addJoker?.();
-  }
-  // Reward popup for clarity.
-  const name = rewardNameForGoal(g);
-  const desc =
-    g === 1
-      ? "Hints may appear randomly"
-      : g === 2
-        ? "Cascade combos score 2x"
-        : g === 3
-          ? "Counts as any card"
-          : g === 4
-            ? "Diagonal hands score too"
-            : g === 5
-              ? "Another Joker added"
-              : "";
-  if (name && desc) enqueueRewardBurst(name, desc);
-  // Update UI immediately (hint cost, reward label).
-  ui.hintBtn.textContent = `Hint - ${hintCost()} Credits`;
-  updateRewardLabel();
+  // Deprecated: rewards are chosen via the roguelike picker now.
 }
 
 function rerender() {
@@ -461,10 +435,13 @@ ui.newGameBtn.addEventListener("click", () => {
   goalTarget = 1000;
   hasWon = false;
   rewards.randomHints = false;
+  randomHintChance = 0;
+  lastPickedRewardName = "____";
   rewards.comboMultiplier = false;
   rewards.jokerWildcard = false;
   rewards.diagonalsScored = false;
   rewards.extraJoker = false;
+  pendingRewardPicks = 0;
   // Keep main/gameState.js in sync for the starting bankroll.
   state.credits = STARTING_POINTS;
   showToast(ui.toast, "New deal");
@@ -486,10 +463,13 @@ ui.restartBtn.addEventListener("click", () => {
   goalTarget = 1000;
   hasWon = false;
   rewards.randomHints = false;
+  randomHintChance = 0;
+  lastPickedRewardName = "____";
   rewards.comboMultiplier = false;
   rewards.jokerWildcard = false;
   rewards.diagonalsScored = false;
   rewards.extraJoker = false;
+  pendingRewardPicks = 0;
   state.credits = STARTING_POINTS;
   rerender();
   showCenterTip("Swap any 2 cards to make vertical or horizontal poker hands");
@@ -929,6 +909,130 @@ let pendingWinModal = false;
 const rewardBurstQueue = [];
 let rewardBurstShowing = false;
 
+const REWARD_DEFS = /** @type {const} */ ([
+  {
+    id: "randomHints",
+    name: "Random Hints",
+    desc: "Hints may appear randomly",
+    canRepeat: true
+  },
+  {
+    id: "combos2x",
+    name: "2X Combos",
+    desc: "Cascade combos score 2x",
+    canRepeat: false
+  },
+  {
+    id: "jokerCard",
+    name: "Joker Card",
+    desc: "Counts as any card",
+    canRepeat: true
+  },
+  {
+    id: "diagonals",
+    name: "Diagonals",
+    desc: "Diagonal hands score too",
+    canRepeat: false
+  }
+]);
+
+function canOfferReward(id) {
+  if (id === "combos2x") return !rewards.comboMultiplier;
+  if (id === "diagonals") return !rewards.diagonalsScored;
+  return true;
+}
+
+function applyReward(id) {
+  if (id === "randomHints") {
+    rewards.randomHints = true;
+    // First pick sets it to 10%, then +10% per additional pick.
+    randomHintChance = Math.min(0.9, Math.max(0.1, (randomHintChance || 0) + 0.1));
+    lastPickedRewardName = "Random Hints";
+    enqueueRewardBurst("Random Hints", `Chance: ${Math.round(randomHintChance * 100)}%`);
+    return;
+  }
+  if (id === "combos2x") {
+    rewards.comboMultiplier = true;
+    lastPickedRewardName = "2X Combos";
+    enqueueRewardBurst("2X Combos", "Cascade combos score 2x");
+    return;
+  }
+  if (id === "jokerCard") {
+    rewards.jokerWildcard = true;
+    // Every pick adds a Joker to the deck.
+    state.deck?.addJoker?.();
+    lastPickedRewardName = "Joker Card";
+    enqueueRewardBurst("Joker Card", "Counts as any card");
+    return;
+  }
+  if (id === "diagonals") {
+    rewards.diagonalsScored = true;
+    lastPickedRewardName = "Diagonals";
+    enqueueRewardBurst("Diagonals", "Diagonal hands score too");
+    return;
+  }
+}
+
+function pickRewardOptions3() {
+  const pool = REWARD_DEFS.filter((r) => canOfferReward(r.id));
+  /** @type {typeof REWARD_DEFS[number][]} */
+  const chosen = [];
+  const used = new Set();
+  const desired = Math.min(3, Math.max(1, pool.length));
+  while (chosen.length < desired && pool.length) {
+    const idx = state.rng.int(pool.length);
+    const r = pool[idx];
+    if (used.has(r.id)) continue;
+    used.add(r.id);
+    chosen.push(r);
+  }
+  // If we ran out (because pool < 3), pad with repeatables (randomHints/jokerCard).
+  const repeatables = REWARD_DEFS.filter((r) => r.canRepeat);
+  while (chosen.length < 3) {
+    const r = repeatables[state.rng.int(repeatables.length)];
+    chosen.push(r);
+  }
+  return chosen.slice(0, 3);
+}
+
+function showRewardPickModal() {
+  return new Promise((resolve) => {
+    const opts = pickRewardOptions3();
+    const overlay = document.createElement("div");
+    overlay.className = "rewardPickOverlay";
+    overlay.innerHTML = `
+      <div class="rewardPickOverlay__backdrop"></div>
+      <div class="rewardPickOverlay__card" role="dialog" aria-modal="true">
+        <div class="rewardPickOverlay__title">Choose a Reward</div>
+        <div class="rewardPickOverlay__choices">
+          ${opts
+            .map(
+              (o) => `
+            <button class="rewardPick" type="button" data-id="${o.id}">
+              <div class="rewardPick__name">${o.name}</div>
+              <div class="rewardPick__desc">${o.desc}</div>
+            </button>
+          `
+            )
+            .join("")}
+        </div>
+      </div>
+    `;
+    document.body.append(overlay);
+
+    const onPick = (id) => {
+      overlay.remove();
+      resolve(String(id));
+    };
+    overlay.querySelectorAll(".rewardPick").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        // @ts-ignore
+        onPick(btn.dataset.id);
+      });
+    });
+  });
+}
+
 async function playRewardBurst({ title, desc }) {
   const host = ui.board.parentElement;
   if (!host) return;
@@ -987,8 +1091,10 @@ function maybeTriggerRandomHint() {
   if (state.busy) return;
   // Disable during cascades/combos.
   if (state.comboStep > 0) return;
+  // While a reward picker is pending, don't fire random hints.
+  if (pendingRewardPicks > 0) return;
   if (viewFx.hint) return;
-  if (Math.random() >= 0.15) return;
+  if (Math.random() >= randomHintChance) return;
 
   const move = findBestScoringSwap(state.board);
   if (!move) return;
@@ -1473,6 +1579,13 @@ async function resolveCascades() {
         pendingWinModal = false;
         await showWinModal();
         // Re-render in case layout changed while modal was open.
+        rerender();
+      }
+
+      while (pendingRewardPicks > 0) {
+        const picked = await showRewardPickModal();
+        pendingRewardPicks = Math.max(0, pendingRewardPicks - 1);
+        applyReward(picked);
         rerender();
       }
 
