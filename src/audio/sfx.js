@@ -1,5 +1,7 @@
 let ctx = /** @type {AudioContext|null} */ (null);
 let master = /** @type {GainNode|null} */ (null);
+let enabled = true;
+const MASTER_GAIN_ON = 0.18;
 
 function ensureAudio() {
   if (ctx && master) return { ctx, master };
@@ -7,7 +9,7 @@ function ensureAudio() {
   if (!Ctx) return null;
   ctx = new Ctx();
   master = ctx.createGain();
-  master.gain.value = 0.18;
+  master.gain.value = enabled ? MASTER_GAIN_ON : 0;
   master.connect(ctx.destination);
   return { ctx, master };
 }
@@ -38,6 +40,7 @@ function gainEnv(gain, t0, t1, v0, v1) {
 }
 
 function playTone({ freq, dur = 0.07, type = "sine", detune = 0, sweepTo = null }) {
+  if (!enabled) return;
   const a = ensureAudio();
   if (!a) return;
 
@@ -59,6 +62,7 @@ function playTone({ freq, dur = 0.07, type = "sine", detune = 0, sweepTo = null 
 }
 
 function playMetal({ freq, dur = 0.11, strength = 1 }) {
+  if (!enabled) return;
   // Simple "coin-ish" clang: add a few detuned partials with fast decay.
   const a = ensureAudio();
   if (!a) return;
@@ -96,6 +100,7 @@ function playMetal({ freq, dur = 0.11, strength = 1 }) {
 }
 
 function playNoise({ dur = 0.08, highpassHz = 600 } = {}) {
+  if (!enabled) return;
   const a = ensureAudio();
   if (!a) return;
 
@@ -134,6 +139,17 @@ function speedFromCombo(combo) {
 }
 
 export const sfx = {
+  setEnabled(v) {
+    enabled = !!v;
+    const a = ensureAudio();
+    if (!a) return;
+    a.master.gain.value = enabled ? MASTER_GAIN_ON : 0;
+  },
+
+  isEnabled() {
+    return enabled;
+  },
+
   /**
    * Call once on the first user gesture (click) to unlock audio.
    */

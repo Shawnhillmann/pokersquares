@@ -18,8 +18,7 @@
 
         <div class="hud__right">
           <button class="btn" id="newGameBtn" type="button">New Game</button>
-          <button class="btn btn--ghost" id="toggleChartBtn" type="button">Hide hands</button>
-          <button class="btn btn--ghost toggleHowToBtn" id="toggleHowToBtn" type="button">Hide tips</button>
+          <button class="btn btn--ghost" id="settingsBtn" type="button">Settings</button>
           <button class="btn btn--ghost" id="helpBtn" type="button">Rules</button>
         </div>
       </header>
@@ -260,6 +259,35 @@
         </div>
         <div class="modal__actions">
           <button class="btn" id="restartBtn" type="button">Restart</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal" id="settingsModal" hidden>
+      <div class="modal__backdrop"></div>
+      <div class="modal__card modal__card--settings" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+        <div class="modal__title" id="settingsTitle">Settings</div>
+        <div class="settingsGrid" role="group" aria-label="Settings toggles">
+          <label class="settingsRow">
+            <input class="settingsRow__check" id="settingsHands" type="checkbox" />
+            <span class="settingsRow__label">Show hands panel</span>
+          </label>
+          <label class="settingsRow">
+            <input class="settingsRow__check" id="settingsTips" type="checkbox" />
+            <span class="settingsRow__label">Show tips panel</span>
+          </label>
+          <div class="settingsDivider"></div>
+          <label class="settingsRow">
+            <input class="settingsRow__check" id="settingsSfx" type="checkbox" />
+            <span class="settingsRow__label">Sound effects</span>
+          </label>
+          <label class="settingsRow">
+            <input class="settingsRow__check" id="settingsMusic" type="checkbox" />
+            <span class="settingsRow__label">Music</span>
+          </label>
+        </div>
+        <div class="modal__actions">
+          <button class="btn" id="settingsCloseBtn" type="button">Close</button>
         </div>
       </div>
     </div>

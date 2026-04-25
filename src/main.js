@@ -13,6 +13,7 @@ import { evaluateHand } from "./poker/evaluateHand.js";
 import { evaluateHandWild } from "./poker/evaluateHandWild.js";
 import { cardBaseValue, handMultiplier } from "./game/scoring.js";
 import { sfx } from "./audio/sfx.js";
+import { music } from "./audio/music.js";
 
 const ui = {
   board: /** @type {HTMLElement} */ (document.getElementById("board")),
@@ -21,7 +22,7 @@ const ui = {
   newGameBtn: /** @type {HTMLButtonElement} */ (document.getElementById("newGameBtn")),
   hintBtn: /** @type {HTMLButtonElement} */ (document.getElementById("hintBtn")),
   helpBtn: /** @type {HTMLButtonElement} */ (document.getElementById("helpBtn")),
-  toggleChartBtn: /** @type {HTMLButtonElement} */ (document.getElementById("toggleChartBtn")),
+  settingsBtn: /** @type {HTMLButtonElement|null} */ (document.getElementById("settingsBtn")),
   toggleChartBtn2: /** @type {HTMLButtonElement} */ (document.getElementById("toggleChartBtn2")),
   handChart: /** @type {HTMLElement} */ (document.getElementById("handChart")),
   rulesPanel: /** @type {HTMLElement} */ (document.getElementById("rulesPanel")),
@@ -44,7 +45,12 @@ const ui = {
   rewardsTrackerBody: /** @type {HTMLElement|null} */ (document.getElementById("rewardsTrackerBody")),
   howToPlayPanel: /** @type {HTMLElement} */ (document.getElementById("howToPlayPanel")),
   creditDock: /** @type {HTMLElement|null} */ (document.getElementById("creditDock")),
-  toggleHowToBtn: /** @type {HTMLButtonElement|null} */ (document.getElementById("toggleHowToBtn"))
+  settingsModal: /** @type {HTMLElement|null} */ (document.getElementById("settingsModal")),
+  settingsCloseBtn: /** @type {HTMLButtonElement|null} */ (document.getElementById("settingsCloseBtn")),
+  settingsHands: /** @type {HTMLInputElement|null} */ (document.getElementById("settingsHands")),
+  settingsTips: /** @type {HTMLInputElement|null} */ (document.getElementById("settingsTips")),
+  settingsSfx: /** @type {HTMLInputElement|null} */ (document.getElementById("settingsSfx")),
+  settingsMusic: /** @type {HTMLInputElement|null} */ (document.getElementById("settingsMusic"))
 };
 
 const state = createGameState({ seed: null });
@@ -219,7 +225,6 @@ function setChartHidden(hidden) {
     ui.handChart.classList.toggle("is-collapsed", hidden);
     ui.handChart.setAttribute("aria-hidden", hidden ? "true" : "false");
   }
-  if (ui.toggleChartBtn) ui.toggleChartBtn.textContent = hidden ? "Show hands" : "Hide hands";
   if (ui.toggleChartBtn2) ui.toggleChartBtn2.textContent = hidden ? "Show" : "Hide";
   if (!hidden && MOBILE_MQ.matches && ui.handChart) {
     requestAnimationFrame(() => {
@@ -475,10 +480,6 @@ function setHowToHidden(hidden) {
     if (hidden) ui.creditDock.setAttribute("aria-hidden", "true");
     else ui.creditDock.removeAttribute("aria-hidden");
   }
-  if (ui.toggleHowToBtn) {
-    ui.toggleHowToBtn.textContent = hidden ? "Show tips" : "Hide tips";
-    ui.toggleHowToBtn.setAttribute("aria-pressed", hidden ? "true" : "false");
-  }
 }
 
 function syncHowToPanelForViewport() {
@@ -493,10 +494,97 @@ function syncMobileViewportClass() {
 
 if (MOBILE_MQ.matches) setChartHidden(true);
 
-ui.toggleHowToBtn?.addEventListener("click", () => {
-  if (MOBILE_MQ.matches) return;
-  setHowToHidden(!isHowToHidden);
+const SETTINGS_STORAGE_KEY = "speed_poker_settings_v1";
+const settings = {
+  showHands: true,
+  showTips: true,
+  sfx: true,
+  music: false
+};
+
+function loadSettings() {
+  try {
+    const raw = localStorage.getItem(SETTINGS_STORAGE_KEY);
+    if (!raw) return;
+    const v = JSON.parse(raw);
+    if (v && typeof v === "object") {
+      if (typeof v.showHands === "boolean") settings.showHands = v.showHands;
+      if (typeof v.showTips === "boolean") settings.showTips = v.showTips;
+      if (typeof v.sfx === "boolean") settings.sfx = v.sfx;
+      if (typeof v.music === "boolean") settings.music = v.music;
+    }
+  } catch {
+    // ignored
+  }
+}
+
+function saveSettings() {
+  try {
+    localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
+  } catch {
+    // ignored
+  }
+}
+
+function syncSettingsUi() {
+  if (ui.settingsHands) ui.settingsHands.checked = !!settings.showHands;
+  if (ui.settingsTips) ui.settingsTips.checked = !!settings.showTips;
+  if (ui.settingsSfx) ui.settingsSfx.checked = !!settings.sfx;
+  if (ui.settingsMusic) ui.settingsMusic.checked = !!settings.music;
+}
+
+function applySettings() {
+  setChartHidden(!settings.showHands);
+  // Preserve existing mobile behavior: tips panel is always shown on mobile.
+  if (MOBILE_MQ.matches) setHowToHidden(false);
+  else setHowToHidden(!settings.showTips);
+  sfx.setEnabled(!!settings.sfx);
+  music.setEnabled(!!settings.music);
+}
+
+function openSettings() {
+  if (!ui.settingsModal) return;
+  syncSettingsUi();
+  ui.settingsModal.removeAttribute("hidden");
+}
+
+function closeSettings() {
+  if (!ui.settingsModal) return;
+  ui.settingsModal.setAttribute("hidden", "");
+}
+
+ui.settingsBtn?.addEventListener("click", () => {
+  // User gesture: allow audio to start if toggles are enabled.
+  sfx.unlock();
+  music.unlock();
+  openSettings();
 });
+
+ui.settingsCloseBtn?.addEventListener("click", () => closeSettings());
+ui.settingsModal?.addEventListener("click", (ev) => {
+  // Click outside the card closes.
+  if (ev.target && (ev.target.classList?.contains("modal") || ev.target.classList?.contains("modal__backdrop"))) {
+    closeSettings();
+  }
+});
+
+for (const [el, key] of [
+  [ui.settingsHands, "showHands"],
+  [ui.settingsTips, "showTips"],
+  [ui.settingsSfx, "sfx"],
+  [ui.settingsMusic, "music"]
+]) {
+  if (!el) continue;
+  el.addEventListener("change", () => {
+    // @ts-ignore
+    settings[key] = !!el.checked;
+    saveSettings();
+    // User gesture: allow audio to start if toggles are enabled.
+    sfx.unlock();
+    music.unlock();
+    applySettings();
+  });
+}
 
 /**
  * Pick a random screen position that avoids the board rect.
@@ -577,7 +665,7 @@ ui.newGameBtn.addEventListener("click", () => {
   checkCantAffordSwapAndEnd();
 });
 
-for (const btn of [ui.toggleChartBtn, ui.toggleChartBtn2]) {
+for (const btn of [ui.toggleChartBtn2]) {
   if (!btn) continue;
   btn.addEventListener("click", () => setChartHidden(!isChartHidden));
 }
@@ -647,6 +735,10 @@ document.addEventListener("visibilitychange", () => {
 });
 window.addEventListener("focus", () => sfx.unlock());
 window.addEventListener("pageshow", () => sfx.unlock());
+
+// Apply persisted settings at startup.
+loadSettings();
+applySettings();
 
 function isMobileLayout() {
   return document.documentElement.classList.contains("is-mobile");
@@ -1786,6 +1878,7 @@ async function onCellClick(pos) {
   if (checkCantAffordSwapAndEnd()) return;
   // First interaction unlocks audio on most browsers.
   sfx.unlock();
+  music.unlock();
   sfx.cardFlipTick(0, 1);
   // Any interaction clears hint.
   if (viewFx.hint) {
