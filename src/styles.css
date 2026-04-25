@@ -705,8 +705,8 @@ html.is-mobile .cell.is-swap-windup {
 /* (Aces are standard cards; no ace art mode) */
 
 .cardRank.cardRank--ten {
-  font-size: 23px;
-  letter-spacing: -0.06em;
+  font-size: 30px;
+  letter-spacing: -0.03em;
 }
 
 .cardPip {
@@ -2270,7 +2270,7 @@ html.is-mobile .cardCornerSuit {
 }
 
 html.is-mobile .cardRank.cardRank--ten {
-  font-size: clamp(10px, calc(var(--cell) * 0.27), 17px);
+  font-size: clamp(12px, calc(var(--cell) * 0.32), 22px);
 }
 
 html.is-mobile .cardPip:not(.cardPip--faceArt) {

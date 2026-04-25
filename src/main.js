@@ -55,6 +55,17 @@ let successfulMoves = 0;
 
 const SCORE_OPTS = { minType: HAND_TYPE.TWO_PAIR };
 
+const GOAL_TARGETS = /** @type {const} */ ([
+  1000, 2000, 4000, 8000, 16000, 24000, 36000, 52000, 72000, 100000
+]);
+
+function goalTargetForIndex(idx) {
+  const i = Math.max(1, Math.floor(idx));
+  if (i <= GOAL_TARGETS.length) return GOAL_TARGETS[i - 1];
+  // Endless: +10k each goal after Goal 10.
+  return GOAL_TARGETS[GOAL_TARGETS.length - 1] + (i - GOAL_TARGETS.length) * 10000;
+}
+
 const STARTING_POINTS = 500;
 /** Base swap cost before goal-based scaling. */
 const SWAP_COST_BASE = 100;
@@ -314,14 +325,13 @@ function animateCreditsTo(to) {
 }
 
 let goalIndex = 1;
-let goalTarget = 1000;
+let goalTarget = goalTargetForIndex(1);
 let hasWon = false;
 let pendingRewardPicks = 0;
 
 function updateGoalTitleLabel() {
   if (!ui.goalLabelTitle) return;
-  if (goalIndex >= 6) ui.goalLabelTitle.textContent = "Endless";
-  else ui.goalLabelTitle.textContent = `Goal ${goalIndex}`;
+  ui.goalLabelTitle.textContent = `Goal ${goalIndex}`;
 }
 
 function updateGoalHud(credits) {
@@ -329,33 +339,30 @@ function updateGoalHud(credits) {
   if (credits >= creditsDisplayValue) animateCreditsTo(credits);
   else setCreditsInstant(credits);
 
-  // Advance goals: 1k, 2k, 4k, 8k, 16k (up through Goal 5).
-  while (goalIndex < 5 && credits >= goalTarget) {
+  // Advance goals using the curve up through Goal 10, then endless (+10k each).
+  // Every cleared goal grants a reward pick and increases swap/hint costs by 20%.
+  while (credits >= goalTarget) {
     const completed = goalIndex;
-    peakGoalClearedThisRun = Math.max(peakGoalClearedThisRun, completed);
-    sfx.goalReached(completed);
-    bumpGoalCelebration();
+    peakGoalClearedThisRun = Math.max(peakGoalClearedThisRun, Math.min(10, completed));
+
+    if (!hasWon && completed === 10) {
+      hasWon = true;
+      sfx.youWin();
+      pendingWinModal = true;
+      bumpGoalCelebration(true);
+    } else {
+      sfx.goalReached(completed);
+      bumpGoalCelebration();
+    }
+
     pendingRewardPicks += 1;
     swapCostTier += 1;
     goalIndex += 1;
-    goalTarget *= 2;
-  }
-
-  // Win state: reaching/passing Goal 5 target.
-  if (!hasWon && goalIndex === 5 && credits >= goalTarget) {
-    hasWon = true;
-    peakGoalClearedThisRun = Math.max(peakGoalClearedThisRun, 5);
-    sfx.youWin();
-    pendingWinModal = true;
-    bumpGoalCelebration(true);
-    pendingRewardPicks += 1;
-    swapCostTier += 1;
-    goalIndex = 6;
-    goalTarget *= 2;
+    goalTarget = goalTargetForIndex(goalIndex);
   }
 
   if (ui.goalTarget) {
-    ui.goalTarget.textContent = goalIndex >= 6 ? "High Score" : goalTarget.toLocaleString();
+    ui.goalTarget.textContent = goalTarget.toLocaleString();
   }
   updateGoalText(creditsDisplayValue);
   updateRewardLabel();
@@ -410,8 +417,7 @@ function rewardNameForGoal(g) {
 
 function updateRewardLabel() {
   if (!ui.goalReward) return;
-  if (goalIndex >= 6) ui.goalReward.textContent = "Pride";
-  else ui.goalReward.textContent = "Choose 1 of 3";
+  ui.goalReward.textContent = "Choose 1 of 3";
 }
 
 function unlockRewardForGoal(g) {
@@ -534,7 +540,7 @@ ui.newGameBtn.addEventListener("click", () => {
   ui.runEndModal.setAttribute("hidden", "");
   newGame(state);
   goalIndex = 1;
-  goalTarget = 1000;
+  goalTarget = goalTargetForIndex(1);
   hasWon = false;
   rewards.randomHints = false;
   randomHintChance = 0;
@@ -570,7 +576,7 @@ ui.restartBtn.addEventListener("click", () => {
   ui.runEndModal.setAttribute("hidden", "");
   newGame(state);
   goalIndex = 1;
-  goalTarget = 1000;
+  goalTarget = goalTargetForIndex(1);
   hasWon = false;
   rewards.randomHints = false;
   randomHintChance = 0;
@@ -1049,7 +1055,7 @@ const REWARD_DEFS = /** @type {const} */ ([
   {
     id: "diagonals",
     name: "Diagonals",
-    desc: "Diagonal hands score too",
+    desc: "Diagonals can now be scored as well.",
     stack: { kind: "unique" }
   },
   {
@@ -1116,7 +1122,7 @@ function applyReward(id) {
   if (id === "diagonals") {
     rewards.diagonalsScored = true;
     lastPickedRewardName = "Diagonals";
-    enqueueRewardBurst("Diagonals", "Diagonal hands score too");
+    enqueueRewardBurst("Diagonals", "Diagonals can now be scored as well.");
     return;
   }
   if (id === "noClearTwoPair") {
@@ -1298,7 +1304,10 @@ function showWinModal() {
       <div class="winOverlay__backdrop"></div>
       <div class="winOverlay__card" role="dialog" aria-modal="true">
         <div class="winOverlay__title">YOU WIN!</div>
-        <div class="winOverlay__text">Continue playing in endless mode to reach a new high score!</div>
+        <div class="winOverlay__text">
+          You cleared <b>Goal 10</b>.<br />
+          Endless mode continues after this—every <b>10,000</b> credits earns another reward.
+        </div>
         <button class="btn winOverlay__btn" type="button">Continue</button>
       </div>
     `;
