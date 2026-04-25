@@ -56,14 +56,14 @@ let successfulMoves = 0;
 const SCORE_OPTS = { minType: HAND_TYPE.TWO_PAIR };
 
 const GOAL_TARGETS = /** @type {const} */ ([
-  1000, 2000, 4000, 8000, 16000, 24000, 36000, 52000, 72000, 100000
+  1000, 2000, 5000, 10000, 15000, 25000, 40000, 60000, 80000, 100000
 ]);
 
 function goalTargetForIndex(idx) {
   const i = Math.max(1, Math.floor(idx));
   if (i <= GOAL_TARGETS.length) return GOAL_TARGETS[i - 1];
-  // Endless: +10k each goal after Goal 10.
-  return GOAL_TARGETS[GOAL_TARGETS.length - 1] + (i - GOAL_TARGETS.length) * 10000;
+  // Endless: rewards granted every 50,000 points after Goal 10.
+  return GOAL_TARGETS[GOAL_TARGETS.length - 1] + (i - GOAL_TARGETS.length) * 50000;
 }
 
 const STARTING_POINTS = 500;
@@ -79,6 +79,8 @@ const rewards = {
   jokerWildcard: false, // Goal 3
   diagonalsScored: false, // Goal 4
   extraJoker: false, // Goal 5
+  /** One-time: doubles the pip value of every card for scoring. */
+  doubleCardValues: false,
   /** One-time: two pair lines do not clear (straight+ still does). */
   noClearTwoPair: false,
   /** One-time: three of a kind lines do not clear (straight+ still does). */
@@ -106,8 +108,9 @@ function swapCost() {
 
 function cardScoreValue(card) {
   if (!card) return 0;
-  if (rewards.jokerWildcard && String(card.rank) === "JOKER") return 10;
-  return cardBaseValue(String(card.rank));
+  const isJoker = String(card.rank) === "JOKER";
+  const base = rewards.jokerWildcard && isJoker ? 10 : cardBaseValue(String(card.rank));
+  return rewards.doubleCardValues ? base * 2 : base;
 }
 
 function scoringOpts() {
@@ -275,6 +278,7 @@ function updateRewardsTracker() {
   } else {
     addRow("Jokers", "—");
   }
+  addRow("Double card values", rewards.doubleCardValues ? "Active" : "—");
   addRow("Diagonals", rewards.diagonalsScored ? "Active" : "—");
   addRow("Two pair clears", rewards.noClearTwoPair ? "Disabled" : "On");
   addRow("Trips clear", rewards.noClearTrips ? "Disabled" : "On");
@@ -339,7 +343,7 @@ function updateGoalHud(credits) {
   if (credits >= creditsDisplayValue) animateCreditsTo(credits);
   else setCreditsInstant(credits);
 
-  // Advance goals using the curve up through Goal 10, then endless (+10k each).
+  // Advance goals using the table up through Goal 10, then endless (+50k each).
   // Every cleared goal grants a reward pick and increases swap/hint costs by 20%.
   while (credits >= goalTarget) {
     const completed = goalIndex;
@@ -551,6 +555,7 @@ ui.newGameBtn.addEventListener("click", () => {
   rewards.jokerWildcard = false;
   rewards.diagonalsScored = false;
   rewards.extraJoker = false;
+  rewards.doubleCardValues = false;
   rewards.noClearTwoPair = false;
   rewards.noClearTrips = false;
   rewards.kickersCount = false;
@@ -587,6 +592,7 @@ ui.restartBtn.addEventListener("click", () => {
   rewards.jokerWildcard = false;
   rewards.diagonalsScored = false;
   rewards.extraJoker = false;
+  rewards.doubleCardValues = false;
   rewards.noClearTwoPair = false;
   rewards.noClearTrips = false;
   rewards.kickersCount = false;
@@ -1053,6 +1059,12 @@ const REWARD_DEFS = /** @type {const} */ ([
     stack: { kind: "stackable", max: 2 }
   },
   {
+    id: "doubleCardValues",
+    name: "Double Card Values",
+    desc: "Doubles the value of every card for scoring (2s score as 4s, etc).",
+    stack: { kind: "unique" }
+  },
+  {
     id: "diagonals",
     name: "Diagonals",
     desc: "Diagonals can now be scored as well.",
@@ -1083,6 +1095,7 @@ function canOfferReward(id) {
   if (id === "noClearTwoPair") return !rewards.noClearTwoPair;
   if (id === "noClearTrips") return !rewards.noClearTrips;
   if (id === "kickersCount") return !rewards.kickersCount;
+  if (id === "doubleCardValues") return !rewards.doubleCardValues;
   if (id === "jokerCard") return jokerCount < 2;
   return true;
 }
@@ -1123,6 +1136,12 @@ function applyReward(id) {
     rewards.diagonalsScored = true;
     lastPickedRewardName = "Diagonals";
     enqueueRewardBurst("Diagonals", "Diagonals can now be scored as well.");
+    return;
+  }
+  if (id === "doubleCardValues") {
+    rewards.doubleCardValues = true;
+    lastPickedRewardName = "Double Card Values";
+    enqueueRewardBurst("Double Card Values", "Card values are now doubled");
     return;
   }
   if (id === "noClearTwoPair") {
@@ -1306,7 +1325,7 @@ function showWinModal() {
         <div class="winOverlay__title">YOU WIN!</div>
         <div class="winOverlay__text">
           You cleared <b>Goal 10</b>.<br />
-          Endless mode continues after this—every <b>10,000</b> credits earns another reward.
+          Endless mode continues after this—every <b>50,000</b> credits earns another reward.
         </div>
         <button class="btn winOverlay__btn" type="button">Continue</button>
       </div>
