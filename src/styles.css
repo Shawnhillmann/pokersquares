@@ -1438,17 +1438,17 @@ html.is-mobile .cardFace:not(.cardFace--jokerArt) img.cardPip--faceArt {
 }
 
 .handBurst--tip {
-  border-color: rgba(114, 247, 195, 0.26);
-  background: radial-gradient(700px 170px at 30% 0%, rgba(114, 247, 195, 0.14), transparent 60%),
-    linear-gradient(180deg, var(--felt), var(--felt2));
+  pointer-events: auto;
+  border-color: rgba(247, 215, 116, 0.45);
+  background: rgba(10, 12, 18, 0.78);
 }
 
 .handBurst--tip .handBurst__label {
-  font-size: 16px;
-  letter-spacing: 0.02em;
-  text-transform: none;
-  color: rgba(255, 255, 255, 0.92);
-  text-shadow: 0 0 20px rgba(114, 247, 195, 0.14), 0 18px 44px rgba(0, 0, 0, 0.62);
+  font-size: 18px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(247, 215, 116, 0.98);
+  text-shadow: 0 0 22px rgba(247, 215, 116, 0.18), 0 18px 44px rgba(0, 0, 0, 0.62);
 }
 
 .handBurst--royal {

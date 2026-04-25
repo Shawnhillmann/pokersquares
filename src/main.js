@@ -23,7 +23,6 @@ const ui = {
   hintBtn: /** @type {HTMLButtonElement} */ (document.getElementById("hintBtn")),
   helpBtn: /** @type {HTMLButtonElement} */ (document.getElementById("helpBtn")),
   settingsBtn: /** @type {HTMLButtonElement|null} */ (document.getElementById("settingsBtn")),
-  toggleChartBtn2: /** @type {HTMLButtonElement} */ (document.getElementById("toggleChartBtn2")),
   handChart: /** @type {HTMLElement} */ (document.getElementById("handChart")),
   rulesPanel: /** @type {HTMLElement} */ (document.getElementById("rulesPanel")),
   runEndModal: /** @type {HTMLElement} */ (document.getElementById("runEndModal")),
@@ -47,8 +46,6 @@ const ui = {
   creditDock: /** @type {HTMLElement|null} */ (document.getElementById("creditDock")),
   settingsModal: /** @type {HTMLElement|null} */ (document.getElementById("settingsModal")),
   settingsCloseBtn: /** @type {HTMLButtonElement|null} */ (document.getElementById("settingsCloseBtn")),
-  settingsHands: /** @type {HTMLInputElement|null} */ (document.getElementById("settingsHands")),
-  settingsTips: /** @type {HTMLInputElement|null} */ (document.getElementById("settingsTips")),
   settingsSfx: /** @type {HTMLInputElement|null} */ (document.getElementById("settingsSfx")),
   settingsMusic: /** @type {HTMLInputElement|null} */ (document.getElementById("settingsMusic")),
   settingsSfxVol: /** @type {HTMLInputElement|null} */ (document.getElementById("settingsSfxVol")),
@@ -86,6 +83,8 @@ const rewards = {
   randomHints: false, // selected: Random Hints
   /** Times Combo Bonus picked; each adds +50% to cascade combo line scores. */
   comboBonusStacks: 0,
+  /** Times Hand Multiplier picked; each adds +50% to all hand scores. */
+  handMultiplierStacks: 0,
   jokerWildcard: false, // Goal 3
   diagonalsScored: false, // Goal 4
   extraJoker: false, // Goal 5
@@ -106,13 +105,13 @@ let lastPickedRewardName = "____";
 let jokerCount = 0;
 
 function hintCost() {
-  // Always 20% of the current goal target.
-  return Math.max(1, Math.round(goalTarget * 0.2));
+  // Always 10% of the current goal target.
+  return Math.max(1, Math.round(goalTarget * 0.1));
 }
 
 function swapCost() {
-  // Always 5% of the current goal target.
-  return Math.max(1, Math.round(goalTarget * 0.05));
+  // Always 2.5% of the current goal target.
+  return Math.max(1, Math.round(goalTarget * 0.025));
 }
 
 function cardScoreValue(card) {
@@ -221,20 +220,7 @@ const viewFx = {
   dropMode: null
 };
 
-let isChartHidden = false;
-function setChartHidden(hidden) {
-  isChartHidden = hidden;
-  if (ui.handChart) {
-    ui.handChart.classList.toggle("is-collapsed", hidden);
-    ui.handChart.setAttribute("aria-hidden", hidden ? "true" : "false");
-  }
-  if (ui.toggleChartBtn2) ui.toggleChartBtn2.textContent = hidden ? "Show" : "Hide";
-  if (!hidden && MOBILE_MQ.matches && ui.handChart) {
-    requestAnimationFrame(() => {
-      ui.handChart.scrollIntoView({ behavior: "smooth", block: "end" });
-    });
-  }
-}
+// Poker hand chart is always visible now (no hide control).
 
 /** Best credits reached this run (authoritative bankroll, not mid-animation display). */
 let peakCreditsThisRun = 0;
@@ -282,6 +268,12 @@ function updateRewardsTracker() {
     addRow("Combo bonus", `+${pct}% cascades · ${rewards.comboBonusStacks}×`);
   } else {
     addRow("Combo bonus", "—");
+  }
+  if (rewards.handMultiplierStacks > 0) {
+    const pct = 50 * rewards.handMultiplierStacks;
+    addRow("Hand multiplier", `+${pct}% all hands · ${rewards.handMultiplierStacks}×`);
+  } else {
+    addRow("Hand multiplier", "—");
   }
   if (rewards.jokerWildcard || jokerCount > 0) {
     addRow("Jokers", `${jokerCount} / 2 in deck`);
@@ -466,33 +458,13 @@ function positionScoreFeed() {
 
 const MOBILE_MQ = window.matchMedia("(max-width: 720px)");
 
-let isHowToHidden = false;
-
-function setHowToHidden(hidden) {
-  isHowToHidden = hidden;
-  if (ui.creditDock) {
-    ui.creditDock.classList.toggle("is-howto-collapsed", hidden);
-    if (hidden) ui.creditDock.setAttribute("aria-hidden", "true");
-    else ui.creditDock.removeAttribute("aria-hidden");
-  }
-}
-
-function syncHowToPanelForViewport() {
-  if (MOBILE_MQ.matches) setHowToHidden(false);
-}
-
 function syncMobileViewportClass() {
   document.documentElement.classList.toggle("is-mobile", MOBILE_MQ.matches);
-  syncHowToPanelForViewport();
   positionScoreFeed();
 }
 
-if (MOBILE_MQ.matches) setChartHidden(true);
-
 const SETTINGS_STORAGE_KEY = "speed_poker_settings_v1";
 const settings = {
-  showHands: true,
-  showTips: true,
   sfx: true,
   music: false,
   sfxVol: 1,
@@ -506,8 +478,6 @@ function loadSettings() {
     if (!raw) return;
     const v = JSON.parse(raw);
     if (v && typeof v === "object") {
-      if (typeof v.showHands === "boolean") settings.showHands = v.showHands;
-      if (typeof v.showTips === "boolean") settings.showTips = v.showTips;
       if (typeof v.sfx === "boolean") settings.sfx = v.sfx;
       if (typeof v.music === "boolean") settings.music = v.music;
       if (typeof v.sfxVol === "number") settings.sfxVol = Math.max(0, Math.min(1, v.sfxVol));
@@ -528,8 +498,6 @@ function saveSettings() {
 }
 
 function syncSettingsUi() {
-  if (ui.settingsHands) ui.settingsHands.checked = !!settings.showHands;
-  if (ui.settingsTips) ui.settingsTips.checked = !!settings.showTips;
   if (ui.settingsSfx) ui.settingsSfx.checked = !!settings.sfx;
   if (ui.settingsMusic) ui.settingsMusic.checked = !!settings.music;
   if (ui.settingsSfxVol) ui.settingsSfxVol.value = String(Math.round(settings.sfxVol * 100));
@@ -540,10 +508,6 @@ function syncSettingsUi() {
 }
 
 function applySettings() {
-  setChartHidden(!settings.showHands);
-  // Preserve existing mobile behavior: tips panel is always shown on mobile.
-  if (MOBILE_MQ.matches) setHowToHidden(false);
-  else setHowToHidden(!settings.showTips);
   sfx.setEnabled(!!settings.sfx);
   sfx.setVolume(settings.sfxVol);
   music.setEnabled(!!settings.music);
@@ -607,8 +571,6 @@ ui.settingsNextTrackBtn?.addEventListener("click", async () => {
 });
 
 for (const [el, key] of [
-  [ui.settingsHands, "showHands"],
-  [ui.settingsTips, "showTips"],
   [ui.settingsSfx, "sfx"],
   [ui.settingsMusic, "music"]
 ]) {
@@ -683,6 +645,7 @@ ui.newGameBtn.addEventListener("click", () => {
   lastPickedRewardName = "____";
   jokerCount = 0;
   rewards.comboBonusStacks = 0;
+  rewards.handMultiplierStacks = 0;
   rewards.jokerWildcard = false;
   rewards.diagonalsScored = false;
   rewards.extraJoker = false;
@@ -701,11 +664,6 @@ ui.newGameBtn.addEventListener("click", () => {
   checkCantAffordSwapAndEnd();
 });
 
-for (const btn of [ui.toggleChartBtn2]) {
-  if (!btn) continue;
-  btn.addEventListener("click", () => setChartHidden(!isChartHidden));
-}
-
 ui.restartBtn.addEventListener("click", () => {
   successfulMoves = 0;
   ui.runEndModal.setAttribute("hidden", "");
@@ -718,6 +676,7 @@ ui.restartBtn.addEventListener("click", () => {
   lastPickedRewardName = "____";
   jokerCount = 0;
   rewards.comboBonusStacks = 0;
+  rewards.handMultiplierStacks = 0;
   rewards.jokerWildcard = false;
   rewards.diagonalsScored = false;
   rewards.extraJoker = false;
@@ -1183,6 +1142,12 @@ const REWARD_DEFS = /** @type {const} */ ([
     stack: { kind: "stackable" }
   },
   {
+    id: "handMultiplier",
+    name: "Hand Multiplier",
+    desc: "Increases all hand type scores by 50% (Stackable)",
+    stack: { kind: "stackable" }
+  },
+  {
     id: "jokerCard",
     name: "Joker Card",
     desc: "Counts as any card.",
@@ -1248,6 +1213,13 @@ function applyReward(id) {
       "Combo Bonus",
       `+${pct}% on cascade lines (${stacks} stack${stacks === 1 ? "" : "s"})`
     );
+    return;
+  }
+  if (id === "handMultiplier") {
+    rewards.handMultiplierStacks += 1;
+    lastPickedRewardName = "Hand Multiplier";
+    const pct = 50 * rewards.handMultiplierStacks;
+    enqueueRewardBurst("Hand Multiplier", `+${pct}% to all hand scores`);
     return;
   }
   if (id === "jokerCard") {
@@ -1662,7 +1634,9 @@ function computeImmediateLineScoreForBoard(board, line) {
     if (!card) continue;
     pipSum += cardScoreValue(card);
   }
-  return pipSum * handMultiplier(line.type);
+  const hm = handMultiplier(line.type);
+  const rewardMult = 1 + 0.5 * Math.max(0, Math.floor(rewards.handMultiplierStacks || 0));
+  return pipSum * hm * rewardMult;
 }
 
 /**
@@ -1980,9 +1954,10 @@ async function resolveCascades() {
         if (card) pipSum += cardScoreValue(card);
       }
       const lineScore = pipSum * hm;
+      const rewardMult = 1 + 0.5 * Math.max(0, Math.floor(rewards.handMultiplierStacks || 0));
       const comboMult =
         rewards.comboBonusStacks > 0 && state.comboStep > 1 ? 1 + 0.5 * rewards.comboBonusStacks : 1;
-      const gained = Math.floor(lineScore * comboMult);
+      const gained = Math.floor(lineScore * comboMult * rewardMult);
       const handBurstEl = showHandBurst({ label: line.label, type: line.type, credits: gained });
       // Ensure the line highlight is visible before the sequential grow starts.
       await sleep(comboDelayMs(45, state.comboStep));
