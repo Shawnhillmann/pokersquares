@@ -569,23 +569,29 @@ ui.settingsModal?.addEventListener("click", (ev) => {
 
 const pct01 = (x) => Math.max(0, Math.min(1, Number(x) / 100));
 
-ui.settingsSfxVol?.addEventListener("input", () => {
+function onSettingsSfxVolChange() {
   if (!ui.settingsSfxVol) return;
   settings.sfxVol = pct01(ui.settingsSfxVol.value);
   if (ui.settingsSfxVolValue) ui.settingsSfxVolValue.textContent = `${Math.round(settings.sfxVol * 100)}%`;
   sfx.setVolume(settings.sfxVol);
   saveSettings();
-});
+}
 
-ui.settingsMusicVol?.addEventListener("input", () => {
+ui.settingsSfxVol?.addEventListener("input", onSettingsSfxVolChange);
+ui.settingsSfxVol?.addEventListener("change", onSettingsSfxVolChange);
+
+function onSettingsMusicVolChange() {
   if (!ui.settingsMusicVol) return;
   settings.musicVol = pct01(ui.settingsMusicVol.value);
   if (ui.settingsMusicVolValue) ui.settingsMusicVolValue.textContent = `${Math.round(settings.musicVol * 100)}%`;
   music.setVolume(settings.musicVol);
-  // User gesture path: try to start music if enabled.
-  music.unlock();
+  // User gesture path: wire Web Audio (iOS) and try to start music if enabled.
+  void music.unlock();
   saveSettings();
-});
+}
+
+ui.settingsMusicVol?.addEventListener("input", onSettingsMusicVolChange);
+ui.settingsMusicVol?.addEventListener("change", onSettingsMusicVolChange);
 
 ui.settingsNextTrackBtn?.addEventListener("click", async () => {
   // User gesture path: allow audio to start if enabled.
@@ -605,10 +611,10 @@ for (const [el, key] of [
     // @ts-ignore
     settings[key] = !!el.checked;
     saveSettings();
-    // User gesture: allow audio to start if toggles are enabled.
-    sfx.unlock();
-    music.unlock();
     applySettings();
+    // User gesture: resume Web Audio / playback after enabled state is current.
+    sfx.unlock();
+    void music.unlock();
   });
 }
 

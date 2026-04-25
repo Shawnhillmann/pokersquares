@@ -155,6 +155,7 @@ html {
 .settingsRow__slider {
   flex: 1;
   min-width: 120px;
+  touch-action: manipulation;
 }
 
 .settingsRow__value {

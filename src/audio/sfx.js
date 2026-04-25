@@ -1,7 +1,8 @@
 let ctx = /** @type {AudioContext|null} */ (null);
 let master = /** @type {GainNode|null} */ (null);
 let enabled = true;
-const MASTER_GAIN_ON = 0.18;
+/** Master gain when SFX enabled at 100% (per-voice gains are small; this was ~0.18 and read quiet on phones). */
+const MASTER_GAIN_ON = 0.34;
 let volume = 1;
 
 function ensureAudio() {

@@ -5,9 +5,65 @@ let trackIndex = 1;
 const TRACK_PREFIX = "/audio/track-";
 const TRACK_SUFFIX = ".mp3";
 
+/** @type {AudioContext|null} */
+let musicCtx = null;
+/** @type {MediaElementAudioSourceNode|null} */
+let musicMediaSrc = null;
+/** @type {GainNode|null} */
+let musicGain = null;
+
 function trackUrlForIndex(i) {
   const idx = Math.max(1, Math.floor(i || 1));
   return `${TRACK_PREFIX}${idx}${TRACK_SUFFIX}`;
+}
+
+function applyVolumeToOutputs() {
+  const v = Number.isFinite(volume) ? Math.max(0, Math.min(1, volume)) : 0.22;
+  const a = audio;
+  if (musicGain) {
+    musicGain.gain.value = v;
+    if (a) a.volume = 1;
+  } else if (a) {
+    a.volume = v;
+  }
+}
+
+/**
+ * iOS (and some mobile browsers) ignore HTMLMediaElement.volume. Route the
+ * element through Web Audio so the settings slider always controls loudness.
+ */
+function ensureMusicWebAudio() {
+  const a = ensureAudioEl();
+  if (musicGain) return true;
+  const Ctx = window.AudioContext || window.webkitAudioContext;
+  if (!Ctx) return false;
+  try {
+    musicCtx = new Ctx();
+    musicMediaSrc = musicCtx.createMediaElementSource(a);
+    musicGain = musicCtx.createGain();
+    musicGain.gain.value = Math.max(0, Math.min(1, volume));
+    musicMediaSrc.connect(musicGain);
+    musicGain.connect(musicCtx.destination);
+    a.volume = 1;
+    return true;
+  } catch {
+    musicCtx = null;
+    musicMediaSrc = null;
+    musicGain = null;
+    applyVolumeToOutputs();
+    return false;
+  }
+}
+
+async function resumeMusicCtxIfNeeded() {
+  if (!musicCtx) return;
+  if (musicCtx.state === "suspended") {
+    try {
+      await musicCtx.resume();
+    } catch {
+      // ignored
+    }
+  }
 }
 
 function ensureAudioEl() {
@@ -15,7 +71,7 @@ function ensureAudioEl() {
   audio = new Audio();
   audio.loop = true;
   audio.preload = "auto";
-  audio.volume = volume;
+  applyVolumeToOutputs();
   audio.src = trackUrlForIndex(trackIndex);
   return audio;
 }
@@ -31,6 +87,8 @@ async function applyPlayback() {
     }
     return;
   }
+  ensureMusicWebAudio();
+  await resumeMusicCtxIfNeeded();
   try {
     await a.play();
   } catch {
@@ -51,8 +109,8 @@ export const music = {
   setVolume(v) {
     const n = Number(v);
     volume = Number.isFinite(n) ? Math.max(0, Math.min(1, n)) : 0.22;
-    const a = ensureAudioEl();
-    a.volume = volume;
+    ensureAudioEl();
+    applyVolumeToOutputs();
   },
 
   getVolume() {
@@ -136,4 +194,3 @@ export const music = {
     void applyPlayback();
   }
 };
-
