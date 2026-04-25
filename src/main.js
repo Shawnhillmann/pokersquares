@@ -687,7 +687,9 @@ ui.newGameBtn.addEventListener("click", () => {
   showToast(ui.toast, "New deal");
   rerender();
   syncHandChartScores();
-  showCenterTip("Swap any 2 cards to make vertical or horizontal poker hands");
+  showCenterTip(
+    "Swap cards to make either horizontal or vertical poker hands<br />and earn rewards."
+  );
   checkCantAffordSwapAndEnd();
 });
 
@@ -717,7 +719,9 @@ ui.restartBtn.addEventListener("click", () => {
   peakCreditsThisRun = STARTING_POINTS;
   rerender();
   syncHandChartScores();
-  showCenterTip("Swap any 2 cards to make vertical or horizontal poker hands");
+  showCenterTip(
+    "Swap cards to make either horizontal or vertical poker hands<br />and earn rewards."
+  );
   checkCantAffordSwapAndEnd();
 });
 
