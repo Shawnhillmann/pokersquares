@@ -1465,9 +1465,8 @@ html.is-mobile .cardFace:not(.cardFace--jokerArt) img.cardPip--faceArt {
 }
 
 .handBurst--reward {
-  border-color: rgba(255, 255, 255, 0.1);
-  background: radial-gradient(520px 140px at 50% 0%, rgba(247, 215, 116, 0.1), transparent 60%),
-    linear-gradient(180deg, var(--felt), var(--felt2));
+  border-color: rgba(247, 215, 116, 0.45);
+  background: rgba(10, 12, 18, 0.78);
   box-shadow: 0 14px 40px rgba(0, 0, 0, 0.45);
   backdrop-filter: blur(10px);
 }
