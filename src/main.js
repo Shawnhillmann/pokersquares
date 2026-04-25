@@ -83,7 +83,7 @@ const rewards = {
   randomHints: false, // selected: Random Hints
   /** Times Combo Bonus picked; each adds +50% to cascade combo line scores. */
   comboBonusStacks: 0,
-  /** Times Hand Multiplier picked; each adds +50% to all hand scores. */
+  /** Times Hand Multiplier picked; each adds +25% to all hand scores. */
   handMultiplierStacks: 0,
   jokerWildcard: false, // Goal 3
   diagonalsScored: false, // Goal 4
@@ -270,7 +270,7 @@ function updateRewardsTracker() {
     addRow("Combo bonus", "—");
   }
   if (rewards.handMultiplierStacks > 0) {
-    const pct = 50 * rewards.handMultiplierStacks;
+    const pct = 25 * rewards.handMultiplierStacks;
     addRow("Hand multiplier", `+${pct}% all hands · ${rewards.handMultiplierStacks}×`);
   } else {
     addRow("Hand multiplier", "—");
@@ -461,6 +461,32 @@ const MOBILE_MQ = window.matchMedia("(max-width: 720px)");
 function syncMobileViewportClass() {
   document.documentElement.classList.toggle("is-mobile", MOBILE_MQ.matches);
   positionScoreFeed();
+}
+
+function formatHandChartMult(n) {
+  const v = Number(n);
+  if (!Number.isFinite(v)) return "";
+  const rounded = Math.round(v * 10) / 10;
+  if (Math.abs(rounded - Math.round(rounded)) < 1e-9) return String(Math.round(rounded));
+  return String(rounded);
+}
+
+function syncHandChartScores() {
+  if (!ui.handChart) return;
+  const stacks = Math.max(0, Math.floor(rewards.handMultiplierStacks || 0));
+  const mult = 1 + 0.25 * stacks;
+  ui.handChart.querySelectorAll(".handRow__tag--score").forEach((el) => {
+    // @ts-ignore
+    if (!el.dataset.base) {
+      const m = String(el.textContent || "").match(/x\s*([0-9]+(?:\.[0-9]+)?)/i);
+      // @ts-ignore
+      el.dataset.base = m ? m[1] : "1";
+    }
+    // @ts-ignore
+    const base = Number(el.dataset.base || "1") || 1;
+    const shown = formatHandChartMult(base * mult);
+    el.textContent = `x${shown}`;
+  });
 }
 
 const SETTINGS_STORAGE_KEY = "speed_poker_settings_v1";
@@ -660,6 +686,7 @@ ui.newGameBtn.addEventListener("click", () => {
   peakCreditsThisRun = STARTING_POINTS;
   showToast(ui.toast, "New deal");
   rerender();
+  syncHandChartScores();
   showCenterTip("Swap any 2 cards to make vertical or horizontal poker hands");
   checkCantAffordSwapAndEnd();
 });
@@ -689,6 +716,7 @@ ui.restartBtn.addEventListener("click", () => {
   state.credits = STARTING_POINTS;
   peakCreditsThisRun = STARTING_POINTS;
   rerender();
+  syncHandChartScores();
   showCenterTip("Swap any 2 cards to make vertical or horizontal poker hands");
   checkCantAffordSwapAndEnd();
 });
@@ -732,6 +760,7 @@ window.addEventListener("pageshow", () => sfx.unlock());
 // Apply persisted settings at startup.
 loadSettings();
 applySettings();
+syncHandChartScores();
 
 function isMobileLayout() {
   return document.documentElement.classList.contains("is-mobile");
@@ -1144,7 +1173,7 @@ const REWARD_DEFS = /** @type {const} */ ([
   {
     id: "handMultiplier",
     name: "Hand Multiplier",
-    desc: "Increases all hand type scores by 50% (Stackable)",
+    desc: "Increases all hand type scores by 25% (Stackable)",
     stack: { kind: "stackable" }
   },
   {
@@ -1218,8 +1247,9 @@ function applyReward(id) {
   if (id === "handMultiplier") {
     rewards.handMultiplierStacks += 1;
     lastPickedRewardName = "Hand Multiplier";
-    const pct = 50 * rewards.handMultiplierStacks;
+    const pct = 25 * rewards.handMultiplierStacks;
     enqueueRewardBurst("Hand Multiplier", `+${pct}% to all hand scores`);
+    syncHandChartScores();
     return;
   }
   if (id === "jokerCard") {
@@ -1635,7 +1665,7 @@ function computeImmediateLineScoreForBoard(board, line) {
     pipSum += cardScoreValue(card);
   }
   const hm = handMultiplier(line.type);
-  const rewardMult = 1 + 0.5 * Math.max(0, Math.floor(rewards.handMultiplierStacks || 0));
+  const rewardMult = 1 + 0.25 * Math.max(0, Math.floor(rewards.handMultiplierStacks || 0));
   return pipSum * hm * rewardMult;
 }
 
@@ -1954,7 +1984,7 @@ async function resolveCascades() {
         if (card) pipSum += cardScoreValue(card);
       }
       const lineScore = pipSum * hm;
-      const rewardMult = 1 + 0.5 * Math.max(0, Math.floor(rewards.handMultiplierStacks || 0));
+      const rewardMult = 1 + 0.25 * Math.max(0, Math.floor(rewards.handMultiplierStacks || 0));
       const comboMult =
         rewards.comboBonusStacks > 0 && state.comboStep > 1 ? 1 + 0.5 * rewards.comboBonusStacks : 1;
       const gained = Math.floor(lineScore * comboMult * rewardMult);
