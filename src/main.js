@@ -63,7 +63,7 @@ const HINT_COST_BASE = 300;
 
 const rewards = {
   randomHints: false, // selected: Random Hints
-  /** Times Combo Bonus picked; each adds +25% to cascade combo line scores. */
+  /** Times Combo Bonus picked; each adds +50% to cascade combo line scores. */
   comboBonusStacks: 0,
   jokerWildcard: false, // Goal 3
   diagonalsScored: false, // Goal 4
@@ -254,7 +254,7 @@ function updateRewardsTracker() {
     addRow("Random hints", "—");
   }
   if (rewards.comboBonusStacks > 0) {
-    const pct = 25 * rewards.comboBonusStacks;
+    const pct = 50 * rewards.comboBonusStacks;
     addRow("Combo bonus", `+${pct}% cascades · ${rewards.comboBonusStacks}×`);
   } else {
     addRow("Combo bonus", "—");
@@ -1037,7 +1037,7 @@ const REWARD_DEFS = /** @type {const} */ ([
   {
     id: "comboBonus",
     name: "Combo Bonus",
-    desc: "Cascade combos are worth 25% more (Stackable)",
+    desc: "Cascade combos are worth 50% more (Stackable)",
     stack: { kind: "stackable" }
   },
   {
@@ -1094,7 +1094,7 @@ function applyReward(id) {
   if (id === "comboBonus") {
     rewards.comboBonusStacks += 1;
     lastPickedRewardName = "Combo Bonus";
-    const pct = 25 * rewards.comboBonusStacks;
+    const pct = 50 * rewards.comboBonusStacks;
     const stacks = rewards.comboBonusStacks;
     enqueueRewardBurst(
       "Combo Bonus",
@@ -1824,7 +1824,7 @@ async function resolveCascades() {
       }
       const lineScore = pipSum * hm;
       const comboMult =
-        rewards.comboBonusStacks > 0 && state.comboStep > 1 ? 1 + 0.25 * rewards.comboBonusStacks : 1;
+        rewards.comboBonusStacks > 0 && state.comboStep > 1 ? 1 + 0.5 * rewards.comboBonusStacks : 1;
       const gained = Math.floor(lineScore * comboMult);
       const handBurstEl = showHandBurst({ label: line.label, type: line.type, credits: gained });
       // Ensure the line highlight is visible before the sequential grow starts.
