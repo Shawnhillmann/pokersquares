@@ -624,6 +624,30 @@ main.stage {
   position: relative;
   overflow: hidden;
   transition: transform 120ms ease, border-color 120ms ease, filter 120ms ease;
+  /* Ultra-subtle idle drift parameters (overridden by nth-child patterns). */
+  --idle-delay: 0s;
+  --idle-dur: 12s;
+}
+
+.board .cell:nth-child(5n + 1) {
+  --idle-delay: -1.2s;
+  --idle-dur: 13.5s;
+}
+.board .cell:nth-child(5n + 2) {
+  --idle-delay: -4.8s;
+  --idle-dur: 12.4s;
+}
+.board .cell:nth-child(5n + 3) {
+  --idle-delay: -7.1s;
+  --idle-dur: 14.2s;
+}
+.board .cell:nth-child(5n + 4) {
+  --idle-delay: -2.9s;
+  --idle-dur: 12.9s;
+}
+.board .cell:nth-child(5n) {
+  --idle-delay: -5.6s;
+  --idle-dur: 13.1s;
 }
 
 .cell.is-dropping {
@@ -718,6 +742,13 @@ html.is-mobile .cell.is-swap-windup {
   color: rgba(14, 18, 26, 0.92);
   transform: translateY(0px) scale(1);
   transition: transform 160ms ease;
+}
+
+.cell:not(:hover):not(.is-selected):not(.is-hint):not(.is-fail-pulse):not(.is-clearing):not(.is-border-pop):not(.is-seq-grown):not(.is-seq-grow):not(.is-dropping):not(.is-swap-success):not(.is-swap-flip):not(.is-swap-windup)
+  .cardFace {
+  animation: idleDrift var(--idle-dur, 12s) ease-in-out infinite alternate;
+  animation-delay: var(--idle-delay, 0s);
+  will-change: transform;
 }
 
 .cell:hover .cardFace {
@@ -1843,6 +1874,21 @@ html.is-mobile .cardFace:not(.cardFace--jokerArt) img.cardPip--faceArt {
   50% {
     filter: brightness(1.12);
     transform: translateY(-1px);
+  }
+}
+
+@keyframes idleDrift {
+  0% {
+    transform: translate3d(-0.6px, 0.4px, 0) scale(1);
+  }
+  35% {
+    transform: translate3d(0.8px, -0.5px, 0) scale(1);
+  }
+  70% {
+    transform: translate3d(-0.2px, -0.9px, 0) scale(1);
+  }
+  100% {
+    transform: translate3d(0.6px, 0.8px, 0) scale(1);
   }
 }
 
