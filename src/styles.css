@@ -1603,9 +1603,9 @@ html.is-mobile .cardFace:not(.cardFace--jokerArt) img.cardPip--faceArt {
 }
 
 .rewardPick__stackTag--stackable {
-  border-color: rgba(120, 200, 255, 0.35);
-  color: rgba(186, 228, 255, 0.98);
-  background: rgba(40, 90, 140, 0.25);
+  border-color: rgba(247, 215, 116, 0.35);
+  color: rgba(255, 236, 190, 0.98);
+  background: rgba(90, 70, 20, 0.28);
 }
 
 .rewardPick__stackTag--once {

@@ -339,6 +339,8 @@ function animateCreditsTo(to) {
 let goalIndex = 1;
 let goalTarget = goalTargetForIndex(1);
 let pendingRewardPicks = 0;
+/** FIFO of goal numbers that granted a reward pick (for messaging). */
+const clearedGoalsForRewardPick = [];
 
 function updateGoalTitleLabel() {
   if (!ui.goalLabelTitle) return;
@@ -358,6 +360,7 @@ function updateGoalHud(credits) {
     bumpGoalCelebration();
 
     pendingRewardPicks += 1;
+    clearedGoalsForRewardPick.push(completed);
     goalIndex += 1;
     goalTarget = goalTargetForIndex(goalIndex);
   }
@@ -1289,7 +1292,8 @@ function rewardStackTagHtml(o) {
 function showRewardPickModal() {
   return new Promise((resolve) => {
     const opts = pickRewardOptions3();
-    const swapNotice = `Costs scale with your goal. Swaps: <b>${swapCost().toLocaleString()}</b> credits (<b>5%</b> of goal) · Hints: <b>${hintCost().toLocaleString()}</b> credits (<b>20%</b> of goal).`;
+    const clearedGoal = clearedGoalsForRewardPick.length ? clearedGoalsForRewardPick[0] : Math.max(1, goalIndex - 1);
+    const swapNotice = `Goal <b>${clearedGoal}</b> cleared. Swaps now cost <b>${swapCost().toLocaleString()}</b>, Hints now cost <b>${hintCost().toLocaleString()}</b>.`;
     const overlay = document.createElement("div");
     overlay.className = "rewardPickOverlay";
     overlay.innerHTML = `
@@ -1944,6 +1948,7 @@ async function resolveCascades() {
       while (pendingRewardPicks > 0) {
         const picked = await showRewardPickModal();
         pendingRewardPicks = Math.max(0, pendingRewardPicks - 1);
+        clearedGoalsForRewardPick.shift();
         applyReward(picked);
         rerender();
       }
