@@ -100,13 +100,13 @@ let lastPickedRewardName = "____";
 let jokerCount = 0;
 
 function hintCost() {
-  // Always 25% of the current goal target.
-  return Math.max(1, Math.round(goalTarget * 0.25));
+  // Always 20% of the current goal target.
+  return Math.max(1, Math.round(goalTarget * 0.2));
 }
 
 function swapCost() {
-  // Always 10% of the current goal target.
-  return Math.max(1, Math.round(goalTarget * 0.1));
+  // Always 5% of the current goal target.
+  return Math.max(1, Math.round(goalTarget * 0.05));
 }
 
 function cardScoreValue(card) {
@@ -1289,7 +1289,7 @@ function rewardStackTagHtml(o) {
 function showRewardPickModal() {
   return new Promise((resolve) => {
     const opts = pickRewardOptions3();
-    const swapNotice = `Costs scale with your goal. Swaps: <b>${swapCost().toLocaleString()}</b> credits (<b>10%</b> of goal) · Hints: <b>${hintCost().toLocaleString()}</b> credits (<b>25%</b> of goal).`;
+    const swapNotice = `Costs scale with your goal. Swaps: <b>${swapCost().toLocaleString()}</b> credits (<b>5%</b> of goal) · Hints: <b>${hintCost().toLocaleString()}</b> credits (<b>20%</b> of goal).`;
     const overlay = document.createElement("div");
     overlay.className = "rewardPickOverlay";
     overlay.innerHTML = `

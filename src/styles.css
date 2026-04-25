@@ -879,6 +879,11 @@ html.is-mobile .cardFace:not(.cardFace--jokerArt) img.cardPip--faceArt {
   overflow: hidden;
   justify-self: start;
   margin-left: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: radial-gradient(600px 160px at 30% 0%, rgba(114, 247, 195, 0.12), transparent 62%),
+    linear-gradient(180deg, var(--felt), var(--felt2));
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.52);
+  backdrop-filter: blur(10px);
 }
 
 .handChart.is-collapsed {
@@ -1439,6 +1444,14 @@ html.is-mobile .cardFace:not(.cardFace--jokerArt) img.cardPip--faceArt {
   font-weight: 750;
 }
 
+.handBurst--reward {
+  border-color: rgba(255, 255, 255, 0.1);
+  background: radial-gradient(520px 140px at 50% 0%, rgba(247, 215, 116, 0.1), transparent 60%),
+    linear-gradient(180deg, var(--felt), var(--felt2));
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(10px);
+}
+
 .winOverlay {
   position: fixed;
   inset: 0;
@@ -1504,10 +1517,12 @@ html.is-mobile .cardFace:not(.cardFace--jokerArt) img.cardPip--faceArt {
   position: relative;
   width: min(var(--game-stack-w), 94vw);
   border-radius: 16px;
-  border: 1px solid rgba(247, 215, 116, 0.32);
-  background: rgba(10, 12, 18, 0.82);
-  box-shadow: var(--shadow);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: radial-gradient(520px 140px at 50% 0%, rgba(247, 215, 116, 0.1), transparent 60%),
+    linear-gradient(180deg, var(--felt), var(--felt2));
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.52);
   padding: 16px;
+  backdrop-filter: blur(10px);
 }
 
 .rewardPickOverlay__swapNotice {
