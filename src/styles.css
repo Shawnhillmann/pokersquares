@@ -915,8 +915,18 @@ html.is-mobile .cardFace:not(.cardFace--jokerArt) img.cardPip--faceArt {
 .handChart__head {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   gap: 10px;
+}
+
+.handChart__head .panel__title {
+  width: 100%;
+  text-align: center;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  font-size: 10px;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.72);
 }
 
 .btn--tiny {
