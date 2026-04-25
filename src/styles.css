@@ -131,10 +131,31 @@ html {
   user-select: none;
 }
 
+.settingsRow--slider {
+  cursor: default;
+}
+
+.settingsRow--track {
+  cursor: default;
+}
+
 .settingsRow__check {
   width: 18px;
   height: 18px;
   accent-color: rgba(247, 215, 116, 0.95);
+}
+
+.settingsRow__slider {
+  flex: 1;
+  min-width: 120px;
+}
+
+.settingsRow__value {
+  font-size: 12px;
+  font-weight: 750;
+  letter-spacing: 0.04em;
+  color: rgba(255, 255, 255, 0.78);
+  white-space: nowrap;
 }
 
 .settingsRow__label {

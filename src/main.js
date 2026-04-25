@@ -50,7 +50,13 @@ const ui = {
   settingsHands: /** @type {HTMLInputElement|null} */ (document.getElementById("settingsHands")),
   settingsTips: /** @type {HTMLInputElement|null} */ (document.getElementById("settingsTips")),
   settingsSfx: /** @type {HTMLInputElement|null} */ (document.getElementById("settingsSfx")),
-  settingsMusic: /** @type {HTMLInputElement|null} */ (document.getElementById("settingsMusic"))
+  settingsMusic: /** @type {HTMLInputElement|null} */ (document.getElementById("settingsMusic")),
+  settingsSfxVol: /** @type {HTMLInputElement|null} */ (document.getElementById("settingsSfxVol")),
+  settingsSfxVolValue: /** @type {HTMLElement|null} */ (document.getElementById("settingsSfxVolValue")),
+  settingsMusicVol: /** @type {HTMLInputElement|null} */ (document.getElementById("settingsMusicVol")),
+  settingsMusicVolValue: /** @type {HTMLElement|null} */ (document.getElementById("settingsMusicVolValue")),
+  settingsNextTrackBtn: /** @type {HTMLButtonElement|null} */ (document.getElementById("settingsNextTrackBtn")),
+  settingsTrackLabel: /** @type {HTMLElement|null} */ (document.getElementById("settingsTrackLabel"))
 };
 
 const state = createGameState({ seed: null });
@@ -488,7 +494,10 @@ const settings = {
   showHands: true,
   showTips: true,
   sfx: true,
-  music: false
+  music: false,
+  sfxVol: 1,
+  musicVol: 0.22,
+  musicTrack: 1
 };
 
 function loadSettings() {
@@ -501,6 +510,9 @@ function loadSettings() {
       if (typeof v.showTips === "boolean") settings.showTips = v.showTips;
       if (typeof v.sfx === "boolean") settings.sfx = v.sfx;
       if (typeof v.music === "boolean") settings.music = v.music;
+      if (typeof v.sfxVol === "number") settings.sfxVol = Math.max(0, Math.min(1, v.sfxVol));
+      if (typeof v.musicVol === "number") settings.musicVol = Math.max(0, Math.min(1, v.musicVol));
+      if (typeof v.musicTrack === "number") settings.musicTrack = Math.max(1, Math.floor(v.musicTrack));
     }
   } catch {
     // ignored
@@ -520,6 +532,11 @@ function syncSettingsUi() {
   if (ui.settingsTips) ui.settingsTips.checked = !!settings.showTips;
   if (ui.settingsSfx) ui.settingsSfx.checked = !!settings.sfx;
   if (ui.settingsMusic) ui.settingsMusic.checked = !!settings.music;
+  if (ui.settingsSfxVol) ui.settingsSfxVol.value = String(Math.round(settings.sfxVol * 100));
+  if (ui.settingsMusicVol) ui.settingsMusicVol.value = String(Math.round(settings.musicVol * 100));
+  if (ui.settingsSfxVolValue) ui.settingsSfxVolValue.textContent = `${Math.round(settings.sfxVol * 100)}%`;
+  if (ui.settingsMusicVolValue) ui.settingsMusicVolValue.textContent = `${Math.round(settings.musicVol * 100)}%`;
+  if (ui.settingsTrackLabel) ui.settingsTrackLabel.textContent = `Track ${settings.musicTrack}`;
 }
 
 function applySettings() {
@@ -528,7 +545,10 @@ function applySettings() {
   if (MOBILE_MQ.matches) setHowToHidden(false);
   else setHowToHidden(!settings.showTips);
   sfx.setEnabled(!!settings.sfx);
+  sfx.setVolume(settings.sfxVol);
   music.setEnabled(!!settings.music);
+  music.setVolume(settings.musicVol);
+  music.setTrackIndex(settings.musicTrack);
 }
 
 function openSettings() {
@@ -555,6 +575,35 @@ ui.settingsModal?.addEventListener("click", (ev) => {
   if (ev.target && (ev.target.classList?.contains("modal") || ev.target.classList?.contains("modal__backdrop"))) {
     closeSettings();
   }
+});
+
+const pct01 = (x) => Math.max(0, Math.min(1, Number(x) / 100));
+
+ui.settingsSfxVol?.addEventListener("input", () => {
+  if (!ui.settingsSfxVol) return;
+  settings.sfxVol = pct01(ui.settingsSfxVol.value);
+  if (ui.settingsSfxVolValue) ui.settingsSfxVolValue.textContent = `${Math.round(settings.sfxVol * 100)}%`;
+  sfx.setVolume(settings.sfxVol);
+  saveSettings();
+});
+
+ui.settingsMusicVol?.addEventListener("input", () => {
+  if (!ui.settingsMusicVol) return;
+  settings.musicVol = pct01(ui.settingsMusicVol.value);
+  if (ui.settingsMusicVolValue) ui.settingsMusicVolValue.textContent = `${Math.round(settings.musicVol * 100)}%`;
+  music.setVolume(settings.musicVol);
+  // User gesture path: try to start music if enabled.
+  music.unlock();
+  saveSettings();
+});
+
+ui.settingsNextTrackBtn?.addEventListener("click", async () => {
+  // User gesture path: allow audio to start if enabled.
+  music.unlock();
+  const next = await music.nextTrack();
+  settings.musicTrack = next;
+  if (ui.settingsTrackLabel) ui.settingsTrackLabel.textContent = `Track ${settings.musicTrack}`;
+  saveSettings();
 });
 
 for (const [el, key] of [

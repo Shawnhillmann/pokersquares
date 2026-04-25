@@ -2,6 +2,7 @@ let ctx = /** @type {AudioContext|null} */ (null);
 let master = /** @type {GainNode|null} */ (null);
 let enabled = true;
 const MASTER_GAIN_ON = 0.18;
+let volume = 1;
 
 function ensureAudio() {
   if (ctx && master) return { ctx, master };
@@ -9,7 +10,7 @@ function ensureAudio() {
   if (!Ctx) return null;
   ctx = new Ctx();
   master = ctx.createGain();
-  master.gain.value = enabled ? MASTER_GAIN_ON : 0;
+  master.gain.value = enabled ? MASTER_GAIN_ON * volume : 0;
   master.connect(ctx.destination);
   return { ctx, master };
 }
@@ -143,11 +144,23 @@ export const sfx = {
     enabled = !!v;
     const a = ensureAudio();
     if (!a) return;
-    a.master.gain.value = enabled ? MASTER_GAIN_ON : 0;
+    a.master.gain.value = enabled ? MASTER_GAIN_ON * volume : 0;
   },
 
   isEnabled() {
     return enabled;
+  },
+
+  setVolume(v) {
+    const n = Number(v);
+    volume = Number.isFinite(n) ? Math.max(0, Math.min(1, n)) : 1;
+    const a = ensureAudio();
+    if (!a) return;
+    a.master.gain.value = enabled ? MASTER_GAIN_ON * volume : 0;
+  },
+
+  getVolume() {
+    return volume;
   },
 
   /**
