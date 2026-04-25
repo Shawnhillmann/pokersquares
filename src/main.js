@@ -79,8 +79,8 @@ const rewards = {
   jokerWildcard: false, // Goal 3
   diagonalsScored: false, // Goal 4
   extraJoker: false, // Goal 5
-  /** One-time: doubles the pip value of every card for scoring. */
-  doubleCardValues: false,
+  /** Times Double Card Values was picked; each pick doubles pip values again. */
+  doubleCardValueStacks: 0,
   /** One-time: two pair lines do not clear (straight+ still does). */
   noClearTwoPair: false,
   /** One-time: three of a kind lines do not clear (straight+ still does). */
@@ -110,7 +110,9 @@ function cardScoreValue(card) {
   if (!card) return 0;
   const isJoker = String(card.rank) === "JOKER";
   const base = rewards.jokerWildcard && isJoker ? 10 : cardBaseValue(String(card.rank));
-  return rewards.doubleCardValues ? base * 2 : base;
+  const stacks = Math.max(0, Math.floor(rewards.doubleCardValueStacks || 0));
+  const mult = stacks <= 0 ? 1 : Math.pow(2, stacks);
+  return base * mult;
 }
 
 function scoringOpts() {
@@ -278,7 +280,11 @@ function updateRewardsTracker() {
   } else {
     addRow("Jokers", "—");
   }
-  addRow("Double card values", rewards.doubleCardValues ? "Active" : "—");
+  if (rewards.doubleCardValueStacks > 0) {
+    addRow("Double card values", `x${Math.pow(2, rewards.doubleCardValueStacks)} · ${rewards.doubleCardValueStacks}× picked`);
+  } else {
+    addRow("Double card values", "—");
+  }
   addRow("Diagonals", rewards.diagonalsScored ? "Active" : "—");
   addRow("Two pair clears", rewards.noClearTwoPair ? "Disabled" : "On");
   addRow("Trips clear", rewards.noClearTrips ? "Disabled" : "On");
@@ -555,7 +561,7 @@ ui.newGameBtn.addEventListener("click", () => {
   rewards.jokerWildcard = false;
   rewards.diagonalsScored = false;
   rewards.extraJoker = false;
-  rewards.doubleCardValues = false;
+  rewards.doubleCardValueStacks = 0;
   rewards.noClearTwoPair = false;
   rewards.noClearTrips = false;
   rewards.kickersCount = false;
@@ -592,7 +598,7 @@ ui.restartBtn.addEventListener("click", () => {
   rewards.jokerWildcard = false;
   rewards.diagonalsScored = false;
   rewards.extraJoker = false;
-  rewards.doubleCardValues = false;
+  rewards.doubleCardValueStacks = 0;
   rewards.noClearTwoPair = false;
   rewards.noClearTrips = false;
   rewards.kickersCount = false;
@@ -1061,8 +1067,8 @@ const REWARD_DEFS = /** @type {const} */ ([
   {
     id: "doubleCardValues",
     name: "Double Card Values",
-    desc: "Doubles the value of every card for scoring (2s score as 4s, etc).",
-    stack: { kind: "unique" }
+    desc: "Doubles the value of every card for scoring (Stackable).",
+    stack: { kind: "stackable" }
   },
   {
     id: "diagonals",
@@ -1095,7 +1101,6 @@ function canOfferReward(id) {
   if (id === "noClearTwoPair") return !rewards.noClearTwoPair;
   if (id === "noClearTrips") return !rewards.noClearTrips;
   if (id === "kickersCount") return !rewards.kickersCount;
-  if (id === "doubleCardValues") return !rewards.doubleCardValues;
   if (id === "jokerCard") return jokerCount < 2;
   return true;
 }
@@ -1139,9 +1144,10 @@ function applyReward(id) {
     return;
   }
   if (id === "doubleCardValues") {
-    rewards.doubleCardValues = true;
+    rewards.doubleCardValueStacks += 1;
     lastPickedRewardName = "Double Card Values";
-    enqueueRewardBurst("Double Card Values", "Card values are now doubled");
+    const mult = Math.pow(2, rewards.doubleCardValueStacks);
+    enqueueRewardBurst("Double Card Values", `Card values are now x${mult}`);
     return;
   }
   if (id === "noClearTwoPair") {
