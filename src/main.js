@@ -1554,13 +1554,31 @@ function getContributionMask(line) {
 
 function computeImmediateLineScoreForBoard(board, line) {
   const { contribCells } = getContributionMaskForBoard(board, line);
+  const ordered = orderCellsForLine(line, contribCells);
   let pipSum = 0;
-  for (const p of contribCells) {
+  for (const p of ordered) {
     const card = board[p.r][p.c];
     if (!card) continue;
     pipSum += cardScoreValue(card);
   }
   return pipSum * handMultiplier(line.type);
+}
+
+/**
+ * Ensure per-card calculations run in a readable direction:
+ * - row: left -> right
+ * - col: top -> bottom
+ * - diagonals: left -> right
+ *
+ * @param {{ kind:"row"|"col"|"diagDown"|"diagUp" }} line
+ * @param {{r:number,c:number}[]} cells
+ */
+function orderCellsForLine(line, cells) {
+  const kind = line?.kind;
+  const arr = cells.slice();
+  if (kind === "col") return arr.sort((a, b) => a.r - b.r || a.c - b.c);
+  // row + both diagonals: left -> right
+  return arr.sort((a, b) => a.c - b.c || a.r - b.r);
 }
 
 function findBestScoringSwap(board) {
@@ -1666,11 +1684,13 @@ async function kickDropAnimation() {
 /**
  * Sequentially pulse the cards in a scored line.
  * Row pulses left->right, column pulses top->bottom.
- * @param {{ kind:"row"|"col", cells:{r:number,c:number}[] }} line
+ * Diagonals pulse left->right.
+ * @param {{ kind:"row"|"col"|"diagDown"|"diagUp", cells:{r:number,c:number}[] }} line
  */
 async function pulseScoredLine(line, combo, contribCells, dimCells, onTotal, handBurstEl) {
   // DOM nodes exist only after a render.
-  const ordered = contribCells; // only scoring cards
+  const ordered = orderCellsForLine(line, contribCells); // only scoring cards
+  const orderedDim = orderCellsForLine(line, dimCells);
   /** @type {HTMLElement[]} */
   const valuePops = [];
   let running = 0;
@@ -1680,7 +1700,7 @@ async function pulseScoredLine(line, combo, contribCells, dimCells, onTotal, han
   if (handBurstEl) valuePops.push(handBurstEl);
 
   // Kickers: show grey 0 popups and keep them dimmed.
-  for (const p of dimCells) {
+  for (const p of orderedDim) {
     const pop = showCardValuePopup(p, 0, { variant: "zero" });
     if (pop) valuePops.push(pop);
   }
