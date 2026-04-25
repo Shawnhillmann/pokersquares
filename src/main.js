@@ -68,15 +68,13 @@ const GOAL_TARGETS = /** @type {const} */ ([
 function goalTargetForIndex(idx) {
   const i = Math.max(1, Math.floor(idx));
   if (i <= GOAL_TARGETS.length) return GOAL_TARGETS[i - 1];
-  // Endless: rewards granted every 50,000 points after Goal 10.
-  return GOAL_TARGETS[GOAL_TARGETS.length - 1] + (i - GOAL_TARGETS.length) * 50000;
+  // Goal 11+: increase 50% each goal (compounding). Goal 11 = 150,000.
+  const base = GOAL_TARGETS[GOAL_TARGETS.length - 1]; // Goal 10
+  const steps = i - GOAL_TARGETS.length;
+  return Math.max(1, Math.round(base * Math.pow(1.5, steps)));
 }
 
 const STARTING_POINTS = 500;
-/** Base swap cost before goal-based scaling. */
-const SWAP_COST_BASE = 100;
-/** Base hint cost before goal-based scaling (same 20%/goal multiplier as swaps). */
-const HINT_COST_BASE = 300;
 
 const rewards = {
   randomHints: false, // selected: Random Hints
@@ -102,14 +100,13 @@ let lastPickedRewardName = "____";
 let jokerCount = 0;
 
 function hintCost() {
-  return Math.max(1, Math.round(HINT_COST_BASE * Math.pow(1.2, swapCostTier)));
+  // Always 25% of the current goal target.
+  return Math.max(1, Math.round(goalTarget * 0.25));
 }
 
-/** Number of goals cleared this run; each adds +20% to swap and hint costs (compounding). */
-let swapCostTier = 0;
-
 function swapCost() {
-  return Math.max(1, Math.round(SWAP_COST_BASE * Math.pow(1.2, swapCostTier)));
+  // Always 10% of the current goal target.
+  return Math.max(1, Math.round(goalTarget * 0.1));
 }
 
 function cardScoreValue(card) {
@@ -341,7 +338,6 @@ function animateCreditsTo(to) {
 
 let goalIndex = 1;
 let goalTarget = goalTargetForIndex(1);
-let hasWon = false;
 let pendingRewardPicks = 0;
 
 function updateGoalTitleLabel() {
@@ -354,24 +350,14 @@ function updateGoalHud(credits) {
   if (credits >= creditsDisplayValue) animateCreditsTo(credits);
   else setCreditsInstant(credits);
 
-  // Advance goals using the table up through Goal 10, then endless (+50k each).
-  // Every cleared goal grants a reward pick and increases swap/hint costs by 20%.
+  // Advance goals forever. Every cleared goal grants a reward pick.
   while (credits >= goalTarget) {
     const completed = goalIndex;
-    peakGoalClearedThisRun = Math.max(peakGoalClearedThisRun, Math.min(10, completed));
-
-    if (!hasWon && completed === 10) {
-      hasWon = true;
-      sfx.youWin();
-      pendingWinModal = true;
-      bumpGoalCelebration(true);
-    } else {
-      sfx.goalReached(completed);
-      bumpGoalCelebration();
-    }
+    peakGoalClearedThisRun = Math.max(peakGoalClearedThisRun, completed);
+    sfx.goalReached(completed);
+    bumpGoalCelebration();
 
     pendingRewardPicks += 1;
-    swapCostTier += 1;
     goalIndex += 1;
     goalTarget = goalTargetForIndex(goalIndex);
   }
@@ -639,7 +625,6 @@ ui.newGameBtn.addEventListener("click", () => {
   newGame(state);
   goalIndex = 1;
   goalTarget = goalTargetForIndex(1);
-  hasWon = false;
   rewards.randomHints = false;
   randomHintChance = 0;
   randomHintsPickCount = 0;
@@ -654,7 +639,6 @@ ui.newGameBtn.addEventListener("click", () => {
   rewards.noClearTrips = false;
   rewards.kickersCount = false;
   pendingRewardPicks = 0;
-  swapCostTier = 0;
   peakGoalClearedThisRun = 0;
   // Keep main/gameState.js in sync for the starting bankroll.
   state.credits = STARTING_POINTS;
@@ -676,7 +660,6 @@ ui.restartBtn.addEventListener("click", () => {
   newGame(state);
   goalIndex = 1;
   goalTarget = goalTargetForIndex(1);
-  hasWon = false;
   rewards.randomHints = false;
   randomHintChance = 0;
   randomHintsPickCount = 0;
@@ -691,7 +674,6 @@ ui.restartBtn.addEventListener("click", () => {
   rewards.noClearTrips = false;
   rewards.kickersCount = false;
   pendingRewardPicks = 0;
-  swapCostTier = 0;
   peakGoalClearedThisRun = 0;
   state.credits = STARTING_POINTS;
   peakCreditsThisRun = STARTING_POINTS;
@@ -1131,8 +1113,6 @@ function dismissCenterTip() {
   setTimeout(() => n.remove(), 260);
 }
 
-let pendingWinModal = false;
-
 /** @type {{ title:string, desc:string }[]} */
 const rewardBurstQueue = [];
 let rewardBurstShowing = false;
@@ -1309,7 +1289,7 @@ function rewardStackTagHtml(o) {
 function showRewardPickModal() {
   return new Promise((resolve) => {
     const opts = pickRewardOptions3();
-    const swapNotice = `Clearing a goal raises <b>swap</b> and <b>hint</b> costs by <b>20%</b> (compounding). Swaps: <b>${swapCost().toLocaleString()}</b> credits · Hints: <b>${hintCost().toLocaleString()}</b> credits.`;
+    const swapNotice = `Costs scale with your goal. Swaps: <b>${swapCost().toLocaleString()}</b> credits (<b>10%</b> of goal) · Hints: <b>${hintCost().toLocaleString()}</b> credits (<b>25%</b> of goal).`;
     const overlay = document.createElement("div");
     overlay.className = "rewardPickOverlay";
     overlay.innerHTML = `
@@ -1413,38 +1393,7 @@ function maybeTriggerRandomHint() {
   showHintHighlightForMove(move);
 }
 
-function showWinModal() {
-  return new Promise((resolve) => {
-    const overlay = document.createElement("div");
-    overlay.className = "winOverlay";
-    overlay.innerHTML = `
-      <div class="winOverlay__backdrop"></div>
-      <div class="winOverlay__card" role="dialog" aria-modal="true">
-        <div class="winOverlay__title">YOU WIN!</div>
-        <div class="winOverlay__text">
-          You cleared <b>Goal 10</b>.<br />
-          Endless mode continues after this—every <b>50,000</b> credits earns another reward.
-        </div>
-        <button class="btn winOverlay__btn" type="button">Continue</button>
-      </div>
-    `;
-    document.body.append(overlay);
-    const btn = overlay.querySelector(".winOverlay__btn");
-    const finish = () => {
-      overlay.remove();
-      resolve(null);
-    };
-    if (btn) btn.addEventListener("click", finish);
-    overlay.addEventListener("click", (ev) => {
-      // Click outside to continue
-      if (ev.target && (ev.target.classList?.contains("winOverlay") || ev.target.classList?.contains("winOverlay__backdrop"))) {
-        finish();
-      }
-    });
-  });
-}
-
-function showBigWin(amount) {
+function showBigWin(amount, goalAtStart) {
   const host = ui.board.parentElement;
   if (!host) return;
   const rect = ui.board.getBoundingClientRect();
@@ -1456,10 +1405,17 @@ function showBigWin(amount) {
   n.style.left = `${x}px`;
   n.style.top = `${y}px`;
   const to = Math.max(0, Math.floor(amount));
-  // Index matches tier: [2500–4999), default, [5000–10000), 10000+
-  const phrases = ["NICE WIN!", "GOOD RUN!", "MONSTER WIN!", "JACKPOT!"];
-  const phraseIdx = to >= 10000 ? 3 : to >= 5000 ? 2 : to >= 2500 ? 0 : 1;
-  n.innerHTML = `<div class="bigWinBurst__title">${phrases[phraseIdx]}</div><div class="bigWinBurst__value">+0</div>`;
+  const goal = Math.max(1, Math.floor(goalAtStart || goalTarget));
+  const pct = to / goal;
+  const phrase =
+    pct >= 1
+      ? "STACKED!"
+      : pct >= 0.75
+        ? "MONSTER HIT!"
+        : pct >= 0.5
+          ? "GOOD RUN!"
+          : "NICE HAND!";
+  n.innerHTML = `<div class="bigWinBurst__title">${phrase}</div><div class="bigWinBurst__value">+0</div>`;
   host.append(n);
   requestAnimationFrame(() => n.classList.add("is-showing"));
 
@@ -1929,6 +1885,7 @@ async function resolveCascades() {
   state.comboStep = 0;
   state.lastHands = [];
   let gainedTotal = 0;
+  const goalAtComboStart = goalTarget;
   // The single “breather” between a cascade landing and the next scoring check.
   // Tweak this number to change how fast scoring starts after a fill.
   const CASCADE_EVAL_DELAY_MS = 26;
@@ -1965,7 +1922,7 @@ async function resolveCascades() {
       rerender();
       const hm = handMultiplier(line.type);
       let pipSum = 0;
-      for (const p of contribCells) {
+      for (const p of orderCellsForLine(line, contribCells)) {
         const card = state.board[p.r][p.c];
         if (card) pipSum += cardScoreValue(card);
       }
@@ -1983,14 +1940,6 @@ async function resolveCascades() {
 
       sfx.scoreHand(line.type, state.comboStep);
       rerender();
-
-      // If the win condition was reached mid-combo, pause here until dismissed.
-      if (pendingWinModal) {
-        pendingWinModal = false;
-        await showWinModal();
-        // Re-render in case layout changed while modal was open.
-        rerender();
-      }
 
       while (pendingRewardPicks > 0) {
         const picked = await showRewardPickModal();
@@ -2080,7 +2029,7 @@ async function resolveCascades() {
   }
 
   state.comboStep = 0;
-  if (gainedTotal > 0 && gainedTotal >= 500) showBigWin(gainedTotal);
+  if (gainedTotal > 0 && gainedTotal >= goalAtComboStart * 0.25) showBigWin(gainedTotal, goalAtComboStart);
 }
 
 syncMobileViewportClass();
