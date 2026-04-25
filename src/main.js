@@ -71,7 +71,9 @@ const rewards = {
   /** One-time: two pair lines do not clear (straight+ still does). */
   noClearTwoPair: false,
   /** One-time: three of a kind lines do not clear (straight+ still does). */
-  noClearTrips: false
+  noClearTrips: false,
+  /** One-time: kickers count toward the line score (normally off for 2-pair/trips/quads). */
+  kickersCount: false
 };
 
 let randomHintChance = 0;
@@ -263,8 +265,9 @@ function updateRewardsTracker() {
     addRow("Jokers", "—");
   }
   addRow("Diagonals", rewards.diagonalsScored ? "Active" : "—");
-  addRow("2-pair clears", rewards.noClearTwoPair ? "Off (held)" : "On");
-  addRow("Trips clear", rewards.noClearTrips ? "Off (held)" : "On");
+  addRow("Two pair clears", rewards.noClearTwoPair ? "Disabled" : "On");
+  addRow("Trips clear", rewards.noClearTrips ? "Disabled" : "On");
+  addRow("Kickers count", rewards.kickersCount ? "On" : "Off");
 }
 
 let creditsDisplayValue = Math.max(0, Math.floor(state.credits));
@@ -544,6 +547,7 @@ ui.newGameBtn.addEventListener("click", () => {
   rewards.extraJoker = false;
   rewards.noClearTwoPair = false;
   rewards.noClearTrips = false;
+  rewards.kickersCount = false;
   pendingRewardPicks = 0;
   swapCostTier = 0;
   peakGoalClearedThisRun = 0;
@@ -579,6 +583,7 @@ ui.restartBtn.addEventListener("click", () => {
   rewards.extraJoker = false;
   rewards.noClearTwoPair = false;
   rewards.noClearTrips = false;
+  rewards.kickersCount = false;
   pendingRewardPicks = 0;
   swapCostTier = 0;
   peakGoalClearedThisRun = 0;
@@ -1049,14 +1054,20 @@ const REWARD_DEFS = /** @type {const} */ ([
   },
   {
     id: "noClearTwoPair",
-    name: "Hold Two Pair",
+    name: "Disable Two Pair",
     desc: "Two pair no longer clears a line—keep building toward full house or four of a kind. Straights and stronger still clear.",
     stack: { kind: "unique" }
   },
   {
     id: "noClearTrips",
-    name: "Hold Three of a Kind",
+    name: "Disable Trips",
     desc: "Three of a kind no longer clears—lines stay until quads, full house, or straight+.",
+    stack: { kind: "unique" }
+  },
+  {
+    id: "kickersCount",
+    name: "Kickers Count",
+    desc: "Kicker cards now add to scoring for hands like trips and two pair.",
     stack: { kind: "unique" }
   }
 ]);
@@ -1065,6 +1076,7 @@ function canOfferReward(id) {
   if (id === "diagonals") return !rewards.diagonalsScored;
   if (id === "noClearTwoPair") return !rewards.noClearTwoPair;
   if (id === "noClearTrips") return !rewards.noClearTrips;
+  if (id === "kickersCount") return !rewards.kickersCount;
   if (id === "jokerCard") return jokerCount < 2;
   return true;
 }
@@ -1109,14 +1121,20 @@ function applyReward(id) {
   }
   if (id === "noClearTwoPair") {
     rewards.noClearTwoPair = true;
-    lastPickedRewardName = "Hold Two Pair";
-    enqueueRewardBurst("Hold Two Pair", "Two pair lines no longer clear");
+    lastPickedRewardName = "Disable Two Pair";
+    enqueueRewardBurst("Disable Two Pair", "Two pair lines no longer clear");
     return;
   }
   if (id === "noClearTrips") {
     rewards.noClearTrips = true;
-    lastPickedRewardName = "Hold Three of a Kind";
-    enqueueRewardBurst("Hold Three of a Kind", "Three of a kind lines no longer clear");
+    lastPickedRewardName = "Disable Trips";
+    enqueueRewardBurst("Disable Trips", "Three of a kind lines no longer clear");
+    return;
+  }
+  if (id === "kickersCount") {
+    rewards.kickersCount = true;
+    lastPickedRewardName = "Kickers Count";
+    enqueueRewardBurst("Kickers Count", "Kickers now add to scores");
     return;
   }
 }
@@ -1367,20 +1385,6 @@ function getContributionMaskForBoard(board, line) {
     return { contrib: new Set(), dim: new Set(), contribCells: [] };
   }
 
-  // With wildcards, "which exact cards contribute" depends on the chosen substitution,
-  // so we treat all 5 as contributing for clearer feedback.
-  if (rewards.jokerWildcard || rewards.extraJoker) {
-    const contrib = new Set();
-    /** @type {{r:number,c:number}[]} */
-    const contribCells = [];
-    for (const p of line.cells) {
-      const k = `${p.r},${p.c}`;
-      contrib.add(k);
-      contribCells.push(p);
-    }
-    return { contrib, dim: new Set(), contribCells, dimCells: [] };
-  }
-
   const evald = scoringOpts().evaluateHand(cards);
   const vc = evald.meta.valueCounts;
 
@@ -1404,12 +1408,100 @@ function getContributionMaskForBoard(board, line) {
   /** @type {{r:number,c:number}[]} */
   const dimCells = [];
 
+  // Wildcards: keep kickers excluded unless the player has "Kickers Count".
+  // We always include Joker cards as contributors, then fill contributing ranks up to the target size.
+  if ((rewards.jokerWildcard || rewards.extraJoker) && !rewards.kickersCount) {
+    const target =
+      evald.type === HAND_TYPE.TWO_PAIR
+        ? 4
+        : evald.type === HAND_TYPE.THREE_OF_A_KIND
+          ? 3
+          : evald.type === HAND_TYPE.FOUR_OF_A_KIND
+            ? 4
+            : 5;
+
+    /** @type {{ p:{r:number,c:number}, card:any, v:number }[]} */
+    const fixed = [];
+    /** @type {{ p:{r:number,c:number}, card:any }[]} */
+    const jokers = [];
+    for (const p of line.cells) {
+      const card = board[p.r][p.c];
+      if (!card) continue;
+      if (String(card.rank) === "JOKER") jokers.push({ p, card });
+      else fixed.push({ p, card, v: rankToValue14(card.rank) });
+    }
+
+    /** @type {Map<number, { items: typeof fixed }>} */
+    const byV = new Map();
+    for (const it of fixed) {
+      const arr = byV.get(it.v);
+      if (arr) arr.items.push(it);
+      else byV.set(it.v, { items: [it] });
+    }
+
+    /** @type {Set<string>} */
+    const pickedKeys = new Set();
+    const addPicked = (p) => {
+      const k = `${p.r},${p.c}`;
+      if (pickedKeys.has(k)) return;
+      pickedKeys.add(k);
+      contrib.add(k);
+      contribCells.push(p);
+    };
+
+    // Always count jokers as contributing cards.
+    for (const j of jokers) {
+      if (contribCells.length >= target) break;
+      addPicked(j.p);
+    }
+
+    // Add the main group ranks first (pairs/trips/quads) if they exist among fixed cards.
+    if (values && values.size) {
+      for (const v of values) {
+        const group = byV.get(v);
+        if (!group) continue;
+        for (const it of group.items) {
+          if (contribCells.length >= target) break;
+          addPicked(it.p);
+        }
+        if (contribCells.length >= target) break;
+      }
+    }
+
+    // If we're still short (because wildcards filled missing ranks), fill with the strongest remaining fixed cards,
+    // preferring larger groups, then higher ranks.
+    if (contribCells.length < target) {
+      const remaining = fixed
+        .filter((it) => !pickedKeys.has(`${it.p.r},${it.p.c}`))
+        .sort((a, b) => {
+          const ca = byV.get(a.v)?.items.length ?? 1;
+          const cb = byV.get(b.v)?.items.length ?? 1;
+          return cb - ca || b.v - a.v;
+        });
+      for (const it of remaining) {
+        if (contribCells.length >= target) break;
+        addPicked(it.p);
+      }
+    }
+
+    // Everything else is a kicker/dim card.
+    for (const p of line.cells) {
+      const k = `${p.r},${p.c}`;
+      if (contrib.has(k)) continue;
+      if (!board[p.r][p.c]) continue;
+      dim.add(k);
+      dimCells.push(p);
+    }
+
+    return { contrib, dim, contribCells, dimCells };
+  }
+
   for (const p of line.cells) {
     const card = board[p.r][p.c];
     const k = `${p.r},${p.c}`;
     if (!card) continue;
     const v = rankToValue14(card.rank);
-    const isContrib = values == null ? true : values.has(v);
+    const isContrib = rewards.kickersCount ? true : values == null ? true : values.has(v);
     if (isContrib) {
       contrib.add(k);
       contribCells.push(p);
