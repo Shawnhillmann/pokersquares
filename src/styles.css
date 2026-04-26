@@ -142,7 +142,7 @@ html {
   border-radius: 16px;
   background: rgba(10, 12, 18, 0.88);
   box-shadow: 0 18px 50px rgba(0, 0, 0, 0.52);
-  padding: 16px;
+  padding: 14px 14px 12px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -150,14 +150,17 @@ html {
 
 .modal__card--runEnd .modal__title {
   text-align: center;
-  font-weight: 850;
+  font-weight: 800;
   letter-spacing: 0.1em;
   text-transform: uppercase;
+  font-size: 12px;
 }
 
 .modal__card--runEnd .modal__reason {
   text-align: center;
-  margin-top: 8px;
+  margin-top: 6px;
+  font-size: 14px;
+  font-weight: 600;
 }
 
 .modal__card--runEnd .modal__stats {
@@ -169,16 +172,26 @@ html {
   justify-content: center;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
-  margin-top: 16px;
+  gap: 8px;
+  margin-top: 12px;
 }
 
 .btn.btn--runEndPrimary {
   min-width: 220px;
   min-height: 44px;
-  padding: 12px 18px;
+  padding: 11px 18px;
   font-size: 14px;
   border-radius: 14px;
+}
+
+.runEndSupport__text {
+  max-width: min(92vw, 420px);
+  font-size: 10px;
+  line-height: 1.25;
+  letter-spacing: 0.01em;
+  color: rgba(255, 255, 255, 0.58);
+  text-align: center;
+  margin-top: 2px;
 }
 
 .btn.btn--runEndSupport {
@@ -188,6 +201,26 @@ html {
   font-size: 12px;
   border-radius: 14px;
   opacity: 0.95;
+}
+
+.modal__card--runEnd .modalStat__label {
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.modal__card--runEnd .modalStat__value {
+  font-size: 24px;
+  font-weight: 850;
+  margin-top: 6px;
+}
+
+.modal__card--runEnd .modal__stats {
+  margin-top: 10px;
+  gap: 8px;
+}
+
+.modal__card--runEnd .modalStat {
+  padding: 10px 10px;
 }
 
 .modal__card--settings {
