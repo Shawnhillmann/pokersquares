@@ -2239,7 +2239,21 @@ async function resolveCascades() {
       applyReward(picked);
       rerender();
     }
-    if (stopAfterGoalClear) break;
+    if (stopAfterGoalClear) {
+      // Important: stopping cascades for clarity should not leave a scoring line on the board,
+      // otherwise it looks like a bug (e.g., visible two pair that "doesn't clear").
+      // Re-deal a fair stable board and keep the run stats/rewards/credits.
+      regenerateBoardForFairness(state, { maxAttempts: 2500, lineClearOpts: boardLineOpts() });
+      state.selected = null;
+      viewFx.scoring = null;
+      viewFx.scoredLines = null;
+      viewFx.dim = null;
+      viewFx.clearing = null;
+      viewFx.hint = null;
+      rerender();
+      showToast(ui.toast, "Fresh deal");
+      break;
+    }
   }
 
   state.comboStep = 0;
