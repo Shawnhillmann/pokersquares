@@ -74,10 +74,10 @@ const GOAL_TARGETS = /** @type {const} */ ([
 function goalTargetForIndex(idx) {
   const i = Math.max(1, Math.floor(idx));
   if (i <= GOAL_TARGETS.length) return GOAL_TARGETS[i - 1];
-  // Goal 11+: increase 50% each goal (compounding). Goal 11 = 150,000.
+  // Goal 11+: increase 20% each goal (compounding). Goal 11 = 120,000.
   const base = GOAL_TARGETS[GOAL_TARGETS.length - 1]; // Goal 10
   const steps = i - GOAL_TARGETS.length;
-  return Math.max(1, Math.round(base * Math.pow(1.5, steps)));
+  return Math.max(1, Math.round(base * Math.pow(1.2, steps)));
 }
 
 const STARTING_POINTS = 500;
@@ -204,8 +204,8 @@ function hintCost() {
 }
 
 function swapCost() {
-  // Always 2.5% of the current goal target.
-  return Math.max(1, Math.round(goalTarget * 0.025));
+  // Always 2% of the current goal target.
+  return Math.max(1, Math.round(goalTarget * 0.02));
 }
 
 function cardScoreValue(card) {
