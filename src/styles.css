@@ -776,11 +776,13 @@ main.stage {
   inset: 0;
   transform: translateZ(0);
   will-change: transform;
-}
-
-.cardBreath.can-breathe {
   animation: cardBreath 5.5s ease-in-out infinite;
   animation-delay: var(--breath-delay, 0ms);
+  animation-play-state: paused;
+}
+
+.board.is-idle:not(.is-busy) .cardBreath {
+  animation-play-state: running;
 }
 
 .board.is-busy .cardBreath {

@@ -97,7 +97,7 @@ const rewards = {
   premiumHandsStacks: 0,
   /** Times Low Range picked; each adds +50% to low-range hand types. */
   lowRangeStacks: 0,
-  /** Times Pocket Rockets picked; each triples Ace card value (stackable multiplier). */
+  /** Times Pocket Rockets picked; each quadruples Ace card value (stackable multiplier). */
   pocketRocketsStacks: 0,
   jokerWildcard: false, // Goal 3
   diagonalsScored: false, // Goal 4
@@ -232,7 +232,7 @@ function cardScoreValue(card) {
   const isJoker = String(card.rank) === "JOKER";
   const isAce = String(card.rank) === "A";
   const aceStacks = Math.max(0, Math.floor(rewards.pocketRocketsStacks || 0));
-  const aceMult = aceStacks <= 0 ? 1 : Math.pow(3, aceStacks);
+  const aceMult = aceStacks <= 0 ? 1 : Math.pow(4, aceStacks);
   const baseUnmult = rewards.jokerWildcard && isJoker ? 10 : cardBaseValue(String(card.rank));
   const base = isAce ? baseUnmult * aceMult : baseUnmult;
   const stacks = Math.max(0, Math.floor(rewards.doubleCardValueStacks || 0));
@@ -423,6 +423,26 @@ function updateRewardsTracker() {
   } else {
     addRow("Double card values", "Off");
   }
+  if (rewards.swapCouponStacks > 0) {
+    addRow("Swap coupon", `-${15 * rewards.swapCouponStacks}% · ${rewards.swapCouponStacks}×`);
+  } else {
+    addRow("Swap coupon", "Off");
+  }
+  if (rewards.premiumHandsStacks > 0) {
+    addRow("Premium hands", `x${Math.pow(1.5, rewards.premiumHandsStacks).toFixed(2)} · ${rewards.premiumHandsStacks}×`);
+  } else {
+    addRow("Premium hands", "Off");
+  }
+  if (rewards.lowRangeStacks > 0) {
+    addRow("Low range", `x${Math.pow(1.5, rewards.lowRangeStacks).toFixed(2)} · ${rewards.lowRangeStacks}×`);
+  } else {
+    addRow("Low range", "Off");
+  }
+  if (rewards.pocketRocketsStacks > 0) {
+    addRow("Pocket rockets", `Aces x${Math.pow(4, rewards.pocketRocketsStacks)} · ${rewards.pocketRocketsStacks}×`);
+  } else {
+    addRow("Pocket rockets", "Off");
+  }
   addRow("Diagonals", rewards.diagonalsScored ? "Active" : "Off");
   addRow("Two pair clears", rewards.noClearTwoPair ? "Disabled" : "On");
   addRow("Trips clear", rewards.noClearTrips ? "Disabled" : "On");
@@ -588,17 +608,16 @@ function rerender() {
       : null
   );
   // Pause any purely-visual idle animations during gameplay activity.
-  ui.board.classList.toggle(
-    "is-busy",
-    !!(
-      state.busy ||
-      pendingRewardPicks > 0 ||
-      viewFx.scoring ||
-      viewFx.clearing ||
-      (viewFx.dropRowsById && viewFx.dropRowsById.size) ||
-      (viewFx.scoredLines && viewFx.scoredLines.length)
-    )
+  const busy = !!(
+    state.busy ||
+    pendingRewardPicks > 0 ||
+    viewFx.scoring ||
+    viewFx.clearing ||
+    (viewFx.dropRowsById && viewFx.dropRowsById.size) ||
+    (viewFx.scoredLines && viewFx.scoredLines.length)
   );
+  ui.board.classList.toggle("is-busy", busy);
+  if (busy) markActivity();
   updateHud();
   positionScoreFeed();
 }
@@ -613,6 +632,35 @@ function syncMobileViewportClass() {
   document.documentElement.classList.toggle("is-mobile", MOBILE_MQ.matches);
   positionScoreFeed();
 }
+
+// Idle breathing: only enable after 10s of no player/game activity; disable immediately on any activity.
+let idleBreathTimer = /** @type {number|null} */ (null);
+let lastActivityAt = Date.now();
+const IDLE_BREATH_MS = 10_000;
+
+function markActivity() {
+  lastActivityAt = Date.now();
+  ui.board.classList.remove("is-idle");
+  if (idleBreathTimer != null) clearTimeout(idleBreathTimer);
+  idleBreathTimer = window.setTimeout(() => {
+    idleBreathTimer = null;
+    const now = Date.now();
+    const enoughIdle = now - lastActivityAt >= IDLE_BREATH_MS;
+    const busy = ui.board.classList.contains("is-busy");
+    if (enoughIdle && !busy && document.visibilityState === "visible") {
+      ui.board.classList.add("is-idle");
+    } else {
+      markActivity();
+    }
+  }, IDLE_BREATH_MS + 20);
+}
+
+document.addEventListener("pointerdown", markActivity, { passive: true });
+document.addEventListener("keydown", markActivity);
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState !== "visible") ui.board.classList.remove("is-idle");
+  markActivity();
+});
 
 function formatHandChartMult(n) {
   const v = Number(n);
@@ -1466,7 +1514,7 @@ const REWARD_DEFS = /** @type {const} */ ([
   {
     id: "pocketRockets",
     name: "Pocket Rockets",
-    desc: "Aces are worth 200% more card value (Stackable)",
+    desc: "Aces are worth 4x card value (Stackable)",
     stack: { kind: "stackable" }
   },
   {
@@ -1582,7 +1630,7 @@ function applyReward(id) {
     const stacks = rewards.pocketRocketsStacks;
     enqueueRewardBurst(
       "Pocket Rockets",
-      `Aces are now x${Math.pow(3, stacks)} value (${stacks} stack${stacks === 1 ? "" : "s"})`
+      `Aces are now x${Math.pow(4, stacks)} value (${stacks} stack${stacks === 1 ? "" : "s"})`
     );
     return;
   }
@@ -2489,6 +2537,7 @@ window.addEventListener("resize", () => {
   positionScoreFeed();
   syncOrientationBlock();
 });
+markActivity();
 rerender();
 
 // Block play in mobile landscape.

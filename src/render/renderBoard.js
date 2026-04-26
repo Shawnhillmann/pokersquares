@@ -27,8 +27,6 @@ export function renderBoard(root, board, view, onCellClick) {
   const ART_RANKS = new Set(["A", "J", "Q", "K"]);
   const CORNER_SUIT_RANKS = new Set(["J", "Q", "K"]);
   const cells = /** @type {HTMLButtonElement[]} */ (root.__cells ?? []);
-  /** @type {{ id: string, el: HTMLElement }[]} */
-  const breathCandidates = [];
 
   // Build fixed 5x5 button grid once; update in place to avoid image flicker on mobile Safari.
   if (cells.length !== BOARD_SIZE * BOARD_SIZE) {
@@ -194,9 +192,6 @@ export function renderBoard(root, board, view, onCellClick) {
         // with gameplay transforms (swap/cascade/scoring) on other nodes.
         // Keep per-card delay stable by deriving it from card.id.
         if (breath) {
-          // We'll pick up to 7 cards total to breathe after the grid is updated.
-          breath.classList.remove("can-breathe");
-          breathCandidates.push({ id: card.id, el: breath });
           // @ts-ignore
           const prevFor = breath.dataset.breathForId;
           if (prevFor !== card.id) {
@@ -257,21 +252,6 @@ export function renderBoard(root, board, view, onCellClick) {
         if (!isJoker && isRedSuit(card.suit)) face.classList.add("is-red");
       }
     }
-  }
-
-  // Choose a stable "random" subset of cards (max 7) to breathe.
-  // Deterministic per board state: we hash card.id, then pick the 7 lowest.
-  const MAX_BREATH = 7;
-  if (breathCandidates.length > 0) {
-    const scored = breathCandidates
-      .map((c) => {
-        let h = 0;
-        for (let i = 0; i < c.id.length; i++) h = (h * 31 + c.id.charCodeAt(i)) | 0;
-        return { el: c.el, score: h >>> 0 };
-      })
-      .sort((a, b) => a.score - b.score)
-      .slice(0, MAX_BREATH);
-    for (const s of scored) s.el.classList.add("can-breathe");
   }
 }
 
