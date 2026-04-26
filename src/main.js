@@ -1413,15 +1413,17 @@ async function playRewardBurst({ title, desc }) {
   const centerX = rect.left + rect.width / 2;
   const centerY = rect.top + rect.height / 2;
 
-  // Avoid the center hand-score burst area as much as possible (desktop + mobile).
-  const offset = Math.min(rect.width * 0.22, 190);
-  const dir = Math.random() < 0.5 ? -1 : 1;
-  const x = centerX + offset * dir;
+  // Notifications in the game area should always be vertically centered.
+  const y = centerY;
 
-  // Higher than hand bursts, and stay well above the center band on short boards.
-  const avoidBand = Math.min(170, rect.height * 0.36);
-  let y = rect.top + rect.height * 0.18;
-  if (Math.abs(y - centerY) < avoidBand * 0.5) y = rect.top + rect.height * 0.08;
+  // Reduce overlap with the center hand-score burst by nudging left/right,
+  // while staying inside the board bounds.
+  const maxOffset = Math.min(rect.width * 0.24, 190);
+  const minOffset = Math.min(rect.width * 0.12, 90);
+  const dir = Math.random() < 0.5 ? -1 : 1;
+  const offset = minOffset + Math.random() * (maxOffset - minOffset);
+  const safeX = 18 + 170; // keep away from board edge + popup half-width guess
+  const x = Math.max(rect.left + safeX, Math.min(rect.right - safeX, centerX + offset * dir));
 
   // Gold particle pop on reward.
   burstGoldWin(x, y, 0.85);
