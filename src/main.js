@@ -453,6 +453,28 @@ function updateRewardsTracker() {
     window.__rewardsTooltipEl = null;
   };
 
+  const hoverCapable =
+    window.matchMedia &&
+    window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+
+  const isTooltipOpenFor = (label) => {
+    // @ts-ignore
+    const t = window.__rewardsTooltipEl;
+    // @ts-ignore
+    return !!t && t.__trackerLabel === label;
+  };
+
+  const showTooltipForRow = (label, ev) => {
+    showTooltip(label, ev);
+    // Tag so we can toggle per-row on mobile.
+    // @ts-ignore
+    const t = window.__rewardsTooltipEl;
+    if (t) {
+      // @ts-ignore
+      t.__trackerLabel = label;
+    }
+  };
+
   const addRow = (label, value) => {
     const row = document.createElement("div");
     row.className = "trackerRow";
@@ -465,18 +487,42 @@ function updateRewardsTracker() {
     row.append(k, v);
     if (descByLabel[label]) {
       row.classList.add("is-clickable");
-      row.addEventListener("pointerenter", (ev) => showTooltip(label, ev));
-      row.addEventListener("pointerleave", () => hideTooltip());
-      row.addEventListener("pointerdown", (ev) => {
-        // Mobile-friendly: tap toggles.
-        // @ts-ignore
-        const t = window.__rewardsTooltipEl;
-        if (t) hideTooltip();
-        else showTooltip(label, ev);
-      });
+      if (hoverCapable) {
+        row.addEventListener("pointerenter", (ev) => showTooltipForRow(label, ev));
+        row.addEventListener("pointerleave", () => hideTooltip());
+      } else {
+        row.addEventListener("pointerdown", (ev) => {
+          // Touch-friendly: tap toggles; don't instantly hide on pointerleave.
+          ev.preventDefault();
+          ev.stopPropagation();
+          if (isTooltipOpenFor(label)) hideTooltip();
+          else showTooltipForRow(label, ev);
+        });
+      }
     }
     b.append(row);
   };
+
+  // Touch: tap outside to dismiss.
+  // @ts-ignore
+  if (!window.__rewardsTooltipDismissWired) {
+    // @ts-ignore
+    window.__rewardsTooltipDismissWired = true;
+    document.addEventListener(
+      "pointerdown",
+      (ev) => {
+        // @ts-ignore
+        const t = window.__rewardsTooltipEl;
+        if (!t) return;
+        const target = /** @type {any} */ (ev.target);
+        if (target && (target.closest?.(".trackerRow") || target.closest?.(".trackerTooltip"))) return;
+        hideTooltip();
+      },
+      { capture: true }
+    );
+    window.addEventListener("scroll", hideTooltip, { passive: true });
+    window.addEventListener("resize", hideTooltip, { passive: true });
+  }
   // Order matches requested "build" readability.
   if (rewards.pocketRocketsStacks > 0) {
     addRow("Pocket Rockets", `Aces x${Math.pow(4, rewards.pocketRocketsStacks)} · ${rewards.pocketRocketsStacks}×`);
