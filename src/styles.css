@@ -1643,8 +1643,11 @@ html.is-mobile .cardFace:not(.cardFace--jokerArt) img.cardPip--faceArt {
 
 .swapNotice__goal,
 .swapNotice__cost {
-  font-weight: 950;
   color: rgba(247, 215, 116, 0.98);
+}
+
+.swapNotice__cost {
+  font-weight: 950;
 }
 
 .rewardPickOverlay__title {

@@ -172,7 +172,7 @@ function endRun(kind) {
   state.selected = null;
   if (ui.finalPeakCreditsValue) ui.finalPeakCreditsValue.textContent = peakCreditsThisRun.toLocaleString();
   if (ui.finalPeakGoalValue) {
-    ui.finalPeakGoalValue.textContent = peakGoalClearedThisRun <= 0 ? "—" : `Goal ${peakGoalClearedThisRun}`;
+    ui.finalPeakGoalValue.textContent = peakGoalClearedThisRun <= 0 ? "None" : `Goal ${peakGoalClearedThisRun}`;
   }
   ui.finalScoreValue.textContent = state.credits.toLocaleString();
   ui.finalMovesValue.textContent = successfulMoves.toLocaleString();
@@ -262,31 +262,31 @@ function updateRewardsTracker() {
       `${Math.round(randomHintChance * 100)}% roll · ${randomHintsPickCount} picked`
     );
   } else {
-    addRow("Random hints", "—");
+    addRow("Random hints", "Off");
   }
   if (rewards.comboBonusStacks > 0) {
     const pct = 50 * rewards.comboBonusStacks;
     addRow("Combo bonus", `+${pct}% cascades · ${rewards.comboBonusStacks}×`);
   } else {
-    addRow("Combo bonus", "—");
+    addRow("Combo bonus", "Off");
   }
   if (rewards.handMultiplierStacks > 0) {
     const pct = 25 * rewards.handMultiplierStacks;
     addRow("Hand multiplier", `+${pct}% all hands · ${rewards.handMultiplierStacks}×`);
   } else {
-    addRow("Hand multiplier", "—");
+    addRow("Hand multiplier", "Off");
   }
   if (rewards.jokerWildcard || jokerCount > 0) {
     addRow("Jokers", `${jokerCount} / 2 in deck`);
   } else {
-    addRow("Jokers", "—");
+    addRow("Jokers", "Off");
   }
   if (rewards.doubleCardValueStacks > 0) {
     addRow("Double card values", `x${Math.pow(2, rewards.doubleCardValueStacks)} · ${rewards.doubleCardValueStacks}× picked`);
   } else {
-    addRow("Double card values", "—");
+    addRow("Double card values", "Off");
   }
-  addRow("Diagonals", rewards.diagonalsScored ? "Active" : "—");
+  addRow("Diagonals", rewards.diagonalsScored ? "Active" : "Off");
   addRow("Two pair clears", rewards.noClearTwoPair ? "Disabled" : "On");
   addRow("Trips clear", rewards.noClearTrips ? "Disabled" : "On");
   addRow("Kickers count", rewards.kickersCount ? "On" : "Off");
@@ -1212,13 +1212,13 @@ const REWARD_DEFS = /** @type {const} */ ([
   {
     id: "noClearTwoPair",
     name: "Disable Two Pair",
-    desc: "Two pair no longer clears a line—keep building toward full house or four of a kind. Straights and stronger still clear.",
+    desc: "Two pair no longer clears a line, enabling higher scoring hands.",
     stack: { kind: "unique" }
   },
   {
     id: "noClearTrips",
     name: "Disable Trips",
-    desc: "Three of a kind no longer clears—lines stay until quads, full house, or straight+.",
+    desc: "Three of a kind no longer clears a line, enabling higher scoring hands.",
     stack: { kind: "unique" }
   },
   {
