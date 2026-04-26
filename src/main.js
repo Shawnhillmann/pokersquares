@@ -393,60 +393,50 @@ function updateRewardsTracker() {
     row.append(k, v);
     b.append(row);
   };
-  if (rewards.randomHints) {
-    addRow(
-      "Random hints",
-      `${Math.round(randomHintChance * 100)}% roll · ${randomHintsPickCount} picked`
-    );
-  } else {
-    addRow("Random hints", "Off");
-  }
+  // Order matches requested "build" readability.
+  if (rewards.pocketRocketsStacks > 0) {
+    addRow("Pocket Rockets", `Aces x${Math.pow(4, rewards.pocketRocketsStacks)} · ${rewards.pocketRocketsStacks}×`);
+  } else addRow("Pocket Rockets", "Off");
+
+  if (rewards.jokerWildcard || jokerCount > 0) addRow("Jokers", `${jokerCount} / 2 in deck`);
+  else addRow("Jokers", "Off");
+
+  addRow("Diagonals", rewards.diagonalsScored ? "On" : "Off");
+
   if (rewards.comboBonusStacks > 0) {
     const pct = 50 * rewards.comboBonusStacks;
-    addRow("Combo bonus", `+${pct}% cascades · ${rewards.comboBonusStacks}×`);
-  } else {
-    addRow("Combo bonus", "Off");
-  }
+    addRow("Chain Combo Bonus", `+${pct}% cascades · ${rewards.comboBonusStacks}×`);
+  } else addRow("Chain Combo Bonus", "Off");
+
   if (rewards.handMultiplierStacks > 0) {
     const pct = 25 * rewards.handMultiplierStacks;
-    addRow("Hand multiplier", `+${pct}% all hands · ${rewards.handMultiplierStacks}×`);
-  } else {
-    addRow("Hand multiplier", "Off");
-  }
-  if (rewards.jokerWildcard || jokerCount > 0) {
-    addRow("Jokers", `${jokerCount} / 2 in deck`);
-  } else {
-    addRow("Jokers", "Off");
-  }
-  if (rewards.doubleCardValueStacks > 0) {
-    addRow("Double card values", `x${Math.pow(2, rewards.doubleCardValueStacks)} · ${rewards.doubleCardValueStacks}× picked`);
-  } else {
-    addRow("Double card values", "Off");
-  }
-  if (rewards.swapCouponStacks > 0) {
-    addRow("Swap coupon", `-${15 * rewards.swapCouponStacks}% · ${rewards.swapCouponStacks}×`);
-  } else {
-    addRow("Swap coupon", "Off");
-  }
+    addRow("Hand Multiplier", `+${pct}% all hands · ${rewards.handMultiplierStacks}×`);
+  } else addRow("Hand Multiplier", "Off");
+
   if (rewards.premiumHandsStacks > 0) {
-    addRow("Premium hands", `x${Math.pow(1.5, rewards.premiumHandsStacks).toFixed(2)} · ${rewards.premiumHandsStacks}×`);
-  } else {
-    addRow("Premium hands", "Off");
-  }
+    addRow("Premium Hands", `x${Math.pow(1.5, rewards.premiumHandsStacks).toFixed(2)} · ${rewards.premiumHandsStacks}×`);
+  } else addRow("Premium Hands", "Off");
+
   if (rewards.lowRangeStacks > 0) {
-    addRow("Low range", `x${Math.pow(1.5, rewards.lowRangeStacks).toFixed(2)} · ${rewards.lowRangeStacks}×`);
-  } else {
-    addRow("Low range", "Off");
-  }
-  if (rewards.pocketRocketsStacks > 0) {
-    addRow("Pocket rockets", `Aces x${Math.pow(4, rewards.pocketRocketsStacks)} · ${rewards.pocketRocketsStacks}×`);
-  } else {
-    addRow("Pocket rockets", "Off");
-  }
-  addRow("Diagonals", rewards.diagonalsScored ? "Active" : "Off");
-  addRow("Two Pair Disabled", rewards.noClearTwoPair ? "On" : "Off");
+    addRow("Low Range", `x${Math.pow(1.5, rewards.lowRangeStacks).toFixed(2)} · ${rewards.lowRangeStacks}×`);
+  } else addRow("Low Range", "Off");
+
+  if (rewards.doubleCardValueStacks > 0) {
+    addRow("2X Card Values", `x${Math.pow(2, rewards.doubleCardValueStacks)} · ${rewards.doubleCardValueStacks}× picked`);
+  } else addRow("2X Card Values", "Off");
+
+  if (rewards.randomHints) {
+    addRow("Random Hints", `${Math.round(randomHintChance * 100)}% roll · ${randomHintsPickCount} picked`);
+  } else addRow("Random Hints", "Off");
+
+  if (rewards.swapCouponStacks > 0) {
+    addRow("Swap Coupons", `-${15 * rewards.swapCouponStacks}% · ${rewards.swapCouponStacks}×`);
+  } else addRow("Swap Coupons", "Off");
+
   addRow("Trips Disabled", rewards.noClearTrips ? "On" : "Off");
-  addRow("Kickers count", rewards.kickersCount ? "On" : "Off");
+  addRow("Two Pair Disabled", rewards.noClearTwoPair ? "On" : "Off");
+
+  addRow("Kickers Are Good", rewards.kickersCount ? "On" : "Off");
 }
 
 let creditsDisplayValue = Math.max(0, Math.floor(state.credits));
@@ -1489,13 +1479,13 @@ const REWARD_DEFS = /** @type {const} */ ([
   },
   {
     id: "swapCoupon",
-    name: "Swap Coupon",
+    name: "Swap Coupons",
     desc: "Swaps cost 15% less (Stackable)",
     stack: { kind: "stackable" }
   },
   {
     id: "comboBonus",
-    name: "Combo Bonus",
+    name: "Chain Combo Bonus",
     desc: "Cascade combos are worth 50% more (Stackable)",
     stack: { kind: "stackable" }
   },
@@ -1531,7 +1521,7 @@ const REWARD_DEFS = /** @type {const} */ ([
   },
   {
     id: "doubleCardValues",
-    name: "Double Card Values",
+    name: "2X Card Values",
     desc: "Doubles the value of every card for scoring (Stackable).",
     stack: { kind: "stackable" }
   },
@@ -1543,19 +1533,19 @@ const REWARD_DEFS = /** @type {const} */ ([
   },
   {
     id: "noClearTwoPair",
-    name: "Disable Two Pair",
+    name: "Two Pair Disabled",
     desc: "Two pair no longer clears a line, enabling higher scoring hands.",
     stack: { kind: "unique" }
   },
   {
     id: "noClearTrips",
-    name: "Disable Trips",
+    name: "Trips Disabled",
     desc: "Three of a kind no longer clears a line, enabling higher scoring hands.",
     stack: { kind: "unique" }
   },
   {
     id: "kickersCount",
-    name: "Kickers Count",
+    name: "Kickers Are Good",
     desc: "Kicker cards now add to scoring for hands like trips and two pair.",
     stack: { kind: "unique" }
   }
@@ -1582,22 +1572,22 @@ function applyReward(id) {
   }
   if (id === "swapCoupon") {
     rewards.swapCouponStacks += 1;
-    lastPickedRewardName = "Swap Coupon";
+    lastPickedRewardName = "Swap Coupons";
     const pct = Math.round(15 * rewards.swapCouponStacks);
     const stacks = rewards.swapCouponStacks;
     enqueueRewardBurst(
-      "Swap Coupon",
+      "Swap Coupons",
       `Swaps cost -${pct}% (${stacks} stack${stacks === 1 ? "" : "s"})`
     );
     return;
   }
   if (id === "comboBonus") {
     rewards.comboBonusStacks += 1;
-    lastPickedRewardName = "Combo Bonus";
+    lastPickedRewardName = "Chain Combo Bonus";
     const pct = 50 * rewards.comboBonusStacks;
     const stacks = rewards.comboBonusStacks;
     enqueueRewardBurst(
-      "Combo Bonus",
+      "Chain Combo Bonus",
       `+${pct}% on cascade lines (${stacks} stack${stacks === 1 ? "" : "s"})`
     );
     return;
@@ -1661,27 +1651,27 @@ function applyReward(id) {
   }
   if (id === "doubleCardValues") {
     rewards.doubleCardValueStacks += 1;
-    lastPickedRewardName = "Double Card Values";
+    lastPickedRewardName = "2X Card Values";
     const mult = Math.pow(2, rewards.doubleCardValueStacks);
-    enqueueRewardBurst("Double Card Values", `Card values are now x${mult}`);
+    enqueueRewardBurst("2X Card Values", `Card values are now x${mult}`);
     return;
   }
   if (id === "noClearTwoPair") {
     rewards.noClearTwoPair = true;
-    lastPickedRewardName = "Disable Two Pair";
-    enqueueRewardBurst("Disable Two Pair", "Two pair lines no longer clear");
+    lastPickedRewardName = "Two Pair Disabled";
+    enqueueRewardBurst("Two Pair Disabled", "Two pair lines no longer clear");
     return;
   }
   if (id === "noClearTrips") {
     rewards.noClearTrips = true;
-    lastPickedRewardName = "Disable Trips";
-    enqueueRewardBurst("Disable Trips", "Three of a kind lines no longer clear");
+    lastPickedRewardName = "Trips Disabled";
+    enqueueRewardBurst("Trips Disabled", "Three of a kind lines no longer clear");
     return;
   }
   if (id === "kickersCount") {
     rewards.kickersCount = true;
-    lastPickedRewardName = "Kickers Count";
-    enqueueRewardBurst("Kickers Count", "Kickers now add to scores");
+    lastPickedRewardName = "Kickers Are Good";
+    enqueueRewardBurst("Kickers Are Good", "Kickers now add to scores");
     return;
   }
 }
