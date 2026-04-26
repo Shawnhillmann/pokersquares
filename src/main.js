@@ -810,9 +810,9 @@ function animateSwapSuccess(a, b) {
   const ty = br.top - ar.top;
 
   const dist = Math.abs(b.c - a.c) + Math.abs(b.r - a.r);
-  const msCap = isMobileLayout() ? 460 : 520;
-  const msBase = 160;
-  const ms = Math.max(msBase, Math.min(msCap, msBase + dist * (isMobileLayout() ? 34 : 45)));
+  const msCap = isMobileLayout() ? 400 : 460;
+  const msBase = 130;
+  const ms = Math.max(msBase, Math.min(msCap, msBase + dist * (isMobileLayout() ? 26 : 34)));
 
   aEl.style.setProperty("--swap-tx", `${tx}px`);
   aEl.style.setProperty("--swap-ty", `${ty}px`);
@@ -862,7 +862,7 @@ async function swapWithFlipAnimation(a, b) {
     const uy = dy / len;
     const dist = Math.abs(b.c - a.c) + Math.abs(b.r - a.r);
     const windupPx = Math.min(18, 6 + dist * (isMobileLayout() ? 4 : 5));
-    const windMs = isMobileLayout() ? 70 : 85;
+    const windMs = isMobileLayout() ? 55 : 65;
 
     aEl.style.setProperty("--windup-ms", `${windMs}ms`);
     bEl.style.setProperty("--windup-ms", `${windMs}ms`);
@@ -891,7 +891,7 @@ async function swapWithFlipAnimation(a, b) {
       };
       aEl.addEventListener("transitionend", onEnd, { once: true });
       bEl.addEventListener("transitionend", onEnd, { once: true });
-      setTimeout(finish, windMs + 60);
+      setTimeout(finish, windMs + 45);
     });
 
     aEl.classList.remove("is-swap-windup");
@@ -926,9 +926,9 @@ async function swapWithFlipAnimation(a, b) {
   const bDy = bFrom.top - bTo.top;
 
   const dist = Math.abs(b.c - a.c) + Math.abs(b.r - a.r);
-  const msCap = isMobileLayout() ? 460 : 520;
-  const msBase = 160;
-  const ms = Math.max(msBase, Math.min(msCap, msBase + dist * (isMobileLayout() ? 34 : 45)));
+  const msCap = isMobileLayout() ? 400 : 460;
+  const msBase = 130;
+  const ms = Math.max(msBase, Math.min(msCap, msBase + dist * (isMobileLayout() ? 26 : 34)));
 
   aEl2.style.setProperty("--swap-ms", `${ms}ms`);
   bEl2.style.setProperty("--swap-ms", `${ms}ms`);
@@ -958,7 +958,7 @@ async function swapWithFlipAnimation(a, b) {
     };
     aEl2.addEventListener("transitionend", onEnd, { once: true });
     bEl2.addEventListener("transitionend", onEnd, { once: true });
-    setTimeout(finish, ms + 80);
+    setTimeout(finish, ms + 60);
     requestAnimationFrame(() => {
       aEl2.style.transform = "";
       bEl2.style.transform = "";

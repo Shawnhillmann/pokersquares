@@ -50,7 +50,10 @@ export function createDeck(rng) {
      * @param {Card[]} cards
      */
     recycle(cards) {
+      // Recycle cards back into the draw pool, but keep the pool well-shuffled so
+      // cascades don't feel "chunky" (e.g., many of the same rank reappearing in a row).
       for (const c of cards) queue.push(c);
+      shuffleInPlace(rng, queue);
     },
     addJoker() {
       // Add exactly one Joker to the cycling deck.
