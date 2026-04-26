@@ -248,7 +248,13 @@
 
     <div class="modal" id="runEndModal" hidden>
       <div class="modal__backdrop"></div>
-      <div class="modal__card" role="dialog" aria-modal="true" aria-labelledby="runEndTitle" aria-describedby="runEndReason">
+      <div
+        class="modal__card modal__card--runEnd"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="runEndTitle"
+        aria-describedby="runEndReason"
+      >
         <div class="modal__title" id="runEndTitle">Run ended</div>
         <p class="modal__reason" id="runEndReason"></p>
         <div class="modal__stats">
@@ -269,8 +275,17 @@
             <div class="modalStat__value" id="finalMovesValue">0</div>
           </div>
         </div>
-        <div class="modal__actions">
-          <button class="btn" id="restartBtn" type="button">Restart</button>
+        <div class="modal__actions modal__actions--runEnd">
+          <button class="btn btn--runEndPrimary" id="restartBtn" type="button">New Game</button>
+          <a
+            class="btn btn--support btn--runEndSupport"
+            id="runEndSupportBtn"
+            href="__SUPPORT_LINK__"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Support the Game
+          </a>
         </div>
       </div>
     </div>
