@@ -100,7 +100,7 @@ const rewards = {
   premiumHandsStacks: 0,
   /** Times Low Hands picked; each adds +50% to low-range hand types. */
   lowRangeStacks: 0,
-  /** Times Bold Faces picked; each triples face card value again. */
+  /** Times Bolder Faces picked; each triples face card value again. */
   boldFacesStacks: 0,
   /** Times Bigger Numbers picked; each triples number card (and ace) value again. */
   biggerNumbersStacks: 0,
@@ -397,6 +397,62 @@ function updateRewardsTracker() {
   const b = ui.rewardsTrackerBody;
   if (!b) return;
   b.replaceChildren();
+  /** @type {Record<string, string>} */
+  const descByLabel = {
+    "Pocket Rockets": "Aces are worth 4x more card value per stack.",
+    Jokers: "Adds Joker cards to your deck (max 2). Jokers count as any rank for hand evaluation.",
+    Diagonals: "Diagonals can be scored as poker hands.",
+    "Chain Combo Bonus": "Each stack adds +50% credits to cascade combo line scores.",
+    "Hand Multiplier": "Each stack adds +25% to all hand multipliers.",
+    "Premium Hands":
+      "Each stack makes Full House, Four of a Kind, Straight Flush, Five of a Kind, and Royal Flush worth 50% more.",
+    "Low Hands": "Each stack makes Straights, Flushes, Trips, and Two Pair worth 50% more.",
+    "Bolder Faces": "Each stack makes face cards (J/Q/K) worth 3x more card value.",
+    "Bigger Numbers": "Each stack makes number cards (and Aces) worth 3x more card value.",
+    "2X Card Values": "Each stack doubles every card’s value again.",
+    "Random Hints": "Grants a chance for free hints to appear.",
+    "Swap Coupons": "Each stack reduces swap cost by 15%.",
+    "Trips Disabled": "Three of a kind lines no longer clear.",
+    "Two Pair Disabled": "Two pair lines no longer clear.",
+    "Kickers Are Good": "Kicker cards add to scores for hands like trips and two pair."
+  };
+
+  const showTooltip = (label, ev) => {
+    const desc = descByLabel[label];
+    if (!desc) return;
+    hideTooltip();
+    const t = document.createElement("div");
+    t.className = "trackerTooltip";
+    t.innerHTML = `<div class="trackerTooltip__title">${label}</div><div class="trackerTooltip__desc">${desc}</div>`;
+    document.body.append(t);
+
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const pad = 10;
+
+    const rect = ev?.currentTarget?.getBoundingClientRect?.();
+    const x0 = rect ? rect.left + rect.width / 2 : vw / 2;
+    const y0 = rect ? rect.top : vh / 2;
+
+    // Position above the row, clamped to viewport.
+    const br = t.getBoundingClientRect();
+    const x = Math.max(pad + br.width / 2, Math.min(vw - pad - br.width / 2, x0));
+    const y = Math.max(pad + br.height, Math.min(vh - pad, y0));
+    t.style.left = `${Math.round(x)}px`;
+    t.style.top = `${Math.round(y)}px`;
+
+    // @ts-ignore
+    window.__rewardsTooltipEl = t;
+  };
+
+  const hideTooltip = () => {
+    // @ts-ignore
+    const t = window.__rewardsTooltipEl;
+    if (t && t.remove) t.remove();
+    // @ts-ignore
+    window.__rewardsTooltipEl = null;
+  };
+
   const addRow = (label, value) => {
     const row = document.createElement("div");
     row.className = "trackerRow";
@@ -407,6 +463,18 @@ function updateRewardsTracker() {
     v.className = "trackerRow__v";
     v.textContent = value;
     row.append(k, v);
+    if (descByLabel[label]) {
+      row.classList.add("is-clickable");
+      row.addEventListener("pointerenter", (ev) => showTooltip(label, ev));
+      row.addEventListener("pointerleave", () => hideTooltip());
+      row.addEventListener("pointerdown", (ev) => {
+        // Mobile-friendly: tap toggles.
+        // @ts-ignore
+        const t = window.__rewardsTooltipEl;
+        if (t) hideTooltip();
+        else showTooltip(label, ev);
+      });
+    }
     b.append(row);
   };
   // Order matches requested "build" readability.
@@ -438,8 +506,8 @@ function updateRewardsTracker() {
   } else addRow("Low Hands", "Off");
 
   if (rewards.boldFacesStacks > 0) {
-    addRow("Bold Faces", `x${Math.pow(3, rewards.boldFacesStacks)} · ${rewards.boldFacesStacks}×`);
-  } else addRow("Bold Faces", "Off");
+    addRow("Bolder Faces", `x${Math.pow(3, rewards.boldFacesStacks)} · ${rewards.boldFacesStacks}×`);
+  } else addRow("Bolder Faces", "Off");
 
   if (rewards.biggerNumbersStacks > 0) {
     addRow("Bigger Numbers", `x${Math.pow(3, rewards.biggerNumbersStacks)} · ${rewards.biggerNumbersStacks}×`);
@@ -1572,7 +1640,7 @@ const REWARD_DEFS = /** @type {const} */ ([
   },
   {
     id: "boldFaces",
-    name: "Bold Faces",
+    name: "Bolder Faces",
     desc: "Face cards (J/Q/K) are worth 3x more (Stackable)",
     stack: { kind: "stackable" }
   },
@@ -1697,10 +1765,10 @@ function applyReward(id) {
   }
   if (id === "boldFaces") {
     rewards.boldFacesStacks += 1;
-    lastPickedRewardName = "Bold Faces";
+    lastPickedRewardName = "Bolder Faces";
     const stacks = rewards.boldFacesStacks;
     enqueueRewardBurst(
-      "Bold Faces",
+      "Bolder Faces",
       `Face cards are now x${Math.pow(3, stacks)} value (${stacks} stack${stacks === 1 ? "" : "s"})`
     );
     return;
