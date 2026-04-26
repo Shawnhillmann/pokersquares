@@ -1820,6 +1820,10 @@ html.is-mobile .cardFace:not(.cardFace--jokerArt) img.cardPip--faceArt {
   letter-spacing: 0.02em;
   color: rgba(247, 215, 116, 0.98);
   text-shadow: 0 0 22px rgba(247, 215, 116, 0.2), 0 18px 44px rgba(0, 0, 0, 0.62);
+  font-variant-numeric: tabular-nums;
+  display: inline-block;
+  min-width: 10ch;
+  text-align: center;
 }
 
 @keyframes popOut {

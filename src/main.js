@@ -363,8 +363,6 @@ function updateGoalHud(credits) {
     clearedGoalsForRewardPick.push(completed);
     goalIndex += 1;
     goalTarget = goalTargetForIndex(goalIndex);
-
-    enqueueRewardBurst("Goal Cleared!", `New Goal for Rewards: ${goalTarget.toLocaleString()}`);
   }
 
   if (ui.goalTarget) {
@@ -2116,11 +2114,18 @@ async function resolveCascades() {
     // If a goal was cleared during this cascade step, pick the reward now,
     // then stop any further cascade/combos.
     while (pendingRewardPicks > 0) {
+      const clearedGoal =
+        clearedGoalsForRewardPick.length ? clearedGoalsForRewardPick[0] : Math.max(1, goalIndex - 1);
       const picked = await showRewardPickModal();
       pendingRewardPicks = Math.max(0, pendingRewardPicks - 1);
       clearedGoalsForRewardPick.shift();
       applyReward(picked);
       rerender();
+
+      enqueueRewardBurst(
+        `Goal ${clearedGoal} cleared.`,
+        `New Goal ${goalIndex}: ${goalTarget.toLocaleString()}<br />Swap: ${swapCost().toLocaleString()} credits · Hint: ${hintCost().toLocaleString()} credits`
+      );
     }
     if (stopAfterGoalClear) break;
   }
