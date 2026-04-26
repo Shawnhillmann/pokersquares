@@ -194,23 +194,40 @@ html {
 }
 
 /* CRT overlay (theme-agnostic): subtle scanlines + vignette + tiny glow. */
-html[data-crt="1"] body::before {
+html[data-crt="1"]::before {
   content: "";
   position: fixed;
   inset: 0;
   pointer-events: none;
-  z-index: 999;
-  opacity: 0.45;
-  mix-blend-mode: soft-light;
+  z-index: 9999;
+  opacity: 0.72;
+  mix-blend-mode: overlay;
   background:
     repeating-linear-gradient(
       to bottom,
-      rgba(0, 0, 0, 0.18) 0px,
-      rgba(0, 0, 0, 0.18) 1px,
-      rgba(255, 255, 255, 0.02) 2px,
-      rgba(255, 255, 255, 0.02) 4px
+      rgba(0, 0, 0, 0.22) 0px,
+      rgba(0, 0, 0, 0.22) 1px,
+      rgba(255, 255, 255, 0.03) 2px,
+      rgba(255, 255, 255, 0.03) 4px
     ),
-    radial-gradient(1200px 800px at 50% 45%, rgba(255, 255, 255, 0.05), rgba(0, 0, 0, 0.42) 70%, rgba(0, 0, 0, 0.7) 100%);
+    radial-gradient(1200px 800px at 50% 45%, rgba(255, 255, 255, 0.06), rgba(0, 0, 0, 0.46) 70%, rgba(0, 0, 0, 0.78) 100%);
+}
+
+/* Fallback layer (no blend mode needed) to ensure visibility on very dark themes. */
+html[data-crt="1"]::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9998;
+  opacity: 0.18;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.22) 0px,
+    rgba(0, 0, 0, 0.22) 1px,
+    rgba(255, 255, 255, 0.03) 2px,
+    rgba(255, 255, 255, 0.03) 4px
+  );
 }
 
 .settingsMusicCredit {
