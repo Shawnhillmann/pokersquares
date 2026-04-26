@@ -204,8 +204,10 @@ function hintCost() {
 }
 
 function swapCost() {
-  // Always 2% of the current goal target.
-  return Math.max(1, Math.round(goalTarget * 0.02));
+  // Goals 1–3: 5% so early rounds aren't trivial.
+  // Goal 4+: 2% to keep the late game playable.
+  const pct = goalIndex <= 3 ? 0.05 : 0.02;
+  return Math.max(1, Math.round(goalTarget * pct));
 }
 
 function cardScoreValue(card) {

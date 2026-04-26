@@ -10,6 +10,8 @@
   --muted: rgba(255, 255, 255, 0.6);
   --gold: #f7d774;
   --accent: #72f7c3;
+  --feltGlow: rgba(114, 247, 195, 0.12);
+  --tableGlow: rgba(114, 247, 195, 0.08);
   --bad: #ff6b6b;
   --shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
   --board-size: 5;
@@ -28,6 +30,8 @@ html[data-theme="slate"] {
   --bg1: #0f1115;
   --felt: #1c2027;
   --felt2: #12151b;
+  --feltGlow: rgba(255, 255, 255, 0.08);
+  --tableGlow: rgba(255, 255, 255, 0.06);
 }
 
 html[data-theme="blue"] {
@@ -35,6 +39,8 @@ html[data-theme="blue"] {
   --bg1: #030b14;
   --felt: #0a2038;
   --felt2: #061425;
+  --feltGlow: rgba(120, 185, 255, 0.12);
+  --tableGlow: rgba(120, 185, 255, 0.08);
 }
 
 html[data-theme="purple"] {
@@ -42,6 +48,8 @@ html[data-theme="purple"] {
   --bg1: #0b0714;
   --felt: #251a44;
   --felt2: #140d2a;
+  --feltGlow: rgba(200, 160, 255, 0.12);
+  --tableGlow: rgba(200, 160, 255, 0.08);
 }
 
 * {
@@ -528,7 +536,7 @@ main.stage {
   position: relative;
   padding: var(--table-pad-x);
   border-radius: 20px;
-  background: radial-gradient(900px 500px at 50% 20%, rgba(114, 247, 195, 0.08), transparent 55%), var(--felt);
+  background: radial-gradient(900px 500px at 50% 20%, var(--tableGlow), transparent 55%), var(--felt);
   border: 1px solid rgba(255, 255, 255, 0.08);
   box-shadow: var(--shadow);
 }
@@ -934,7 +942,7 @@ html.is-mobile .cardFace:not(.cardFace--jokerArt) img.cardPip--faceArt {
   padding: 14px 14px 16px;
   border-radius: 16px;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  background: radial-gradient(520px 160px at 35% 0%, rgba(114, 247, 195, 0.12), transparent 62%),
+  background: radial-gradient(520px 160px at 35% 0%, var(--feltGlow), transparent 62%),
     linear-gradient(180deg, var(--felt), var(--felt2));
   box-shadow: var(--shadow);
 }
@@ -945,7 +953,7 @@ html.is-mobile .cardFace:not(.cardFace--jokerArt) img.cardPip--faceArt {
   justify-self: start;
   margin-left: 8px;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  background: radial-gradient(600px 160px at 30% 0%, rgba(114, 247, 195, 0.12), transparent 62%),
+  background: radial-gradient(600px 160px at 30% 0%, var(--feltGlow), transparent 62%),
     linear-gradient(180deg, var(--felt), var(--felt2));
   box-shadow: 0 18px 50px rgba(0, 0, 0, 0.52);
 }
@@ -1130,7 +1138,7 @@ html.is-mobile .cardFace:not(.cardFace--jokerArt) img.cardPip--faceArt {
   padding: 14px 16px 14px;
   border-radius: 16px;
   border: 1px solid rgba(114, 247, 195, 0.28);
-  background: radial-gradient(600px 160px at 30% 0%, rgba(114, 247, 195, 0.12), transparent 62%),
+  background: radial-gradient(600px 160px at 30% 0%, var(--feltGlow), transparent 62%),
     linear-gradient(180deg, var(--felt), var(--felt2));
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.55);
   opacity: 0;
@@ -1176,7 +1184,7 @@ html.is-mobile .cardFace:not(.cardFace--jokerArt) img.cardPip--faceArt {
   padding: 12px 12px 12px;
   border-radius: 16px;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  background: radial-gradient(600px 160px at 30% 0%, rgba(114, 247, 195, 0.12), transparent 62%),
+  background: radial-gradient(600px 160px at 30% 0%, var(--feltGlow), transparent 62%),
     linear-gradient(180deg, var(--felt), var(--felt2));
   box-shadow: 0 18px 50px rgba(0, 0, 0, 0.52);
   pointer-events: auto;
