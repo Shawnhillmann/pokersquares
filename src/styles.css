@@ -392,7 +392,9 @@ body {
   padding: 10px 10px 12px;
   border-radius: 14px;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(0, 0, 0, 0.14);
+  background: radial-gradient(600px 160px at 30% 0%, var(--feltGlow), transparent 62%),
+    linear-gradient(180deg, var(--felt), var(--felt2));
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.52);
 }
 
 .goalBlock__top {
@@ -697,27 +699,7 @@ main.stage {
   box-shadow: 0 8px 22px rgba(0, 0, 0, 0.28);
 }
 
-.belowGameArea .btn.btn--hint {
-  animation: hintSupportGlow 22s ease-in-out infinite;
-}
-
-@keyframes hintSupportGlow {
-  0%,
-  82%,
-  100% {
-    box-shadow: 0 10px 26px rgba(0, 0, 0, 0.32);
-    border-color: rgba(247, 215, 116, 0.62);
-  }
-  88% {
-    box-shadow: 0 0 0 1px rgba(247, 215, 116, 0.2), 0 0 18px rgba(247, 215, 116, 0.16),
-      0 12px 30px rgba(0, 0, 0, 0.34);
-    border-color: rgba(247, 215, 116, 0.82);
-  }
-  94% {
-    box-shadow: 0 10px 26px rgba(0, 0, 0, 0.32);
-    border-color: rgba(247, 215, 116, 0.62);
-  }
-}
+/* Hint: keep constant brightness (no pulse). */
 
 .board {
   display: grid;
