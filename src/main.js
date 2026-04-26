@@ -1043,27 +1043,17 @@ function burstComboSparks(cells, combo) {
   }
 }
 
-function handRarityFontPx(type) {
-  switch (type) {
-    case HAND_TYPE.TWO_PAIR:
-      return 22;
-    case HAND_TYPE.THREE_OF_A_KIND:
-      return 24;
-    case HAND_TYPE.STRAIGHT:
-      return 26;
-    case HAND_TYPE.FLUSH:
-      return 28;
-    case HAND_TYPE.FULL_HOUSE:
-      return 30;
-    case HAND_TYPE.FOUR_OF_A_KIND:
-      return 34;
-    case HAND_TYPE.STRAIGHT_FLUSH:
-      return 40;
-    case HAND_TYPE.ROYAL_FLUSH:
-      return 56;
-    default:
-      return 22;
-  }
+function handBurstTier(type) {
+  const p = HAND_PRIORITY[type] ?? 0;
+  const fullHouseP = HAND_PRIORITY[HAND_TYPE.FULL_HOUSE] ?? 6;
+  const fourP = HAND_PRIORITY[HAND_TYPE.FOUR_OF_A_KIND] ?? 7;
+  const sfP = HAND_PRIORITY[HAND_TYPE.STRAIGHT_FLUSH] ?? 8;
+  const royalP = HAND_PRIORITY[HAND_TYPE.ROYAL_FLUSH] ?? 9;
+  if (p >= royalP) return "royal";
+  if (p >= sfP) return "legendary";
+  if (p >= fourP) return "epic";
+  if (p >= fullHouseP) return "rare";
+  return "common";
 }
 
 function burstRoyalGold(x, y, intensity = 1) {
@@ -1117,18 +1107,18 @@ function showHandBurst({ label, type, credits }) {
 
   const n = document.createElement("div");
   n.className = "handBurst";
-  if (type === HAND_TYPE.ROYAL_FLUSH) n.classList.add("handBurst--royal");
+  const tier = handBurstTier(type);
+  n.classList.add(`handBurst--${tier}`);
   n.style.left = `${x}px`;
   n.style.top = `${y}px`;
-  const labelPx = handRarityFontPx(type);
   const amt = Math.max(0, Math.floor(Number(credits) || 0));
-  n.innerHTML = `<div class="handBurst__label" style="font-size:${labelPx}px">${label}</div><div class="handBurst__credits">+${amt.toLocaleString()}</div>`;
+  n.innerHTML = `<div class="handBurst__label">${label}</div><div class="handBurst__credits">+${amt.toLocaleString()}</div>`;
   host.append(n);
   requestAnimationFrame(() => n.classList.add("is-showing"));
 
-  if (type === HAND_TYPE.ROYAL_FLUSH) burstRoyalGold(x, y, 1.2);
-  else if (type === HAND_TYPE.STRAIGHT_FLUSH) burstRoyalGold(x, y, 0.35);
-  else if ((HAND_PRIORITY[type] ?? 0) >= (HAND_PRIORITY[HAND_TYPE.FULL_HOUSE] ?? 6)) burstGoldWin(x, y, 0.9);
+  if (tier === "royal") burstRoyalGold(x, y, 1.2);
+  else if (tier === "legendary") burstRoyalGold(x, y, 0.35);
+  else if (tier === "epic" || tier === "rare") burstGoldWin(x, y, 0.9);
   return n;
 }
 

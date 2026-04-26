@@ -1464,6 +1464,7 @@ html.is-mobile .cardFace:not(.cardFace--jokerArt) img.cardPip--faceArt {
   color: rgba(247, 215, 116, 0.98);
   text-shadow: 0 0 22px rgba(247, 215, 116, 0.18), 0 18px 44px rgba(0, 0, 0, 0.62);
   line-height: 1.05;
+  font-size: 28px;
 }
 
 .handBurst__credits {
@@ -1502,8 +1503,60 @@ html.is-mobile .cardFace:not(.cardFace--jokerArt) img.cardPip--faceArt {
   text-shadow: 0 0 22px rgba(247, 215, 116, 0.18), 0 18px 44px rgba(0, 0, 0, 0.62);
 }
 
-.handBurst--royal {
-  text-shadow: 0 0 28px rgba(247, 215, 116, 0.26), 0 22px 60px rgba(0, 0, 0, 0.68);
+.handBurst--common .handBurst__label,
+.handBurst--common .handBurst__credits {
+  text-shadow: 0 0 20px rgba(247, 215, 116, 0.16), 0 18px 44px rgba(0, 0, 0, 0.62);
+}
+
+.handBurst--rare .handBurst__label,
+.handBurst--rare .handBurst__credits {
+  text-shadow: 0 0 26px rgba(247, 215, 116, 0.22), 0 18px 44px rgba(0, 0, 0, 0.62);
+  animation: handGlow 620ms ease-in-out 1;
+}
+
+.handBurst--epic .handBurst__label,
+.handBurst--epic .handBurst__credits {
+  text-shadow: 0 0 34px rgba(247, 215, 116, 0.3), 0 18px 44px rgba(0, 0, 0, 0.62);
+  animation: handGlow 820ms ease-in-out 1;
+}
+
+.handBurst--legendary .handBurst__label,
+.handBurst--legendary .handBurst__credits {
+  text-shadow: 0 0 40px rgba(247, 215, 116, 0.36), 0 18px 44px rgba(0, 0, 0, 0.62);
+  animation: handShimmer 1150ms ease-in-out 1;
+}
+
+.handBurst--royal .handBurst__label,
+.handBurst--royal .handBurst__credits {
+  text-shadow: 0 0 46px rgba(247, 215, 116, 0.42), 0 22px 60px rgba(0, 0, 0, 0.68);
+  animation: handShimmer 1350ms ease-in-out 1;
+}
+
+@keyframes handGlow {
+  0% {
+    filter: brightness(1);
+  }
+  35% {
+    filter: brightness(1.22);
+  }
+  100% {
+    filter: brightness(1);
+  }
+}
+
+@keyframes handShimmer {
+  0% {
+    filter: brightness(1);
+  }
+  25% {
+    filter: brightness(1.28);
+  }
+  55% {
+    filter: brightness(1.08);
+  }
+  100% {
+    filter: brightness(1);
+  }
 }
 
 .handBurst--reward .handBurst__label {
