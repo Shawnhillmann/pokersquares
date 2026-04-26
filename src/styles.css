@@ -23,6 +23,27 @@
   --font: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
 }
 
+html[data-theme="slate"] {
+  --bg0: #1a1d22;
+  --bg1: #0f1115;
+  --felt: #1c2027;
+  --felt2: #12151b;
+}
+
+html[data-theme="blue"] {
+  --bg0: #061a2e;
+  --bg1: #030b14;
+  --felt: #0a2038;
+  --felt2: #061425;
+}
+
+html[data-theme="purple"] {
+  --bg0: #20143a;
+  --bg1: #0b0714;
+  --felt: #251a44;
+  --felt2: #140d2a;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -47,7 +68,6 @@ html {
   position: absolute;
   inset: 0;
   background: rgba(0, 0, 0, 0.55);
-  backdrop-filter: blur(10px);
 }
 
 .modal__card {
@@ -136,6 +156,23 @@ html {
 
 .settingsRow--track {
   cursor: default;
+}
+
+.settingsRow__select {
+  margin-left: auto;
+  padding: 8px 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(0, 0, 0, 0.22);
+  color: rgba(255, 255, 255, 0.88);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.settingsRow__select:focus {
+  outline: none;
+  border-color: rgba(114, 247, 195, 0.55);
+  box-shadow: 0 0 0 3px rgba(114, 247, 195, 0.18);
 }
 
 .settingsMusicCredit {
@@ -408,8 +445,7 @@ body {
   gap: 18px;
   padding: 18px 20px;
   border-bottom: 1px solid var(--line);
-  background: linear-gradient(180deg, rgba(10, 12, 18, 0.92), rgba(10, 12, 18, 0.7));
-  backdrop-filter: blur(10px);
+  background: rgba(10, 12, 18, 0.82);
 }
 
 .brand__title {
@@ -912,7 +948,6 @@ html.is-mobile .cardFace:not(.cardFace--jokerArt) img.cardPip--faceArt {
   background: radial-gradient(600px 160px at 30% 0%, rgba(114, 247, 195, 0.12), transparent 62%),
     linear-gradient(180deg, var(--felt), var(--felt2));
   box-shadow: 0 18px 50px rgba(0, 0, 0, 0.52);
-  backdrop-filter: blur(10px);
 }
 
 .handChart.is-collapsed {
@@ -1100,7 +1135,6 @@ html.is-mobile .cardFace:not(.cardFace--jokerArt) img.cardPip--faceArt {
   opacity: 0;
   transform: translate(-50%, -50%) translateY(6px);
   pointer-events: none;
-  backdrop-filter: blur(10px);
   min-width: 240px;
 }
 
@@ -1146,7 +1180,6 @@ html.is-mobile .cardFace:not(.cardFace--jokerArt) img.cardPip--faceArt {
   box-shadow: 0 18px 50px rgba(0, 0, 0, 0.52);
   pointer-events: auto;
   opacity: 1;
-  backdrop-filter: blur(10px);
 }
 
 .howToPlayPanel__title {
@@ -1487,7 +1520,6 @@ html.is-mobile .cardFace:not(.cardFace--jokerArt) img.cardPip--faceArt {
   border-color: rgba(247, 215, 116, 0.45);
   background: rgba(10, 12, 18, 0.78);
   box-shadow: 0 14px 40px rgba(0, 0, 0, 0.45);
-  backdrop-filter: blur(10px);
 }
 
 .winOverlay {
@@ -1502,7 +1534,6 @@ html.is-mobile .cardFace:not(.cardFace--jokerArt) img.cardPip--faceArt {
   position: absolute;
   inset: 0;
   background: rgba(0, 0, 0, 0.55);
-  backdrop-filter: blur(6px);
 }
 
 /* winOverlay removed (goals are perpetual) */
@@ -1519,7 +1550,6 @@ html.is-mobile .cardFace:not(.cardFace--jokerArt) img.cardPip--faceArt {
   position: absolute;
   inset: 0;
   background: rgba(0, 0, 0, 0.55);
-  backdrop-filter: blur(6px);
 }
 
 .rewardPickOverlay__card {
@@ -1530,7 +1560,6 @@ html.is-mobile .cardFace:not(.cardFace--jokerArt) img.cardPip--faceArt {
   background: rgba(10, 12, 18, 0.78);
   box-shadow: 0 18px 50px rgba(0, 0, 0, 0.52);
   padding: 16px;
-  backdrop-filter: blur(10px);
 }
 
 .rewardPickOverlay__swapNotice {

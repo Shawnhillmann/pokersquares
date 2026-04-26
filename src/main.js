@@ -52,6 +52,7 @@ const ui = {
   settingsSfxVolValue: /** @type {HTMLElement|null} */ (document.getElementById("settingsSfxVolValue")),
   settingsMusicVol: /** @type {HTMLInputElement|null} */ (document.getElementById("settingsMusicVol")),
   settingsMusicVolValue: /** @type {HTMLElement|null} */ (document.getElementById("settingsMusicVolValue")),
+  settingsTheme: /** @type {HTMLSelectElement|null} */ (document.getElementById("settingsTheme")),
   settingsNextTrackBtn: /** @type {HTMLButtonElement|null} */ (document.getElementById("settingsNextTrackBtn")),
   settingsTrackLabel: /** @type {HTMLElement|null} */ (document.getElementById("settingsTrackLabel"))
 };
@@ -495,7 +496,8 @@ const settings = {
   music: false,
   sfxVol: 1,
   musicVol: 0.22,
-  musicTrack: 1
+  musicTrack: 1,
+  theme: "green"
 };
 
 function loadSettings() {
@@ -509,6 +511,7 @@ function loadSettings() {
       if (typeof v.sfxVol === "number") settings.sfxVol = Math.max(0, Math.min(1, v.sfxVol));
       if (typeof v.musicVol === "number") settings.musicVol = Math.max(0, Math.min(1, v.musicVol));
       if (typeof v.musicTrack === "number") settings.musicTrack = Math.max(1, Math.floor(v.musicTrack));
+      if (typeof v.theme === "string") settings.theme = v.theme;
     }
   } catch {
     // ignored
@@ -530,6 +533,7 @@ function syncSettingsUi() {
   if (ui.settingsMusicVol) ui.settingsMusicVol.value = String(Math.round(settings.musicVol * 100));
   if (ui.settingsSfxVolValue) ui.settingsSfxVolValue.textContent = `${Math.round(settings.sfxVol * 100)}%`;
   if (ui.settingsMusicVolValue) ui.settingsMusicVolValue.textContent = `${Math.round(settings.musicVol * 100)}%`;
+  if (ui.settingsTheme) ui.settingsTheme.value = settings.theme || "green";
   if (ui.settingsTrackLabel) ui.settingsTrackLabel.textContent = `Track ${settings.musicTrack}`;
 }
 
@@ -539,6 +543,7 @@ function applySettings() {
   music.setEnabled(!!settings.music);
   music.setVolume(settings.musicVol);
   music.setTrackIndex(settings.musicTrack);
+  document.documentElement.dataset.theme = settings.theme || "green";
 }
 
 function openSettings() {
@@ -592,6 +597,13 @@ function onSettingsMusicVolChange() {
 
 ui.settingsMusicVol?.addEventListener("input", onSettingsMusicVolChange);
 ui.settingsMusicVol?.addEventListener("change", onSettingsMusicVolChange);
+
+ui.settingsTheme?.addEventListener("change", () => {
+  if (!ui.settingsTheme) return;
+  settings.theme = String(ui.settingsTheme.value || "green");
+  applySettings();
+  saveSettings();
+});
 
 ui.settingsNextTrackBtn?.addEventListener("click", async () => {
   // User gesture path: allow audio to start if enabled.
@@ -1398,9 +1410,18 @@ async function playRewardBurst({ title, desc }) {
   const host = ui.board.parentElement;
   if (!host) return;
   const rect = ui.board.getBoundingClientRect();
-  const x = rect.left + rect.width / 2;
-  // Higher than hand bursts to avoid overlap.
-  const y = rect.top + rect.height * 0.24;
+  const centerX = rect.left + rect.width / 2;
+  const centerY = rect.top + rect.height / 2;
+
+  // Avoid the center hand-score burst area as much as possible (desktop + mobile).
+  const offset = Math.min(rect.width * 0.22, 190);
+  const dir = Math.random() < 0.5 ? -1 : 1;
+  const x = centerX + offset * dir;
+
+  // Higher than hand bursts, and stay well above the center band on short boards.
+  const avoidBand = Math.min(170, rect.height * 0.36);
+  let y = rect.top + rect.height * 0.18;
+  if (Math.abs(y - centerY) < avoidBand * 0.5) y = rect.top + rect.height * 0.08;
 
   // Gold particle pop on reward.
   burstGoldWin(x, y, 0.85);
