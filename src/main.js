@@ -802,7 +802,7 @@ ui.newGameBtn.addEventListener("click", () => {
   rerender();
   syncHandChartScores();
   showCenterTip(
-    "Swap cards to make either horizontal or vertical poker hands<br />and earn rewards."
+    "Swap cards to make either horizontal or vertical poker hands<br />and&nbsp;earn rewards."
   );
   checkCantAffordSwapAndEnd();
   scheduleSaveRun();
@@ -836,7 +836,7 @@ ui.restartBtn.addEventListener("click", () => {
   rerender();
   syncHandChartScores();
   showCenterTip(
-    "Swap cards to make either horizontal or vertical poker hands<br />and earn rewards."
+    "Swap cards to make either horizontal or vertical poker hands<br />and&nbsp;earn rewards."
   );
   checkCantAffordSwapAndEnd();
   scheduleSaveRun();
@@ -845,6 +845,7 @@ ui.restartBtn.addEventListener("click", () => {
 ui.hintBtn.addEventListener("click", async () => {
   if (state.busy) return;
   dismissCenterTip();
+  dismissRewardBursts();
 
   // Hints cost credits (discourage spam).
   state.credits = clampNonNegative(state.credits - hintCost());
@@ -1267,6 +1268,12 @@ function dismissCenterTip() {
   host.__centerTipEl = null;
   n.classList.add("is-fading");
   setTimeout(() => n.remove(), 260);
+}
+
+function dismissRewardBursts() {
+  rewardBurstQueue.length = 0;
+  rewardBurstShowing = false;
+  document.querySelectorAll(".handBurst--reward").forEach((n) => n.remove());
 }
 
 /** @type {{ title:string, desc:string }[]} */
@@ -2024,6 +2031,7 @@ async function pulseScoredLine(line, combo, contribCells, dimCells, onTotal, han
 async function onCellClick(pos) {
   if (state.busy) return;
   dismissCenterTip();
+  dismissRewardBursts();
   if (checkCantAffordSwapAndEnd()) return;
   // First interaction unlocks audio on most browsers.
   sfx.unlock();
@@ -2247,6 +2255,6 @@ rerender();
 
 // First-time load helper: only show the tip when we are not restoring an in-progress run.
 if (!restoredRun) {
-  showCenterTip("Swap cards to make either horizontal or vertical poker hands<br />and earn rewards.");
+  showCenterTip("Swap cards to make either horizontal or vertical poker hands<br />and&nbsp;earn rewards.");
 }
 

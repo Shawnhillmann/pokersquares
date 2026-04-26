@@ -1494,14 +1494,17 @@ html.is-mobile .cardFace:not(.cardFace--jokerArt) img.cardPip--faceArt {
   pointer-events: auto;
   border-color: rgba(247, 215, 116, 0.45);
   background: rgba(10, 12, 18, 0.78);
+  padding: 12px 18px;
+  max-width: min(92vw, 520px);
 }
 
 .handBurst--tip .handBurst__label {
-  font-size: 18px;
-  letter-spacing: 0.08em;
+  font-size: 17px;
+  letter-spacing: 0.07em;
   text-transform: uppercase;
   color: rgba(247, 215, 116, 0.98);
   text-shadow: 0 0 22px rgba(247, 215, 116, 0.18), 0 18px 44px rgba(0, 0, 0, 0.62);
+  line-height: 1.2;
 }
 
 .handBurst--common .handBurst__label,
