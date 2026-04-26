@@ -551,6 +551,18 @@ function rerender() {
       ? viewFx.scoredLines.map((l) => ({ kind: l.kind, index: l.index, label: l.label }))
       : null
   );
+  // Pause any purely-visual idle animations during gameplay activity.
+  ui.board.classList.toggle(
+    "is-busy",
+    !!(
+      state.busy ||
+      pendingRewardPicks > 0 ||
+      viewFx.scoring ||
+      viewFx.clearing ||
+      (viewFx.dropRowsById && viewFx.dropRowsById.size) ||
+      (viewFx.scoredLines && viewFx.scoredLines.length)
+    )
+  );
   updateHud();
   positionScoreFeed();
 }

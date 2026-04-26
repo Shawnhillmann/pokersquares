@@ -766,6 +766,43 @@ main.stage {
   transition: transform 120ms ease, border-color 120ms ease, filter 120ms ease;
 }
 
+.cardShell {
+  position: absolute;
+  inset: 0;
+}
+
+.cardBreath {
+  position: absolute;
+  inset: 0;
+  transform: translateZ(0);
+  will-change: transform;
+}
+
+.cardBreath.can-breathe {
+  animation: cardBreath 5.5s ease-in-out infinite;
+  animation-delay: var(--breath-delay, 0ms);
+}
+
+.board.is-busy .cardBreath {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cardBreath {
+    animation: none !important;
+  }
+}
+
+@keyframes cardBreath {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(0, -1.5px, 0);
+  }
+}
+
 .cell.is-dropping {
   transform: translate3d(0, calc(var(--drop-rows, 0) * (var(--cell) + var(--gap)) * -1), 0);
   transition: transform var(--drop-ms, 220ms) cubic-bezier(0.16, 0.86, 0.22, 1);

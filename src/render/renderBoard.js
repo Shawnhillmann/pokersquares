@@ -27,6 +27,8 @@ export function renderBoard(root, board, view, onCellClick) {
   const ART_RANKS = new Set(["A", "J", "Q", "K"]);
   const CORNER_SUIT_RANKS = new Set(["J", "Q", "K"]);
   const cells = /** @type {HTMLButtonElement[]} */ (root.__cells ?? []);
+  /** @type {{ id: string, el: HTMLElement }[]} */
+  const breathCandidates = [];
 
   // Build fixed 5x5 button grid once; update in place to avoid image flicker on mobile Safari.
   if (cells.length !== BOARD_SIZE * BOARD_SIZE) {
@@ -63,9 +65,13 @@ export function renderBoard(root, board, view, onCellClick) {
         cell.classList.add("is-empty");
         cell.removeAttribute("data-card-id");
         cell.style.removeProperty("--drop-rows");
-        // Remove face (and any cached refs) when empty.
-        const oldFace = /** @type {HTMLElement|null} */ (cell.__face ?? cell.querySelector(".cardFace"));
-        if (oldFace) oldFace.remove();
+        // Remove card shell (and any cached refs) when empty.
+        const oldShell = /** @type {HTMLElement|null} */ (cell.__shell ?? cell.querySelector(".cardShell"));
+        if (oldShell) oldShell.remove();
+        // @ts-ignore
+        cell.__shell = null;
+        // @ts-ignore
+        cell.__breath = null;
         // @ts-ignore
         cell.__face = null;
         // @ts-ignore
@@ -94,11 +100,21 @@ export function renderBoard(root, board, view, onCellClick) {
           cell.style.removeProperty("--drop-rows");
           cell.style.removeProperty("--drop-ms");
         }
-        // Build face DOM once per cell; update text/classes in place to prevent SVG flicker.
+        // Build shell/breath/face DOM once per cell; update in place to prevent SVG flicker.
+        let shell = /** @type {HTMLElement|null} */ (cell.__shell ?? cell.querySelector(".cardShell"));
+        let breath = /** @type {HTMLElement|null} */ (cell.__breath ?? cell.querySelector(".cardBreath"));
         let face = /** @type {HTMLElement|null} */ (cell.__face ?? cell.querySelector(".cardFace"));
-        if (!face) {
+        if (!shell || !breath || !face) {
+          shell = el("div", "cardShell");
+          breath = el("div", "cardBreath");
           face = el("div", "cardFace");
-          cell.append(face);
+          breath.append(face);
+          shell.append(breath);
+          cell.append(shell);
+          // @ts-ignore
+          cell.__shell = shell;
+          // @ts-ignore
+          cell.__breath = breath;
           // @ts-ignore
           cell.__face = face;
 
@@ -160,6 +176,27 @@ export function renderBoard(root, board, view, onCellClick) {
         const rankText = String(card.rank);
         const suit = String(card.suit);
         const isJoker = rankText === "JOKER";
+
+        // Idle "breathing" animation lives on the breath wrapper only, so it never conflicts
+        // with gameplay transforms (swap/cascade/scoring) on other nodes.
+        // Keep per-card delay stable by deriving it from card.id.
+        if (breath) {
+          // We'll pick up to 7 cards total to breathe after the grid is updated.
+          breath.classList.remove("can-breathe");
+          breathCandidates.push({ id: card.id, el: breath });
+          // @ts-ignore
+          const prevFor = breath.dataset.breathForId;
+          if (prevFor !== card.id) {
+            // Hash card.id into a stable negative delay range [-5s, 0s).
+            let h = 0;
+            for (let i = 0; i < card.id.length; i++) h = (h * 31 + card.id.charCodeAt(i)) | 0;
+            const ms = Math.abs(h) % 5000;
+            breath.style.setProperty("--breath-delay", `${-ms}ms`);
+            // @ts-ignore
+            breath.dataset.breathForId = card.id;
+          }
+        }
+
         // Joker should be image-only (no corner label).
         rankEl.textContent = isJoker ? "" : rankText;
         rankEl.classList.toggle("cardRank--ten", rankText === "10");
@@ -203,6 +240,21 @@ export function renderBoard(root, board, view, onCellClick) {
         if (!isJoker && isRedSuit(card.suit)) face.classList.add("is-red");
       }
     }
+  }
+
+  // Choose a stable "random" subset of cards (max 7) to breathe.
+  // Deterministic per board state: we hash card.id, then pick the 7 lowest.
+  const MAX_BREATH = 7;
+  if (breathCandidates.length > 0) {
+    const scored = breathCandidates
+      .map((c) => {
+        let h = 0;
+        for (let i = 0; i < c.id.length; i++) h = (h * 31 + c.id.charCodeAt(i)) | 0;
+        return { el: c.el, score: h >>> 0 };
+      })
+      .sort((a, b) => a.score - b.score)
+      .slice(0, MAX_BREATH);
+    for (const s of scored) s.el.classList.add("can-breathe");
   }
 }
 
