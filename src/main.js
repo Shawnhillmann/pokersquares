@@ -1413,27 +1413,28 @@ async function playRewardBurst({ title, desc }) {
   const centerX = rect.left + rect.width / 2;
   const centerY = rect.top + rect.height / 2;
 
-  // Notifications in the game area should always be vertically centered.
-  const y = centerY;
-
-  // Reduce overlap with the center hand-score burst by nudging left/right,
-  // while staying inside the board bounds.
-  const maxOffset = Math.min(rect.width * 0.24, 190);
-  const minOffset = Math.min(rect.width * 0.12, 90);
-  const dir = Math.random() < 0.5 ? -1 : 1;
-  const offset = minOffset + Math.random() * (maxOffset - minOffset);
-  const safeX = 18 + 170; // keep away from board edge + popup half-width guess
-  const x = Math.max(rect.left + safeX, Math.min(rect.right - safeX, centerX + offset * dir));
+  // Run reward notifications should always sit above the centered hand-score burst,
+  // and never be clipped off-screen.
+  const x = centerX;
 
   // Gold particle pop on reward.
-  burstGoldWin(x, y, 0.85);
-
   const n = document.createElement("div");
   n.className = "handBurst handBurst--reward";
   n.style.left = `${x}px`;
-  n.style.top = `${y}px`;
+  n.style.top = `${centerY}px`; // temporary; we'll measure and reposition
   n.innerHTML = `<div class="handBurst__label">${title}</div><div class="handBurst__credits">${desc}</div>`;
   host.append(n);
+  // Measure after insert so we can guarantee visibility + placement.
+  const br = n.getBoundingClientRect();
+  const halfH = br.height / 2;
+  const padTop = 14;
+  const minY = rect.top + padTop + halfH;
+  const maxY = centerY - 10 - halfH; // keep a little gap above hand-score burst center
+  const targetY = centerY - Math.min(180, rect.height * 0.22);
+  const y = Math.max(minY, Math.min(maxY, targetY));
+  n.style.top = `${y}px`;
+
+  burstGoldWin(x, y, 0.85);
   requestAnimationFrame(() => n.classList.add("is-showing"));
   const showMs = 3000;
   await sleep(showMs - 220);
