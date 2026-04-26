@@ -1005,10 +1005,11 @@ html.is-mobile .cardFace:not(.cardFace--jokerArt) img.cardPip--faceArt {
 }
 
 .handRow__name {
-  font-weight: 900;
-  letter-spacing: 0.04em;
-  font-size: 11px;
-  color: rgba(255, 255, 255, 0.88);
+  font-weight: 850;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.72);
 }
 
 .handRow__tag {
