@@ -402,7 +402,7 @@ function updateRewardsTracker() {
     "Pocket Rockets": "Aces are worth 4x more card value per stack.",
     Jokers: "Adds Joker cards to your deck (max 2). Jokers count as any rank for hand evaluation.",
     Diagonals: "Diagonals can be scored as poker hands.",
-    "Chain Combo Bonus": "Each stack adds +50% credits to cascade combo line scores.",
+    "Combo Chain": "Each consecutive scored hand in a combo receives a 25% bonus per stack.",
     "Hand Multiplier": "Each stack adds +25% to all hand multipliers.",
     "Premium Hands":
       "Each stack makes Full House, Four of a Kind, Straight Flush, Five of a Kind, and Royal Flush worth 50% more.",
@@ -534,9 +534,9 @@ function updateRewardsTracker() {
   addRow("Diagonals", rewards.diagonalsScored ? "On" : "Off");
 
   if (rewards.comboBonusStacks > 0) {
-    const pct = 50 * rewards.comboBonusStacks;
-    addRow("Chain Combo Bonus", `+${pct}% cascades · ${rewards.comboBonusStacks}×`);
-  } else addRow("Chain Combo Bonus", "Off");
+    const per = 25 * rewards.comboBonusStacks;
+    addRow("Combo Chain", `+${per}% per chain step · ${rewards.comboBonusStacks}×`);
+  } else addRow("Combo Chain", "Off");
 
   if (rewards.handMultiplierStacks > 0) {
     const pct = 25 * rewards.handMultiplierStacks;
@@ -1668,8 +1668,8 @@ const REWARD_DEFS = /** @type {const} */ ([
   },
   {
     id: "comboBonus",
-    name: "Chain Combo Bonus",
-    desc: "Cascade combos are worth 50% more (Stackable)",
+    name: "Combo Chain",
+    desc: "Each consecutive scored hand in a combo receives a 25% bonus (Stackable)",
     stack: { kind: "stackable" }
   },
   {
@@ -1778,12 +1778,12 @@ function applyReward(id) {
   }
   if (id === "comboBonus") {
     rewards.comboBonusStacks += 1;
-    lastPickedRewardName = "Chain Combo Bonus";
-    const pct = 50 * rewards.comboBonusStacks;
+    lastPickedRewardName = "Combo Chain";
+    const pct = 25 * rewards.comboBonusStacks;
     const stacks = rewards.comboBonusStacks;
     enqueueRewardBurst(
-      "Chain Combo Bonus",
-      `+${pct}% on cascade lines (${stacks} stack${stacks === 1 ? "" : "s"})`
+      "Combo Chain",
+      `+${pct}% per chain step (${stacks} stack${stacks === 1 ? "" : "s"})`
     );
     return;
   }
@@ -2638,8 +2638,9 @@ async function resolveCascades() {
       }
       const lineScore = pipSum * hm;
       const rewardMult = 1 + 0.25 * Math.max(0, Math.floor(rewards.handMultiplierStacks || 0));
-      const comboMult =
-        rewards.comboBonusStacks > 0 && state.comboStep > 1 ? 1 + 0.5 * rewards.comboBonusStacks : 1;
+      const chainStacks = Math.max(0, Math.floor(rewards.comboBonusStacks || 0));
+      const chainStep = Math.max(0, (state.comboStep || 1) - 1);
+      const comboMult = chainStacks > 0 && chainStep > 0 ? 1 + 0.25 * chainStacks * chainStep : 1;
       const gained = Math.floor(lineScore * comboMult * rewardMult * handScoreMultForReward(line.type));
       const handBurstEl = showHandBurst({ label: line.label, type: line.type, credits: gained });
       // Ensure the line highlight is visible before the sequential grow starts.
