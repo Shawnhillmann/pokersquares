@@ -352,7 +352,8 @@ function updateGoalHud(credits) {
   else setCreditsInstant(credits);
 
   // Advance goals forever. Every cleared goal grants a reward pick.
-  while (credits >= goalTarget) {
+  // Limit to 1 goal clear at a time for clarity (no multi-goal jumps).
+  if (credits >= goalTarget) {
     const completed = goalIndex;
     peakGoalClearedThisRun = Math.max(peakGoalClearedThisRun, completed);
     sfx.goalReached(completed);
@@ -362,6 +363,8 @@ function updateGoalHud(credits) {
     clearedGoalsForRewardPick.push(completed);
     goalIndex += 1;
     goalTarget = goalTargetForIndex(goalIndex);
+
+    enqueueRewardBurst("Goal Cleared!", `New Goal for Rewards: ${goalTarget.toLocaleString()}`);
   }
 
   if (ui.goalTarget) {
@@ -1969,6 +1972,7 @@ async function resolveCascades() {
   state.lastHands = [];
   let gainedTotal = 0;
   const goalAtComboStart = goalTarget;
+  let stopAfterGoalClear = false;
   // The single “breather” between a cascade landing and the next scoring check.
   // Tweak this number to change how fast scoring starts after a fill.
   const CASCADE_EVAL_DELAY_MS = 26;
@@ -2019,19 +2023,16 @@ async function resolveCascades() {
       await sleep(comboDelayMs(45, state.comboStep));
       await pulseScoredLine(line, state.comboStep, contribCells, dimCells, () => {}, handBurstEl);
 
+      const goalIndexBefore = goalIndex;
       state.credits += gained;
       gainedTotal += gained;
 
       sfx.scoreHand(line.type, state.comboStep);
       rerender();
 
-      while (pendingRewardPicks > 0) {
-        const picked = await showRewardPickModal();
-        pendingRewardPicks = Math.max(0, pendingRewardPicks - 1);
-        clearedGoalsForRewardPick.shift();
-        applyReward(picked);
-        rerender();
-      }
+      // If this line cleared a goal, we'll finish the current clear/fill step,
+      // then end the cascade/combos so the run feels discrete.
+      if (goalIndex !== goalIndexBefore) stopAfterGoalClear = true;
 
       viewFx.dim = null;
 
@@ -2111,6 +2112,17 @@ async function resolveCascades() {
     viewFx.dropMsById = null;
     // Tight: allow microtask/paint, then evaluate next cascade.
     await sleep(0);
+
+    // If a goal was cleared during this cascade step, pick the reward now,
+    // then stop any further cascade/combos.
+    while (pendingRewardPicks > 0) {
+      const picked = await showRewardPickModal();
+      pendingRewardPicks = Math.max(0, pendingRewardPicks - 1);
+      clearedGoalsForRewardPick.shift();
+      applyReward(picked);
+      rerender();
+    }
+    if (stopAfterGoalClear) break;
   }
 
   state.comboStep = 0;
