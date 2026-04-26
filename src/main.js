@@ -1831,15 +1831,16 @@ async function processGoalOvershootSequence() {
       peakGoalClearedThisRun = Math.max(peakGoalClearedThisRun, completed);
       bumpGoalCelebration();
 
-      const picked = await showRewardPickModal(completed);
-      applyReward(picked);
-      rerender();
-
+      // Advance to the next goal *before* showing the picker so swap/hint costs reflect the new goal.
       goalIndex += 1;
       goalTarget = goalTargetForIndex(goalIndex);
       updateRewardLabel();
       updateGoalTitleLabel();
       if (ui.goalTarget) ui.goalTarget.textContent = goalTarget.toLocaleString();
+
+      const picked = await showRewardPickModal(completed);
+      applyReward(picked);
+      rerender();
     }
 
     // After stepping through all cleared goals, animate the remainder toward the next goal.

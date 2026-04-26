@@ -58,7 +58,8 @@ export function createDeck(rng) {
     addJoker() {
       // Add exactly one Joker to the cycling deck.
       // Id is unique so it won't collide with standard cards.
-      const id = `JOKER-${Math.random().toString(16).slice(2)}`;
+      // Use RNG (not Math.random) so saved/loaded runs behave consistently.
+      const id = `JOKER-${rng.int(1e9).toString(16)}-${rng.int(1e9).toString(16)}`;
       queue.push({ id, rank: "JOKER", suit: "X" });
       shuffleInPlace(rng, queue);
     },
