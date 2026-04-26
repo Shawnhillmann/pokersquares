@@ -968,7 +968,7 @@ html.is-mobile .cell.is-swap-windup {
 .cardPip {
   position: absolute;
   left: 50%;
-  top: 63%;
+  top: 61%;
   transform: translate(-50%, -50%);
   font-size: 58px;
   line-height: 1;
@@ -1535,7 +1535,7 @@ html.is-mobile .cardFace:not(.cardFace--jokerArt) img.cardPip--faceArt {
   font-weight: 900;
   letter-spacing: 0.04em;
   font-size: 17px;
-  transform: translate(-50%, -50%) translateY(6px);
+  transform: translate3d(-50%, -50%, 0) translateY(6px);
   opacity: 0;
   pointer-events: none;
   box-shadow: 0 14px 40px rgba(0, 0, 0, 0.5);
@@ -2610,7 +2610,7 @@ html.is-mobile .cardRank.cardRank--ten {
 
 html.is-mobile .cardPip:not(.cardPip--faceArt) {
   font-size: clamp(13px, calc(var(--cell) * 0.36), 30px);
-  top: 67%;
+  top: 65%;
 }
 
 /* Face art image uses the same base rule on mobile (img.cardPip--faceArt). */

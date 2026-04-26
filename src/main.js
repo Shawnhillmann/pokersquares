@@ -91,6 +91,14 @@ const rewards = {
   comboBonusStacks: 0,
   /** Times Hand Multiplier picked; each adds +25% to all hand scores. */
   handMultiplierStacks: 0,
+  /** Times Swap Coupon picked; each reduces swap cost by 15%. */
+  swapCouponStacks: 0,
+  /** Times Premium Hands picked; each adds +50% to premium hand types. */
+  premiumHandsStacks: 0,
+  /** Times Low Range picked; each adds +50% to low-range hand types. */
+  lowRangeStacks: 0,
+  /** Times Pocket Rockets picked; each triples Ace card value (stackable multiplier). */
+  pocketRocketsStacks: 0,
   jokerWildcard: false, // Goal 3
   diagonalsScored: false, // Goal 4
   extraJoker: false, // Goal 5
@@ -208,17 +216,25 @@ function hintCost() {
 
 function swapCost() {
   // Fixed early-game swap costs to prevent weird inversions where later goals cost less.
-  if (goalIndex === 1) return 50;
-  if (goalIndex === 2) return 100;
-  if (goalIndex === 3) return 150;
+  let base = 0;
+  if (goalIndex === 1) base = 50;
+  else if (goalIndex === 2) base = 100;
+  else if (goalIndex === 3) base = 150;
   // Goal 4+: 2% to keep the late game playable.
-  return Math.max(1, Math.round(goalTarget * 0.02));
+  if (!base) base = Math.max(1, Math.round(goalTarget * 0.02));
+  const stacks = Math.max(0, Math.floor(rewards.swapCouponStacks || 0));
+  const mult = stacks <= 0 ? 1 : Math.pow(0.85, stacks);
+  return Math.max(1, Math.round(base * mult));
 }
 
 function cardScoreValue(card) {
   if (!card) return 0;
   const isJoker = String(card.rank) === "JOKER";
-  const base = rewards.jokerWildcard && isJoker ? 10 : cardBaseValue(String(card.rank));
+  const isAce = String(card.rank) === "A";
+  const aceStacks = Math.max(0, Math.floor(rewards.pocketRocketsStacks || 0));
+  const aceMult = aceStacks <= 0 ? 1 : Math.pow(3, aceStacks);
+  const baseUnmult = rewards.jokerWildcard && isJoker ? 10 : cardBaseValue(String(card.rank));
+  const base = isAce ? baseUnmult * aceMult : baseUnmult;
   const stacks = Math.max(0, Math.floor(rewards.doubleCardValueStacks || 0));
   const mult = stacks <= 0 ? 1 : Math.pow(2, stacks);
   return base * mult;
@@ -233,6 +249,26 @@ function scoringOpts() {
       ? (cards) => evaluateHandWild(cards, { jokerWild: true })
       : evaluateHand
   };
+}
+
+function handScoreMultForReward(handType) {
+  const t = String(handType);
+  const premium =
+    t === HAND_TYPE.FULL_HOUSE ||
+    t === HAND_TYPE.FOUR_OF_A_KIND ||
+    t === HAND_TYPE.STRAIGHT_FLUSH ||
+    t === HAND_TYPE.FIVE_OF_A_KIND ||
+    t === HAND_TYPE.ROYAL_FLUSH;
+  const lowRange =
+    t === HAND_TYPE.FLUSH ||
+    t === HAND_TYPE.STRAIGHT ||
+    t === HAND_TYPE.THREE_OF_A_KIND ||
+    t === HAND_TYPE.TWO_PAIR;
+  const premStacks = Math.max(0, Math.floor(rewards.premiumHandsStacks || 0));
+  const lowStacks = Math.max(0, Math.floor(rewards.lowRangeStacks || 0));
+  const premMult = premium && premStacks > 0 ? Math.pow(1.5, premStacks) : 1;
+  const lowMult = lowRange && lowStacks > 0 ? Math.pow(1.5, lowStacks) : 1;
+  return premMult * lowMult;
 }
 
 /** Options for `findScoringLines` / board regeneration (includes hand types that never clear). */
@@ -841,6 +877,10 @@ ui.newGameBtn.addEventListener("click", () => {
   jokerCount = 0;
   rewards.comboBonusStacks = 0;
   rewards.handMultiplierStacks = 0;
+  rewards.swapCouponStacks = 0;
+  rewards.premiumHandsStacks = 0;
+  rewards.lowRangeStacks = 0;
+  rewards.pocketRocketsStacks = 0;
   rewards.jokerWildcard = false;
   rewards.diagonalsScored = false;
   rewards.extraJoker = false;
@@ -884,6 +924,10 @@ ui.restartBtn.addEventListener("click", () => {
   jokerCount = 0;
   rewards.comboBonusStacks = 0;
   rewards.handMultiplierStacks = 0;
+  rewards.swapCouponStacks = 0;
+  rewards.premiumHandsStacks = 0;
+  rewards.lowRangeStacks = 0;
+  rewards.pocketRocketsStacks = 0;
   rewards.jokerWildcard = false;
   rewards.diagonalsScored = false;
   rewards.extraJoker = false;
@@ -1213,8 +1257,9 @@ function showCardValuePopup(p, value, opts = {}) {
   if (opts.variant === "zero") pop.classList.add("pipPopup--zero");
   pop.textContent = opts.variant === "zero" ? "0" : `+${value}`;
 
-  const x = rect.left + rect.width / 2;
-  const y = rect.top + rect.height / 2;
+  // Use integer pixel centers to avoid occasional sub-pixel drift on some devices/zooms.
+  const x = Math.round(rect.left + rect.width / 2);
+  const y = Math.round(rect.top + rect.height / 2);
   pop.style.left = `${x}px`;
   pop.style.top = `${y}px`;
 
@@ -1395,9 +1440,33 @@ const REWARD_DEFS = /** @type {const} */ ([
     stack: { kind: "stackable" }
   },
   {
+    id: "swapCoupon",
+    name: "Swap Coupon",
+    desc: "Swaps cost 15% less (Stackable)",
+    stack: { kind: "stackable" }
+  },
+  {
     id: "comboBonus",
     name: "Combo Bonus",
     desc: "Cascade combos are worth 50% more (Stackable)",
+    stack: { kind: "stackable" }
+  },
+  {
+    id: "premiumHands",
+    name: "Premium Hands",
+    desc: "Full house+ hands are worth 50% more (Stackable)",
+    stack: { kind: "stackable" }
+  },
+  {
+    id: "lowRange",
+    name: "Low Range",
+    desc: "Straights, flushes, trips, and two pair are worth 50% more (Stackable)",
+    stack: { kind: "stackable" }
+  },
+  {
+    id: "pocketRockets",
+    name: "Pocket Rockets",
+    desc: "Aces are worth 200% more card value (Stackable)",
     stack: { kind: "stackable" }
   },
   {
@@ -1463,6 +1532,17 @@ function applyReward(id) {
     enqueueRewardBurst("Random Hints", `Chance: ${Math.round(randomHintChance * 100)}%`);
     return;
   }
+  if (id === "swapCoupon") {
+    rewards.swapCouponStacks += 1;
+    lastPickedRewardName = "Swap Coupon";
+    const pct = Math.round(15 * rewards.swapCouponStacks);
+    const stacks = rewards.swapCouponStacks;
+    enqueueRewardBurst(
+      "Swap Coupon",
+      `Swaps cost -${pct}% (${stacks} stack${stacks === 1 ? "" : "s"})`
+    );
+    return;
+  }
   if (id === "comboBonus") {
     rewards.comboBonusStacks += 1;
     lastPickedRewardName = "Combo Bonus";
@@ -1471,6 +1551,38 @@ function applyReward(id) {
     enqueueRewardBurst(
       "Combo Bonus",
       `+${pct}% on cascade lines (${stacks} stack${stacks === 1 ? "" : "s"})`
+    );
+    return;
+  }
+  if (id === "premiumHands") {
+    rewards.premiumHandsStacks += 1;
+    lastPickedRewardName = "Premium Hands";
+    const pct = 50 * rewards.premiumHandsStacks;
+    const stacks = rewards.premiumHandsStacks;
+    enqueueRewardBurst(
+      "Premium Hands",
+      `+${pct}% to premium hands (${stacks} stack${stacks === 1 ? "" : "s"})`
+    );
+    return;
+  }
+  if (id === "lowRange") {
+    rewards.lowRangeStacks += 1;
+    lastPickedRewardName = "Low Range";
+    const pct = 50 * rewards.lowRangeStacks;
+    const stacks = rewards.lowRangeStacks;
+    enqueueRewardBurst(
+      "Low Range",
+      `+${pct}% to low-range hands (${stacks} stack${stacks === 1 ? "" : "s"})`
+    );
+    return;
+  }
+  if (id === "pocketRockets") {
+    rewards.pocketRocketsStacks += 1;
+    lastPickedRewardName = "Pocket Rockets";
+    const stacks = rewards.pocketRocketsStacks;
+    enqueueRewardBurst(
+      "Pocket Rockets",
+      `Aces are now x${Math.pow(3, stacks)} value (${stacks} stack${stacks === 1 ? "" : "s"})`
     );
     return;
   }
@@ -1916,7 +2028,7 @@ function computeImmediateLineScoreForBoard(board, line) {
   }
   const hm = handMultiplier(line.type);
   const rewardMult = 1 + 0.25 * Math.max(0, Math.floor(rewards.handMultiplierStacks || 0));
-  return pipSum * hm * rewardMult;
+  return pipSum * hm * rewardMult * handScoreMultForReward(line.type);
 }
 
 /**
@@ -2240,7 +2352,7 @@ async function resolveCascades() {
       const rewardMult = 1 + 0.25 * Math.max(0, Math.floor(rewards.handMultiplierStacks || 0));
       const comboMult =
         rewards.comboBonusStacks > 0 && state.comboStep > 1 ? 1 + 0.5 * rewards.comboBonusStacks : 1;
-      const gained = Math.floor(lineScore * comboMult * rewardMult);
+      const gained = Math.floor(lineScore * comboMult * rewardMult * handScoreMultForReward(line.type));
       const handBurstEl = showHandBurst({ label: line.label, type: line.type, credits: gained });
       // Ensure the line highlight is visible before the sequential grow starts.
       await sleep(comboDelayMs(45, state.comboStep));
