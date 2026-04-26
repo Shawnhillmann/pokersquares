@@ -61,6 +61,11 @@ test("detects straight flush", () => {
   assert.equal(r.type, HAND_TYPE.STRAIGHT_FLUSH);
 });
 
+test("detects straight flush (A low)", () => {
+  const r = evaluateHand([c("A", "S"), c("2", "S"), c("3", "S"), c("4", "S"), c("5", "S")]);
+  assert.equal(r.type, HAND_TYPE.STRAIGHT_FLUSH);
+});
+
 test("detects royal flush", () => {
   const r = evaluateHand([c("10", "S"), c("J", "S"), c("Q", "S"), c("K", "S"), c("A", "S")]);
   assert.equal(r.type, HAND_TYPE.ROYAL_FLUSH);
@@ -74,6 +79,24 @@ test("wild eval detects straight flush (no jokers)", () => {
   assert.equal(r.type, HAND_TYPE.STRAIGHT_FLUSH);
   assert.equal(r.meta.isFlush, true);
   assert.equal(r.meta.isStraight, true);
+});
+
+test("wild eval detects straight flush (A low, no jokers)", () => {
+  const r = evaluateHandWild(
+    [c("A", "S"), c("2", "S"), c("3", "S"), c("4", "S"), c("5", "S")],
+    { jokerWild: true }
+  );
+  assert.equal(r.type, HAND_TYPE.STRAIGHT_FLUSH);
+  assert.equal(r.meta.isFlush, true);
+  assert.equal(r.meta.isStraight, true);
+});
+
+test("wild eval detects straight flush (A low) with a joker", () => {
+  const r = evaluateHandWild(
+    [c("A", "S"), c("2", "S"), c("3", "S"), c("4", "S"), c("JOKER", "X")],
+    { jokerWild: true }
+  );
+  assert.equal(r.type, HAND_TYPE.STRAIGHT_FLUSH);
 });
 
 test("wild eval detects royal flush (no jokers)", () => {

@@ -1646,6 +1646,10 @@ html.is-mobile .cardFace:not(.cardFace--jokerArt) img.cardPip--faceArt {
   color: rgba(247, 215, 116, 0.98);
 }
 
+.swapNotice__goal {
+  font-weight: 750;
+}
+
 .swapNotice__cost {
   font-weight: 950;
 }
