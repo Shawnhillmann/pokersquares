@@ -1359,7 +1359,10 @@ function showRewardPickModal() {
   return new Promise((resolve) => {
     const opts = pickRewardOptions3();
     const clearedGoal = clearedGoalsForRewardPick.length ? clearedGoalsForRewardPick[0] : Math.max(1, goalIndex - 1);
-    const swapNotice = `Goal <b>${clearedGoal}</b> cleared. Swaps now cost <b>${swapCost().toLocaleString()}</b>, Hints now cost <b>${hintCost().toLocaleString()}</b>.`;
+    const swapNotice = `
+      <div class="swapNotice__line1">Goal <span class="swapNotice__goal">${clearedGoal}</span> Cleared</div>
+      <div class="swapNotice__line2">Swaps Now Cost <span class="swapNotice__cost">${swapCost().toLocaleString()}</span>, Hints Now Cost <span class="swapNotice__cost">${hintCost().toLocaleString()}</span></div>
+    `;
     const overlay = document.createElement("div");
     overlay.className = "rewardPickOverlay";
     overlay.innerHTML = `
@@ -1386,7 +1389,12 @@ function showRewardPickModal() {
     `;
     document.body.append(overlay);
 
+    // Sound: same as a goal clear when the reward picker appears.
+    sfx.goalReached(clearedGoal);
+
     const onPick = (id) => {
+      // Sound: same as goal clear when selecting a reward.
+      sfx.goalReached(clearedGoal);
       overlay.remove();
       resolve(String(id));
     };

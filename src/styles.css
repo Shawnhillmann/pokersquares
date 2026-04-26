@@ -1629,6 +1629,24 @@ html.is-mobile .cardFace:not(.cardFace--jokerArt) img.cardPip--faceArt {
   text-align: center;
 }
 
+.swapNotice__line1 {
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.swapNotice__line2 {
+  margin-top: 4px;
+  font-weight: 750;
+  letter-spacing: 0.02em;
+}
+
+.swapNotice__goal,
+.swapNotice__cost {
+  font-weight: 950;
+  color: rgba(247, 215, 116, 0.98);
+}
+
 .rewardPickOverlay__title {
   font-weight: 850;
   letter-spacing: 0.1em;
