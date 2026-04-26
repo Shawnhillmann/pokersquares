@@ -1633,6 +1633,7 @@ html.is-mobile .cardFace:not(.cardFace--jokerArt) img.cardPip--faceArt {
   font-weight: 900;
   letter-spacing: 0.12em;
   text-transform: uppercase;
+  color: rgba(247, 215, 116, 0.98);
 }
 
 .swapNotice__line2 {
@@ -1641,13 +1642,13 @@ html.is-mobile .cardFace:not(.cardFace--jokerArt) img.cardPip--faceArt {
   letter-spacing: 0.02em;
 }
 
-.swapNotice__goal,
 .swapNotice__cost {
   color: rgba(247, 215, 116, 0.98);
 }
 
 .swapNotice__goal {
-  font-weight: 750;
+  font-weight: inherit;
+  color: inherit;
 }
 
 .swapNotice__cost {
