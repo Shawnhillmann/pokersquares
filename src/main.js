@@ -1238,14 +1238,24 @@ function canOfferReward(id) {
   return true;
 }
 
-function applyReward(id) {
+function applyReward(id, ctx = null) {
+  const ctxSuffix = (() => {
+    if (!ctx) return "";
+    const clearedGoal = Math.max(1, Math.floor(ctx.clearedGoal || 1));
+    const newGoalIndex = Math.max(1, Math.floor(ctx.newGoalIndex || goalIndex));
+    const newGoalTarget = Math.max(1, Math.floor(ctx.newGoalTarget || goalTarget));
+    const swap = Math.max(0, Math.floor(ctx.swapCost || swapCost()));
+    const hint = Math.max(0, Math.floor(ctx.hintCost || hintCost()));
+    return `<br />Goal ${clearedGoal} cleared. New Goal ${newGoalIndex}: ${newGoalTarget.toLocaleString()}<br />Swap: ${swap.toLocaleString()} credits · Hint: ${hint.toLocaleString()} credits`;
+  })();
+
   if (id === "randomHints") {
     rewards.randomHints = true;
     // First pick sets it to 10%, then +10% per additional pick.
     randomHintChance = Math.min(0.9, Math.max(0.1, (randomHintChance || 0) + 0.1));
     randomHintsPickCount += 1;
     lastPickedRewardName = "Random Hints";
-    enqueueRewardBurst("Random Hints", `Chance: ${Math.round(randomHintChance * 100)}%`);
+    enqueueRewardBurst("Random Hints", `Chance: ${Math.round(randomHintChance * 100)}%${ctxSuffix}`);
     return;
   }
   if (id === "comboBonus") {
@@ -1255,7 +1265,7 @@ function applyReward(id) {
     const stacks = rewards.comboBonusStacks;
     enqueueRewardBurst(
       "Combo Bonus",
-      `+${pct}% on cascade lines (${stacks} stack${stacks === 1 ? "" : "s"})`
+      `+${pct}% on cascade lines (${stacks} stack${stacks === 1 ? "" : "s"})${ctxSuffix}`
     );
     return;
   }
@@ -1263,7 +1273,7 @@ function applyReward(id) {
     rewards.handMultiplierStacks += 1;
     lastPickedRewardName = "Hand Multiplier";
     const pct = 25 * rewards.handMultiplierStacks;
-    enqueueRewardBurst("Hand Multiplier", `+${pct}% to all hand scores`);
+    enqueueRewardBurst("Hand Multiplier", `+${pct}% to all hand scores${ctxSuffix}`);
     syncHandChartScores();
     return;
   }
@@ -1275,38 +1285,38 @@ function applyReward(id) {
       jokerCount += 1;
     }
     lastPickedRewardName = "Joker Card";
-    enqueueRewardBurst("Joker Card", `${jokerCount}/2 Jokers in the deck`);
+    enqueueRewardBurst("Joker Card", `${jokerCount}/2 Jokers in the deck${ctxSuffix}`);
     return;
   }
   if (id === "diagonals") {
     rewards.diagonalsScored = true;
     lastPickedRewardName = "Diagonals";
-    enqueueRewardBurst("Diagonals", "Diagonals can now be scored as well.");
+    enqueueRewardBurst("Diagonals", `Diagonals can now be scored as well.${ctxSuffix}`);
     return;
   }
   if (id === "doubleCardValues") {
     rewards.doubleCardValueStacks += 1;
     lastPickedRewardName = "Double Card Values";
     const mult = Math.pow(2, rewards.doubleCardValueStacks);
-    enqueueRewardBurst("Double Card Values", `Card values are now x${mult}`);
+    enqueueRewardBurst("Double Card Values", `Card values are now x${mult}${ctxSuffix}`);
     return;
   }
   if (id === "noClearTwoPair") {
     rewards.noClearTwoPair = true;
     lastPickedRewardName = "Disable Two Pair";
-    enqueueRewardBurst("Disable Two Pair", "Two pair lines no longer clear");
+    enqueueRewardBurst("Disable Two Pair", `Two pair lines no longer clear${ctxSuffix}`);
     return;
   }
   if (id === "noClearTrips") {
     rewards.noClearTrips = true;
     lastPickedRewardName = "Disable Trips";
-    enqueueRewardBurst("Disable Trips", "Three of a kind lines no longer clear");
+    enqueueRewardBurst("Disable Trips", `Three of a kind lines no longer clear${ctxSuffix}`);
     return;
   }
   if (id === "kickersCount") {
     rewards.kickersCount = true;
     lastPickedRewardName = "Kickers Count";
-    enqueueRewardBurst("Kickers Count", "Kickers now add to scores");
+    enqueueRewardBurst("Kickers Count", `Kickers now add to scores${ctxSuffix}`);
     return;
   }
 }
@@ -2119,13 +2129,14 @@ async function resolveCascades() {
       const picked = await showRewardPickModal();
       pendingRewardPicks = Math.max(0, pendingRewardPicks - 1);
       clearedGoalsForRewardPick.shift();
-      applyReward(picked);
+      applyReward(picked, {
+        clearedGoal,
+        newGoalIndex: goalIndex,
+        newGoalTarget: goalTarget,
+        swapCost: swapCost(),
+        hintCost: hintCost()
+      });
       rerender();
-
-      enqueueRewardBurst(
-        `Goal ${clearedGoal} cleared.`,
-        `New Goal ${goalIndex}: ${goalTarget.toLocaleString()}<br />Swap: ${swapCost().toLocaleString()} credits · Hint: ${hintCost().toLocaleString()} credits`
-      );
     }
     if (stopAfterGoalClear) break;
   }
