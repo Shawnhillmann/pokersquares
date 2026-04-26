@@ -168,19 +168,49 @@ html {
 
 .settingsRow__select {
   margin-left: auto;
-  padding: 8px 10px;
+  padding: 10px 36px 10px 12px;
+  min-height: 40px;
   border-radius: 12px;
   border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(0, 0, 0, 0.22);
+  background: rgba(10, 12, 18, 0.72);
   color: rgba(255, 255, 255, 0.88);
   font-weight: 700;
   letter-spacing: 0.02em;
+  appearance: none;
+  -webkit-appearance: none;
+  touch-action: manipulation;
+  cursor: pointer;
+  background-image: linear-gradient(45deg, transparent 50%, rgba(247, 215, 116, 0.9) 50%),
+    linear-gradient(135deg, rgba(247, 215, 116, 0.9) 50%, transparent 50%);
+  background-position: calc(100% - 18px) 55%, calc(100% - 12px) 55%;
+  background-size: 6px 6px, 6px 6px;
+  background-repeat: no-repeat;
 }
 
 .settingsRow__select:focus {
   outline: none;
   border-color: rgba(114, 247, 195, 0.55);
   box-shadow: 0 0 0 3px rgba(114, 247, 195, 0.18);
+}
+
+/* CRT overlay (theme-agnostic): subtle scanlines + vignette + tiny glow. */
+html[data-crt="1"] body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 999;
+  opacity: 0.45;
+  mix-blend-mode: soft-light;
+  background:
+    repeating-linear-gradient(
+      to bottom,
+      rgba(0, 0, 0, 0.18) 0px,
+      rgba(0, 0, 0, 0.18) 1px,
+      rgba(255, 255, 255, 0.02) 2px,
+      rgba(255, 255, 255, 0.02) 4px
+    ),
+    radial-gradient(1200px 800px at 50% 45%, rgba(255, 255, 255, 0.05), rgba(0, 0, 0, 0.42) 70%, rgba(0, 0, 0, 0.7) 100%);
 }
 
 .settingsMusicCredit {
