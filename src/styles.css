@@ -416,7 +416,7 @@ body {
   font-size: 10px;
   font-weight: 600;
   letter-spacing: 0.16em;
-  color: rgba(114, 247, 195, 0.75);
+  color: rgba(247, 215, 116, 0.9);
   text-transform: uppercase;
   line-height: 1;
 }
@@ -670,8 +670,8 @@ main.stage {
 
 /* Hint: gold-on-felt (readable default); :active darkens — no filter/brightness inversion */
 .belowGameArea .btn.btn--hint {
-  color: rgba(255, 250, 235, 0.98);
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  color: rgba(255, 255, 255, 0.9);
+  text-shadow: none;
   border: 1px solid rgba(247, 215, 116, 0.62);
   background: linear-gradient(180deg, rgba(247, 215, 116, 0.34), rgba(247, 215, 116, 0.14));
   font-weight: 800;
@@ -686,8 +686,8 @@ main.stage {
 
 .belowGameArea .btn.btn--hint:hover {
   transform: translateY(-1px);
-  border-color: rgba(247, 215, 116, 0.85);
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.34);
+  border-color: rgba(247, 215, 116, 0.62);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.32);
 }
 
 .belowGameArea .btn.btn--hint:active {
@@ -1141,9 +1141,9 @@ html.is-mobile .cardFace:not(.cardFace--jokerArt) img.cardPip--faceArt {
   text-align: center;
   font-weight: 900;
   letter-spacing: 0.14em;
-  font-size: 10px;
+  font-size: 11px;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.72);
+  color: rgba(247, 215, 116, 0.92);
 }
 
 .btn--tiny {
@@ -1359,9 +1359,9 @@ html.is-mobile .cardFace:not(.cardFace--jokerArt) img.cardPip--faceArt {
 .howToPlayPanel__title {
   font-weight: 900;
   letter-spacing: 0.14em;
-  font-size: 10px;
+  font-size: 11px;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.75);
+  color: rgba(247, 215, 116, 0.92);
   text-align: center;
 }
 
@@ -1400,9 +1400,9 @@ html.is-mobile .cardFace:not(.cardFace--jokerArt) img.cardPip--faceArt {
 .rewardsTrackerPanel__title {
   font-weight: 900;
   letter-spacing: 0.14em;
-  font-size: 10px;
+  font-size: 11px;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.72);
+  color: rgba(247, 215, 116, 0.92);
   text-align: center;
 }
 
@@ -1435,9 +1435,9 @@ html.is-mobile .cardFace:not(.cardFace--jokerArt) img.cardPip--faceArt {
 .supportPanel__title {
   font-weight: 900;
   letter-spacing: 0.14em;
-  font-size: 10px;
+  font-size: 11px;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.72);
+  color: rgba(247, 215, 116, 0.92);
   text-align: center;
 }
 
