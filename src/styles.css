@@ -2022,16 +2022,16 @@ html.is-mobile .cardFace:not(.cardFace--jokerArt) img.cardPip--faceArt {
 
 @keyframes scoreBorder {
   0% {
-    box-shadow: 0 0 0 0 rgba(247, 215, 116, 0), 0 0 0 0 rgba(114, 247, 195, 0);
+    box-shadow: 0 0 0 0 rgba(90, 255, 235, 0);
     border-color: rgba(255, 255, 255, 0.08);
   }
   35% {
-    box-shadow: 0 0 0 3px rgba(247, 215, 116, 0.55), 0 0 22px rgba(247, 215, 116, 0.22);
-    border-color: rgba(247, 215, 116, 0.6);
+    box-shadow: 0 0 0 3px rgba(90, 255, 235, 0.35);
+    border-color: rgba(90, 255, 235, 0.85);
   }
   100% {
-    box-shadow: 0 0 0 3px rgba(247, 215, 116, 0.38), 0 0 34px rgba(247, 215, 116, 0.34);
-    border-color: rgba(247, 215, 116, 0.95);
+    box-shadow: 0 0 0 3px rgba(90, 255, 235, 0.22);
+    border-color: rgba(90, 255, 235, 0.7);
   }
 }
 
