@@ -98,8 +98,12 @@ const rewards = {
   swapCouponStacks: 0,
   /** Times Premium Hands picked; each adds +50% to premium hand types. */
   premiumHandsStacks: 0,
-  /** Times Low Range picked; each adds +50% to low-range hand types. */
+  /** Times Low Hands picked; each adds +50% to low-range hand types. */
   lowRangeStacks: 0,
+  /** Times Bold Faces picked; each triples face card value again. */
+  boldFacesStacks: 0,
+  /** Times Bigger Numbers picked; each triples number card (and ace) value again. */
+  biggerNumbersStacks: 0,
   /** Times Pocket Rockets picked; each quadruples Ace card value (stackable multiplier). */
   pocketRocketsStacks: 0,
   jokerWildcard: false, // Goal 3
@@ -213,8 +217,8 @@ function tryRestoreRun() {
 }
 
 function hintCost() {
-  // Always 10% of the current goal target.
-  return Math.max(1, Math.round(goalTarget * 0.1));
+  // Always 5% of the current goal target.
+  return Math.max(1, Math.round(goalTarget * 0.05));
 }
 
 function swapCost() {
@@ -234,10 +238,19 @@ function cardScoreValue(card) {
   if (!card) return 0;
   const isJoker = String(card.rank) === "JOKER";
   const isAce = String(card.rank) === "A";
+  const isFace = String(card.rank) === "J" || String(card.rank) === "Q" || String(card.rank) === "K";
+  const isNumberLike = !isJoker && !isFace; // includes A
   const aceStacks = Math.max(0, Math.floor(rewards.pocketRocketsStacks || 0));
   const aceMult = aceStacks <= 0 ? 1 : Math.pow(4, aceStacks);
+  const faceStacks = Math.max(0, Math.floor(rewards.boldFacesStacks || 0));
+  const faceMult = faceStacks <= 0 ? 1 : Math.pow(3, faceStacks);
+  const numStacks = Math.max(0, Math.floor(rewards.biggerNumbersStacks || 0));
+  const numMult = numStacks <= 0 ? 1 : Math.pow(3, numStacks);
   const baseUnmult = rewards.jokerWildcard && isJoker ? 10 : cardBaseValue(String(card.rank));
-  const base = isAce ? baseUnmult * aceMult : baseUnmult;
+  let base = baseUnmult;
+  if (isAce) base *= aceMult;
+  if (isFace) base *= faceMult;
+  if (isNumberLike) base *= numMult;
   const stacks = Math.max(0, Math.floor(rewards.doubleCardValueStacks || 0));
   const mult = stacks <= 0 ? 1 : Math.pow(2, stacks);
   return base * mult;
@@ -421,8 +434,16 @@ function updateRewardsTracker() {
   } else addRow("Premium Hands", "Off");
 
   if (rewards.lowRangeStacks > 0) {
-    addRow("Low Range", `x${Math.pow(1.5, rewards.lowRangeStacks).toFixed(2)} · ${rewards.lowRangeStacks}×`);
-  } else addRow("Low Range", "Off");
+    addRow("Low Hands", `x${Math.pow(1.5, rewards.lowRangeStacks).toFixed(2)} · ${rewards.lowRangeStacks}×`);
+  } else addRow("Low Hands", "Off");
+
+  if (rewards.boldFacesStacks > 0) {
+    addRow("Bold Faces", `x${Math.pow(3, rewards.boldFacesStacks)} · ${rewards.boldFacesStacks}×`);
+  } else addRow("Bold Faces", "Off");
+
+  if (rewards.biggerNumbersStacks > 0) {
+    addRow("Bigger Numbers", `x${Math.pow(3, rewards.biggerNumbersStacks)} · ${rewards.biggerNumbersStacks}×`);
+  } else addRow("Bigger Numbers", "Off");
 
   if (rewards.doubleCardValueStacks > 0) {
     addRow("2X Card Values", `x${Math.pow(2, rewards.doubleCardValueStacks)} · ${rewards.doubleCardValueStacks}× picked`);
@@ -962,6 +983,8 @@ ui.newGameBtn.addEventListener("click", () => {
   rewards.swapCouponStacks = 0;
   rewards.premiumHandsStacks = 0;
   rewards.lowRangeStacks = 0;
+  rewards.boldFacesStacks = 0;
+  rewards.biggerNumbersStacks = 0;
   rewards.pocketRocketsStacks = 0;
   rewards.jokerWildcard = false;
   rewards.diagonalsScored = false;
@@ -1009,6 +1032,8 @@ ui.restartBtn.addEventListener("click", () => {
   rewards.swapCouponStacks = 0;
   rewards.premiumHandsStacks = 0;
   rewards.lowRangeStacks = 0;
+  rewards.boldFacesStacks = 0;
+  rewards.biggerNumbersStacks = 0;
   rewards.pocketRocketsStacks = 0;
   rewards.jokerWildcard = false;
   rewards.diagonalsScored = false;
@@ -1541,8 +1566,20 @@ const REWARD_DEFS = /** @type {const} */ ([
   },
   {
     id: "lowRange",
-    name: "Low Range",
+    name: "Low Hands",
     desc: "Straights, flushes, trips, and two pair are worth 50% more (Stackable)",
+    stack: { kind: "stackable" }
+  },
+  {
+    id: "boldFaces",
+    name: "Bold Faces",
+    desc: "Face cards (J/Q/K) are worth 3x more (Stackable)",
+    stack: { kind: "stackable" }
+  },
+  {
+    id: "biggerNumbers",
+    name: "Bigger Numbers",
+    desc: "Number cards (and aces) are worth 3x more (Stackable)",
     stack: { kind: "stackable" }
   },
   {
@@ -1649,12 +1686,32 @@ function applyReward(id) {
   }
   if (id === "lowRange") {
     rewards.lowRangeStacks += 1;
-    lastPickedRewardName = "Low Range";
+    lastPickedRewardName = "Low Hands";
     const pct = 50 * rewards.lowRangeStacks;
     const stacks = rewards.lowRangeStacks;
     enqueueRewardBurst(
-      "Low Range",
+      "Low Hands",
       `+${pct}% to low-range hands (${stacks} stack${stacks === 1 ? "" : "s"})`
+    );
+    return;
+  }
+  if (id === "boldFaces") {
+    rewards.boldFacesStacks += 1;
+    lastPickedRewardName = "Bold Faces";
+    const stacks = rewards.boldFacesStacks;
+    enqueueRewardBurst(
+      "Bold Faces",
+      `Face cards are now x${Math.pow(3, stacks)} value (${stacks} stack${stacks === 1 ? "" : "s"})`
+    );
+    return;
+  }
+  if (id === "biggerNumbers") {
+    rewards.biggerNumbersStacks += 1;
+    lastPickedRewardName = "Bigger Numbers";
+    const stacks = rewards.biggerNumbersStacks;
+    enqueueRewardBurst(
+      "Bigger Numbers",
+      `Number cards are now x${Math.pow(3, stacks)} value (${stacks} stack${stacks === 1 ? "" : "s"})`
     );
     return;
   }
