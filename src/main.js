@@ -444,8 +444,8 @@ function updateRewardsTracker() {
     addRow("Pocket rockets", "Off");
   }
   addRow("Diagonals", rewards.diagonalsScored ? "Active" : "Off");
-  addRow("Two pair clears", rewards.noClearTwoPair ? "Disabled" : "On");
-  addRow("Trips clear", rewards.noClearTrips ? "Disabled" : "On");
+  addRow("Two Pair Disabled", rewards.noClearTwoPair ? "On" : "Off");
+  addRow("Trips Disabled", rewards.noClearTrips ? "On" : "Off");
   addRow("Kickers count", rewards.kickersCount ? "On" : "Off");
 }
 
