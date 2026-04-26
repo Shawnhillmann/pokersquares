@@ -179,8 +179,10 @@ export function evaluateHandWild(cards, opts) {
     priority: HAND_PRIORITY[best] ?? 0,
     isScoring: best !== HAND_TYPE.HIGH_CARD,
     meta: {
-      isFlush: false,
-      isStraight: false,
+      isFlush:
+        best === HAND_TYPE.FLUSH || best === HAND_TYPE.STRAIGHT_FLUSH || best === HAND_TYPE.ROYAL_FLUSH,
+      isStraight:
+        best === HAND_TYPE.STRAIGHT || best === HAND_TYPE.STRAIGHT_FLUSH || best === HAND_TYPE.ROYAL_FLUSH,
       sortedValuesDesc: fixedVals.slice().sort((a, b) => b - a),
       straightValuesAsc: null,
       valueCounts

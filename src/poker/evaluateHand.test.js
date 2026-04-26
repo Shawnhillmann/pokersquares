@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { evaluateHand } from "./evaluateHand.js";
+import { evaluateHandWild } from "./evaluateHandWild.js";
 import { HAND_TYPE } from "./evaluationTypes.js";
 
 /** @param {string} rank @param {"H"|"D"|"C"|"S"} suit */
@@ -63,5 +64,33 @@ test("detects straight flush", () => {
 test("detects royal flush", () => {
   const r = evaluateHand([c("10", "S"), c("J", "S"), c("Q", "S"), c("K", "S"), c("A", "S")]);
   assert.equal(r.type, HAND_TYPE.ROYAL_FLUSH);
+});
+
+test("wild eval detects straight flush (no jokers)", () => {
+  const r = evaluateHandWild(
+    [c("6", "S"), c("7", "S"), c("8", "S"), c("9", "S"), c("10", "S")],
+    { jokerWild: true }
+  );
+  assert.equal(r.type, HAND_TYPE.STRAIGHT_FLUSH);
+  assert.equal(r.meta.isFlush, true);
+  assert.equal(r.meta.isStraight, true);
+});
+
+test("wild eval detects royal flush (no jokers)", () => {
+  const r = evaluateHandWild(
+    [c("10", "S"), c("J", "S"), c("Q", "S"), c("K", "S"), c("A", "S")],
+    { jokerWild: true }
+  );
+  assert.equal(r.type, HAND_TYPE.ROYAL_FLUSH);
+  assert.equal(r.meta.isFlush, true);
+  assert.equal(r.meta.isStraight, true);
+});
+
+test("wild eval chooses straight flush over flush with a joker", () => {
+  const r = evaluateHandWild(
+    [c("6", "S"), c("7", "S"), c("8", "S"), c("9", "S"), c("JOKER", "X")],
+    { jokerWild: true }
+  );
+  assert.equal(r.type, HAND_TYPE.STRAIGHT_FLUSH);
 });
 
