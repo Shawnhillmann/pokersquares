@@ -873,8 +873,8 @@ html.is-mobile .cell.is-swap-success {
 }
 
 /* Swap blink: briefly darken the swapped cards (enhances "blink" feel). */
-.cell.is-swap-success .cardFace,
-.cell.is-swap-flip .cardFace {
+html:not(.is-mobile) .cell.is-swap-success .cardFace,
+html:not(.is-mobile) .cell.is-swap-flip .cardFace {
   animation: swapBlink var(--swap-ms, 220ms) ease-in-out 1;
 }
 

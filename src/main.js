@@ -954,6 +954,29 @@ loadSettings();
 applySettings();
 syncHandChartScores();
 
+// Warm the browser cache for face-card SVGs (helps on slow mobile connections).
+/** @type {HTMLImageElement[]} */
+const faceArtPreloads = [];
+function preloadFaceArtSvgs() {
+  const ranks = ["J", "Q", "K"];
+  const suits = ["S", "H", "D", "C"];
+  for (const r of ranks) {
+    for (const s of suits) {
+      const img = new Image();
+      img.decoding = "async";
+      img.loading = "eager";
+      img.src = `/images/faces/${r}${s}.svg`;
+      faceArtPreloads.push(img);
+    }
+  }
+  const joker = new Image();
+  joker.decoding = "async";
+  joker.loading = "eager";
+  joker.src = `/images/faces/Joker.svg`;
+  faceArtPreloads.push(joker);
+}
+preloadFaceArtSvgs();
+
 // Restore saved run state (board/credits/goals/rewards) after deck exists.
 const restoredRun = tryRestoreRun();
 

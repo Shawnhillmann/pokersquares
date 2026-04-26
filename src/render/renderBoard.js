@@ -135,7 +135,20 @@ export function renderBoard(root, board, view, onCellClick) {
           img.addEventListener(
             "error",
             () => {
-              // If a face SVG is missing, flip to text pip for this cell.
+              // If a face SVG fails to load (often transient on slow mobile connections),
+              // retry a few times before falling back to text pips.
+              const retries = Math.max(0, Math.floor(Number(img.dataset.retries || "0") || 0));
+              if (retries < 3 && img.dataset.wantSrc) {
+                img.dataset.retries = String(retries + 1);
+                const want = img.dataset.wantSrc;
+                setTimeout(() => {
+                  // Re-trigger load attempt.
+                  if (img.src !== want) img.src = want;
+                  else img.src = `${want}${want.includes("?") ? "&" : "?"}r=${retries + 1}`;
+                }, 220 * (retries + 1));
+                return;
+              }
+              // Permanent fallback: flip to text pip for this cell.
               // @ts-ignore
               cell.__pip = "pip";
               face.classList.remove("cardFace--faceArt", "cardFace--aceArt", "cardFace--jokerArt");
@@ -213,7 +226,11 @@ export function renderBoard(root, board, view, onCellClick) {
           const nextSrc = isJokerArt ? `/images/faces/Joker.svg` : `/images/faces/${rankText}${String(card.suit)}.svg`;
           // Only touch src if it actually changes (avoids iOS SVG repaint).
           const absoluteNext = `${location.origin}${nextSrc}`;
-          if (img.src !== absoluteNext) img.src = nextSrc;
+          if (img.src !== absoluteNext) {
+            img.dataset.wantSrc = absoluteNext;
+            img.dataset.retries = "0";
+            img.src = nextSrc;
+          }
 
           // Ensure img is the active pip node.
           // @ts-ignore
