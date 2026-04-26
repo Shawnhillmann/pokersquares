@@ -207,10 +207,12 @@ function hintCost() {
 }
 
 function swapCost() {
-  // Goals 1–3: 5% so early rounds aren't trivial.
+  // Fixed early-game swap costs to prevent weird inversions where later goals cost less.
+  if (goalIndex === 1) return 50;
+  if (goalIndex === 2) return 100;
+  if (goalIndex === 3) return 150;
   // Goal 4+: 2% to keep the late game playable.
-  const pct = goalIndex <= 3 ? 0.05 : 0.02;
-  return Math.max(1, Math.round(goalTarget * pct));
+  return Math.max(1, Math.round(goalTarget * 0.02));
 }
 
 function cardScoreValue(card) {
