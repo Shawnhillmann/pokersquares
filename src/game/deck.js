@@ -62,6 +62,24 @@ export function createDeck(rng) {
       queue.push({ id, rank: "JOKER", suit: "X" });
       shuffleInPlace(rng, queue);
     },
+    /**
+     * Snapshot the remaining draw pool (front-to-back).
+     * @returns {Card[]}
+     */
+    snapshot() {
+      return queue.map((c) => ({ id: c.id, rank: c.rank, suit: c.suit }));
+    },
+    /**
+     * Restore the remaining draw pool (front-to-back).
+     * @param {Card[]} nextQueue
+     */
+    restore(nextQueue) {
+      queue.length = 0;
+      for (const c of nextQueue || []) {
+        if (!c) continue;
+        queue.push({ id: String(c.id), rank: c.rank, suit: c.suit });
+      }
+    },
     size() {
       return queue.length;
     }

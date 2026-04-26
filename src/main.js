@@ -57,6 +57,8 @@ const ui = {
   settingsTrackLabel: /** @type {HTMLElement|null} */ (document.getElementById("settingsTrackLabel"))
 };
 
+const RUN_STORAGE_KEY = "speed_poker_run_v1";
+
 const state = createGameState({ seed: null });
 newGame(state);
 state.credits = 500;
@@ -104,6 +106,97 @@ let randomHintChance = 0;
 let randomHintsPickCount = 0;
 let lastPickedRewardName = "____";
 let jokerCount = 0;
+
+function clearSavedRun() {
+  try {
+    localStorage.removeItem(RUN_STORAGE_KEY);
+  } catch {
+    // ignored
+  }
+}
+
+function snapshotRun() {
+  const deckSnap = /** @type {any} */ (state.deck)?.snapshot?.() ?? null;
+  return {
+    v: 1,
+    t: Date.now(),
+    credits: Math.max(0, Math.floor(state.credits || 0)),
+    board: state.board,
+    deck: deckSnap,
+    goalIndex,
+    goalTarget,
+    successfulMoves,
+    peakCreditsThisRun,
+    peakGoalClearedThisRun,
+    pendingRewardPicks: 0,
+    clearedGoalsForRewardPick: [],
+    randomHintChance,
+    randomHintsPickCount,
+    lastPickedRewardName,
+    jokerCount,
+    rewards: { ...rewards }
+  };
+}
+
+let runSaveTimer = /** @type {number|null} */ (null);
+function scheduleSaveRun() {
+  if (runSaveTimer != null) return;
+  runSaveTimer = window.setTimeout(() => {
+    runSaveTimer = null;
+    try {
+      localStorage.setItem(RUN_STORAGE_KEY, JSON.stringify(snapshotRun()));
+    } catch {
+      // ignored
+    }
+  }, 60);
+}
+
+function tryRestoreRun() {
+  try {
+    const raw = localStorage.getItem(RUN_STORAGE_KEY);
+    if (!raw) return false;
+    const v = JSON.parse(raw);
+    if (!v || typeof v !== "object") return false;
+    if (!Array.isArray(v.board) || v.board.length !== 5) return false;
+
+    // Restore core run state.
+    state.board = v.board;
+    state.credits = Math.max(0, Math.floor(v.credits || 0));
+    successfulMoves = Math.max(0, Math.floor(v.successfulMoves || 0));
+    peakCreditsThisRun = Math.max(0, Math.floor(v.peakCreditsThisRun || state.credits));
+    peakGoalClearedThisRun = Math.max(0, Math.floor(v.peakGoalClearedThisRun || 0));
+    goalIndex = Math.max(1, Math.floor(v.goalIndex || 1));
+    goalTarget = Math.max(1, Math.floor(v.goalTarget || goalTargetForIndex(goalIndex)));
+
+    randomHintChance = Math.max(0, Math.min(0.9, Number(v.randomHintChance) || 0));
+    randomHintsPickCount = Math.max(0, Math.floor(v.randomHintsPickCount || 0));
+    lastPickedRewardName = String(v.lastPickedRewardName || "____");
+    jokerCount = Math.max(0, Math.floor(v.jokerCount || 0));
+
+    if (v.rewards && typeof v.rewards === "object") {
+      for (const k of Object.keys(rewards)) {
+        // @ts-ignore
+        if (typeof v.rewards[k] === typeof rewards[k]) {
+          // @ts-ignore
+          rewards[k] = v.rewards[k];
+        }
+      }
+    }
+
+    // Restore the remaining draw pool so cascades continue naturally.
+    if (Array.isArray(v.deck) && state.deck && /** @type {any} */ (state.deck).restore) {
+      /** @type {any} */ (state.deck).restore(v.deck);
+    }
+
+    // Ensure we resume in a stable, interactive state.
+    state.busy = false;
+    state.comboStep = 0;
+    state.selected = null;
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 function hintCost() {
   // Always 10% of the current goal target.
@@ -238,6 +331,7 @@ function updateHud() {
   if (ui.howToSwapCost) ui.howToSwapCost.textContent = sc;
   if (ui.howToHintCost) ui.howToHintCost.textContent = hintCost().toLocaleString();
   updateRewardsTracker();
+  scheduleSaveRun();
 }
 
 function updateRewardsTracker() {
@@ -679,6 +773,7 @@ function randomPopupPosition(boardRect) {
 
 ui.newGameBtn.addEventListener("click", () => {
   if (state.busy) return;
+  clearSavedRun();
   successfulMoves = 0;
   ui.runEndModal.setAttribute("hidden", "");
   newGame(state);
@@ -710,11 +805,13 @@ ui.newGameBtn.addEventListener("click", () => {
     "Swap cards to make either horizontal or vertical poker hands<br />and earn rewards."
   );
   checkCantAffordSwapAndEnd();
+  scheduleSaveRun();
 });
 
 ui.restartBtn.addEventListener("click", () => {
   successfulMoves = 0;
   ui.runEndModal.setAttribute("hidden", "");
+  clearSavedRun();
   newGame(state);
   goalIndex = 1;
   goalTarget = goalTargetForIndex(1);
@@ -742,6 +839,7 @@ ui.restartBtn.addEventListener("click", () => {
     "Swap cards to make either horizontal or vertical poker hands<br />and earn rewards."
   );
   checkCantAffordSwapAndEnd();
+  scheduleSaveRun();
 });
 
 ui.hintBtn.addEventListener("click", async () => {
@@ -784,6 +882,9 @@ window.addEventListener("pageshow", () => sfx.unlock());
 loadSettings();
 applySettings();
 syncHandChartScores();
+
+// Restore saved run state (board/credits/goals/rewards) after deck exists.
+const restoredRun = tryRestoreRun();
 
 function isMobileLayout() {
   return document.documentElement.classList.contains("is-mobile");
@@ -2143,4 +2244,9 @@ MOBILE_MQ.addEventListener("change", () => {
 });
 window.addEventListener("resize", () => positionScoreFeed());
 rerender();
+
+// First-time load helper: only show the tip when we are not restoring an in-progress run.
+if (!restoredRun) {
+  showCenterTip("Swap cards to make either horizontal or vertical poker hands<br />and earn rewards.");
+}
 
