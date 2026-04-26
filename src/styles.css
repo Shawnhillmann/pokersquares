@@ -872,6 +872,24 @@ html.is-mobile .cell.is-swap-success {
   transition: transform var(--swap-ms, 220ms) ease-out;
 }
 
+/* Swap blink: briefly darken the swapped cards (enhances "blink" feel). */
+.cell.is-swap-success .cardFace,
+.cell.is-swap-flip .cardFace {
+  animation: swapBlink var(--swap-ms, 220ms) ease-in-out 1;
+}
+
+@keyframes swapBlink {
+  0% {
+    filter: brightness(1) saturate(1);
+  }
+  28% {
+    filter: brightness(0.6) saturate(0.95);
+  }
+  100% {
+    filter: brightness(1) saturate(1);
+  }
+}
+
 /* Swap wind-up: small pull toward the other card before FLIP swap */
 .cell.is-swap-windup {
   z-index: 4;
