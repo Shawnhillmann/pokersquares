@@ -2757,7 +2757,11 @@ async function resolveCascades() {
   }
 
   state.comboStep = 0;
-  if (gainedTotal > 0 && gainedTotal >= goalAtComboStart * 0.25) showBigWin(gainedTotal, goalAtComboStart);
+  // Special-case: Goal 1 big wins are too frequent; only show 75%+ tier there.
+  const showBigWinThreshold = goalIndex === 1 ? 0.75 : 0.25;
+  if (gainedTotal > 0 && gainedTotal >= goalAtComboStart * showBigWinThreshold) {
+    showBigWin(gainedTotal, goalAtComboStart);
+  }
 }
 
 syncMobileViewportClass();
