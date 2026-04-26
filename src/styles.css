@@ -23,6 +23,7 @@
   --game-stack-w: calc(var(--board-inner-w) + 2 * var(--table-pad-x));
   --radius: 14px;
   --font: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  --crt-strength: 0.72;
 }
 
 html[data-theme="slate"] {
@@ -253,7 +254,7 @@ html[data-crt="1"]::before {
   inset: 0;
   pointer-events: none;
   z-index: 9999;
-  opacity: 0.72;
+  opacity: var(--crt-strength, 0.72);
   mix-blend-mode: overlay;
   background:
     repeating-linear-gradient(
@@ -273,7 +274,7 @@ html[data-crt="1"]::after {
   inset: 0;
   pointer-events: none;
   z-index: 9998;
-  opacity: 0.18;
+  opacity: calc(var(--crt-strength, 0.72) * 0.25);
   background: repeating-linear-gradient(
     to bottom,
     rgba(0, 0, 0, 0.22) 0px,

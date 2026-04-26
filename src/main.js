@@ -54,6 +54,9 @@ const ui = {
   settingsMusicVolValue: /** @type {HTMLElement|null} */ (document.getElementById("settingsMusicVolValue")),
   settingsTheme: /** @type {HTMLSelectElement|null} */ (document.getElementById("settingsTheme")),
   settingsCrt: /** @type {HTMLInputElement|null} */ (document.getElementById("settingsCrt")),
+  settingsCrtStrength: /** @type {HTMLInputElement|null} */ (document.getElementById("settingsCrtStrength")),
+  settingsCrtStrengthValue: /** @type {HTMLElement|null} */ (document.getElementById("settingsCrtStrengthValue")),
+  settingsCrtStrengthRow: /** @type {HTMLElement|null} */ (document.getElementById("settingsCrtStrengthRow")),
   settingsFullscreen: /** @type {HTMLInputElement|null} */ (document.getElementById("settingsFullscreen")),
   settingsNextTrackBtn: /** @type {HTMLButtonElement|null} */ (document.getElementById("settingsNextTrackBtn")),
   settingsTrackLabel: /** @type {HTMLElement|null} */ (document.getElementById("settingsTrackLabel"))
@@ -443,6 +446,7 @@ let creditsDisplayValue = Math.max(0, Math.floor(state.credits));
 let creditsAnimRaf = /** @type {number|null} */ (null);
 let creditsAnimTo = creditsDisplayValue;
 let lastGoalTextCredits = -1;
+let goalSequenceActive = false;
 
 function setCreditsInstant(n) {
   const v = Math.max(0, Math.floor(n));
@@ -482,6 +486,37 @@ function animateCreditsTo(to) {
   creditsAnimRaf = requestAnimationFrame(tick);
 }
 
+/**
+ * @param {number} to
+ * @param {number} duration
+ */
+function animateCreditsToAsync(to, duration = 360) {
+  return new Promise((resolve) => {
+    if (creditsAnimRaf != null) cancelAnimationFrame(creditsAnimRaf);
+    const from = creditsDisplayValue;
+    creditsAnimTo = to;
+    const start = performance.now();
+
+    const tick = (t) => {
+      const currentTo = creditsAnimTo;
+      const p = Math.min(1, (t - start) / duration);
+      const e = 1 - Math.pow(1 - p, 2.2);
+      const v = Math.floor(from + (currentTo - from) * e);
+      creditsDisplayValue = v;
+      updateGoalText(v);
+      if (p < 1) creditsAnimRaf = requestAnimationFrame(tick);
+      else {
+        creditsAnimRaf = null;
+        creditsDisplayValue = currentTo;
+        updateGoalText(currentTo);
+        resolve();
+      }
+    };
+
+    creditsAnimRaf = requestAnimationFrame(tick);
+  });
+}
+
 let goalIndex = 1;
 let goalTarget = goalTargetForIndex(1);
 let pendingRewardPicks = 0;
@@ -495,21 +530,12 @@ function updateGoalTitleLabel() {
 
 function updateGoalHud(credits) {
   // Animate rewards upward, but snap costs downward.
-  if (credits >= creditsDisplayValue) animateCreditsTo(credits);
-  else setCreditsInstant(credits);
-
-  // Advance goals forever. Every cleared goal grants a reward pick.
-  // Limit to 1 goal clear at a time for clarity (no multi-goal jumps).
-  if (credits >= goalTarget) {
-    const completed = goalIndex;
-    peakGoalClearedThisRun = Math.max(peakGoalClearedThisRun, completed);
-    sfx.goalReached(completed);
-    bumpGoalCelebration();
-
-    pendingRewardPicks += 1;
-    clearedGoalsForRewardPick.push(completed);
-    goalIndex += 1;
-    goalTarget = goalTargetForIndex(goalIndex);
+  if (!goalSequenceActive) {
+    if (credits >= creditsDisplayValue) animateCreditsTo(credits);
+    else setCreditsInstant(credits);
+  } else {
+    // While we're sequencing multi-goal hits, the sequence controls credit animation.
+    setCreditsInstant(creditsDisplayValue);
   }
 
   if (ui.goalTarget) {
@@ -519,14 +545,14 @@ function updateGoalHud(credits) {
   updateRewardLabel();
   updateGoalTitleLabel();
   if (ui.goalFill) {
-    const p = Math.max(0, Math.min(1, credits / goalTarget));
+    const p = Math.max(0, Math.min(1, creditsDisplayValue / goalTarget));
     ui.goalFill.style.width = `${Math.round(p * 1000) / 10}%`;
   }
   if (ui.goalBar) {
     const track = ui.goalBar.querySelector(".goalBlock__track");
     if (track) {
       track.setAttribute("aria-valuemax", String(goalTarget));
-      track.setAttribute("aria-valuenow", String(Math.max(0, Math.min(goalTarget, credits))));
+      track.setAttribute("aria-valuenow", String(Math.max(0, Math.min(goalTarget, creditsDisplayValue))));
     }
   }
 }
@@ -685,8 +711,9 @@ const settings = {
   sfxVol: 1,
   musicVol: 0.22,
   musicTrack: 1,
-  theme: "green",
-  crt: false,
+  theme: "purple",
+  crt: true,
+  crtStrength: 0.72,
   fullscreen: false
 };
 
@@ -703,6 +730,7 @@ function loadSettings() {
       if (typeof v.musicTrack === "number") settings.musicTrack = Math.max(1, Math.floor(v.musicTrack));
       if (typeof v.theme === "string") settings.theme = v.theme;
       if (typeof v.crt === "boolean") settings.crt = v.crt;
+      if (typeof v.crtStrength === "number") settings.crtStrength = Math.max(0, Math.min(1, v.crtStrength));
       if (typeof v.fullscreen === "boolean") settings.fullscreen = v.fullscreen;
     }
   } catch {
@@ -727,6 +755,9 @@ function syncSettingsUi() {
   if (ui.settingsMusicVolValue) ui.settingsMusicVolValue.textContent = `${Math.round(settings.musicVol * 100)}%`;
   if (ui.settingsTheme) ui.settingsTheme.value = settings.theme || "green";
   if (ui.settingsCrt) ui.settingsCrt.checked = !!settings.crt;
+  if (ui.settingsCrtStrength) ui.settingsCrtStrength.value = String(Math.round((settings.crtStrength ?? 0.72) * 100));
+  if (ui.settingsCrtStrengthValue) ui.settingsCrtStrengthValue.textContent = `${Math.round((settings.crtStrength ?? 0.72) * 100)}%`;
+  if (ui.settingsCrtStrengthRow) ui.settingsCrtStrengthRow.style.display = settings.crt ? "" : "none";
   if (ui.settingsFullscreen) ui.settingsFullscreen.checked = document.fullscreenElement != null;
   if (ui.settingsTrackLabel) ui.settingsTrackLabel.textContent = `Track ${settings.musicTrack}`;
 }
@@ -737,8 +768,9 @@ function applySettings() {
   music.setEnabled(!!settings.music);
   music.setVolume(settings.musicVol);
   music.setTrackIndex(settings.musicTrack);
-  document.documentElement.dataset.theme = settings.theme || "green";
+  document.documentElement.dataset.theme = settings.theme || "purple";
   document.documentElement.dataset.crt = settings.crt ? "1" : "0";
+  document.documentElement.style.setProperty("--crt-strength", String(settings.crtStrength ?? 0.72));
 }
 
 function openSettings() {
@@ -803,9 +835,21 @@ ui.settingsTheme?.addEventListener("change", () => {
 ui.settingsCrt?.addEventListener("change", () => {
   if (!ui.settingsCrt) return;
   settings.crt = !!ui.settingsCrt.checked;
+  if (ui.settingsCrtStrengthRow) ui.settingsCrtStrengthRow.style.display = settings.crt ? "" : "none";
   applySettings();
   saveSettings();
 });
+
+function onSettingsCrtStrengthChange() {
+  if (!ui.settingsCrtStrength) return;
+  settings.crtStrength = pct01(ui.settingsCrtStrength.value);
+  if (ui.settingsCrtStrengthValue) ui.settingsCrtStrengthValue.textContent = `${Math.round(settings.crtStrength * 100)}%`;
+  applySettings();
+  saveSettings();
+}
+
+ui.settingsCrtStrength?.addEventListener("input", onSettingsCrtStrengthChange);
+ui.settingsCrtStrength?.addEventListener("change", onSettingsCrtStrengthChange);
 
 ui.settingsFullscreen?.addEventListener("change", async () => {
   if (!ui.settingsFullscreen) return;
@@ -1720,10 +1764,9 @@ function rewardStackTagHtml(o) {
   return `<span class="rewardPick__stackTag ${mod}">${label}</span>`;
 }
 
-function showRewardPickModal() {
+function showRewardPickModal(clearedGoal) {
   return new Promise((resolve) => {
     const opts = pickRewardOptions3();
-    const clearedGoal = clearedGoalsForRewardPick.length ? clearedGoalsForRewardPick[0] : Math.max(1, goalIndex - 1);
     const swapNotice = `
       <div class="swapNotice__line1">Goal <span class="swapNotice__goal">${clearedGoal}</span> Cleared</div>
       <div class="swapNotice__line2">Swaps Now Cost <span class="swapNotice__cost">${swapCost().toLocaleString()}</span>, Hints Now Cost <span class="swapNotice__cost">${hintCost().toLocaleString()}</span></div>
@@ -1770,6 +1813,41 @@ function showRewardPickModal() {
       });
     });
   });
+}
+
+async function processGoalOvershootSequence() {
+  if (goalSequenceActive) return false;
+  const credits = Math.max(0, Math.floor(state.credits));
+  if (credits < goalTarget) return false;
+  goalSequenceActive = true;
+  let clearedAny = false;
+  try {
+    while (Math.max(0, Math.floor(state.credits)) >= goalTarget) {
+      clearedAny = true;
+      const completed = goalIndex;
+
+      // Fill to the current goal one at a time, then pause for the reward pick.
+      await animateCreditsToAsync(goalTarget, 420);
+      peakGoalClearedThisRun = Math.max(peakGoalClearedThisRun, completed);
+      bumpGoalCelebration();
+
+      const picked = await showRewardPickModal(completed);
+      applyReward(picked);
+      rerender();
+
+      goalIndex += 1;
+      goalTarget = goalTargetForIndex(goalIndex);
+      updateRewardLabel();
+      updateGoalTitleLabel();
+      if (ui.goalTarget) ui.goalTarget.textContent = goalTarget.toLocaleString();
+    }
+
+    // After stepping through all cleared goals, animate the remainder toward the next goal.
+    await animateCreditsToAsync(Math.max(0, Math.floor(state.credits)), 360);
+    return clearedAny;
+  } finally {
+    goalSequenceActive = false;
+  }
 }
 
 async function playRewardBurst({ title, desc }) {
@@ -2403,9 +2481,10 @@ async function resolveCascades() {
       sfx.scoreHand(line.type, state.comboStep);
       rerender();
 
-      // If this line cleared a goal, we'll finish the current clear/fill step,
-      // then end the cascade/combos so the run feels discrete.
-      if (goalIndex !== goalIndexBefore) stopAfterGoalClear = true;
+      // If this line overshot one or more goals, step through them one at a time:
+      // fill → reward pick → next goal fill → ... (then stop cascades for clarity).
+      const cleared = await processGoalOvershootSequence();
+      if (cleared) stopAfterGoalClear = true;
 
       viewFx.dim = null;
 
@@ -2486,17 +2565,7 @@ async function resolveCascades() {
     // Tight: allow microtask/paint, then evaluate next cascade.
     await sleep(0);
 
-    // If a goal was cleared during this cascade step, pick the reward now,
-    // then stop any further cascade/combos.
-    while (pendingRewardPicks > 0) {
-      const clearedGoal =
-        clearedGoalsForRewardPick.length ? clearedGoalsForRewardPick[0] : Math.max(1, goalIndex - 1);
-      const picked = await showRewardPickModal();
-      pendingRewardPicks = Math.max(0, pendingRewardPicks - 1);
-      clearedGoalsForRewardPick.shift();
-      applyReward(picked);
-      rerender();
-    }
+    // (Reward picks are now handled inside `processGoalOvershootSequence`.)
     if (stopAfterGoalClear) {
       // Important: stopping cascades for clarity should not leave a scoring line on the board,
       // otherwise it looks like a bug (e.g., visible two pair that "doesn't clear").
