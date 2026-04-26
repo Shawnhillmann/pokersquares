@@ -56,6 +56,7 @@ const ui = {
   settingsCrt: /** @type {HTMLInputElement|null} */ (document.getElementById("settingsCrt")),
   settingsNextTrackBtn: /** @type {HTMLButtonElement|null} */ (document.getElementById("settingsNextTrackBtn")),
   settingsTrackLabel: /** @type {HTMLElement|null} */ (document.getElementById("settingsTrackLabel"))
+  ,orientationBlock: /** @type {HTMLElement|null} */ (document.getElementById("orientationBlock"))
 };
 
 const RUN_STORAGE_KEY = "speed_poker_run_v1";
@@ -815,6 +816,13 @@ ui.newGameBtn.addEventListener("click", () => {
   showToast(ui.toast, "New deal");
   rerender();
   syncHandChartScores();
+  if (settings.music) {
+    void music.randomTrack?.().then((idx) => {
+      if (typeof idx === "number") settings.musicTrack = idx;
+      if (ui.settingsTrackLabel) ui.settingsTrackLabel.textContent = `Track ${settings.musicTrack}`;
+      saveSettings();
+    });
+  }
   showCenterTip(
     "Swap cards to make either horizontal or vertical poker hands<br />and&nbsp;earn rewards."
   );
@@ -849,6 +857,13 @@ ui.restartBtn.addEventListener("click", () => {
   peakCreditsThisRun = STARTING_POINTS;
   rerender();
   syncHandChartScores();
+  if (settings.music) {
+    void music.randomTrack?.().then((idx) => {
+      if (typeof idx === "number") settings.musicTrack = idx;
+      if (ui.settingsTrackLabel) ui.settingsTrackLabel.textContent = `Track ${settings.musicTrack}`;
+      saveSettings();
+    });
+  }
   showCenterTip(
     "Swap cards to make either horizontal or vertical poker hands<br />and&nbsp;earn rewards."
   );
@@ -858,6 +873,7 @@ ui.restartBtn.addEventListener("click", () => {
 
 ui.hintBtn.addEventListener("click", async () => {
   if (state.busy) return;
+  if (orientationBlocked) return;
   dismissCenterTip();
   dismissRewardBursts();
 
@@ -903,6 +919,20 @@ const restoredRun = tryRestoreRun();
 
 function isMobileLayout() {
   return document.documentElement.classList.contains("is-mobile");
+}
+
+let orientationBlocked = false;
+function syncOrientationBlock() {
+  if (!ui.orientationBlock) return;
+  if (!isMobileLayout()) {
+    orientationBlocked = false;
+    ui.orientationBlock.setAttribute("hidden", "");
+    return;
+  }
+  const landscape = window.matchMedia("(orientation: landscape)").matches;
+  orientationBlocked = landscape;
+  if (landscape) ui.orientationBlock.removeAttribute("hidden");
+  else ui.orientationBlock.setAttribute("hidden", "");
 }
 
 /**
@@ -2044,6 +2074,7 @@ async function pulseScoredLine(line, combo, contribCells, dimCells, onTotal, han
  */
 async function onCellClick(pos) {
   if (state.busy) return;
+  if (orientationBlocked) return;
   dismissCenterTip();
   dismissRewardBursts();
   if (checkCantAffordSwapAndEnd()) return;
@@ -2277,9 +2308,16 @@ async function resolveCascades() {
 syncMobileViewportClass();
 MOBILE_MQ.addEventListener("change", () => {
   syncMobileViewportClass();
+  syncOrientationBlock();
 });
-window.addEventListener("resize", () => positionScoreFeed());
+window.addEventListener("resize", () => {
+  positionScoreFeed();
+  syncOrientationBlock();
+});
 rerender();
+
+// Block play in mobile landscape.
+syncOrientationBlock();
 
 // First-time load helper: only show the tip when we are not restoring an in-progress run.
 if (!restoredRun) {

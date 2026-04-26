@@ -69,8 +69,12 @@ async function resumeMusicCtxIfNeeded() {
 function ensureAudioEl() {
   if (audio) return audio;
   audio = new Audio();
-  audio.loop = true;
+  audio.loop = false;
   audio.preload = "auto";
+  audio.addEventListener("ended", () => {
+    if (!enabled) return;
+    void music.nextTrack();
+  });
   applyVolumeToOutputs();
   audio.src = trackUrlForIndex(trackIndex);
   return audio;
@@ -164,6 +168,37 @@ export const music = {
       return trackIndex;
     }
     // Fallback to track 1.
+    trackIndex = 1;
+    a.src = trackUrlForIndex(1);
+    if (enabled) await applyPlayback();
+    return trackIndex;
+  },
+
+  /**
+   * Pick a random existing `/public/audio/track-N.mp3` (best-effort).
+   */
+  async randomTrack() {
+    const a = ensureAudioEl();
+    const MAX = 20;
+    const start = 1 + Math.floor(Math.random() * MAX);
+    for (let k = 0; k < MAX; k++) {
+      const candidate = ((start + k - 1) % MAX) + 1;
+      const url = trackUrlForIndex(candidate);
+      const ok = await new Promise((resolve) => {
+        const test = new Audio();
+        test.preload = "metadata";
+        test.src = url;
+        const done = (v) => resolve(v);
+        test.addEventListener("loadedmetadata", () => done(true), { once: true });
+        test.addEventListener("error", () => done(false), { once: true });
+      });
+      if (!ok) continue;
+      trackIndex = candidate;
+      a.src = url;
+      if (enabled) await applyPlayback();
+      return trackIndex;
+    }
+    // fallback
     trackIndex = 1;
     a.src = trackUrlForIndex(1);
     if (enabled) await applyPlayback();

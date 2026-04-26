@@ -281,6 +281,46 @@ body {
   overflow-y: auto;
 }
 
+.orientationBlock[hidden] {
+  display: none !important;
+}
+
+.orientationBlock {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(0, 0, 0, 0.75);
+}
+
+.orientationBlock__card {
+  width: min(520px, 94vw);
+  border-radius: 16px;
+  border: 1px solid rgba(247, 215, 116, 0.45);
+  background: rgba(10, 12, 18, 0.88);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.6);
+  padding: 16px 16px;
+  text-align: center;
+}
+
+.orientationBlock__title {
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(247, 215, 116, 0.98);
+}
+
+.orientationBlock__text {
+  margin-top: 8px;
+  font-size: 14px;
+  font-weight: 650;
+  color: rgba(255, 255, 255, 0.82);
+  letter-spacing: 0.02em;
+  line-height: 1.35;
+}
+
 .app {
   min-height: 100%;
   min-height: 100dvh;
@@ -2507,7 +2547,7 @@ html.is-mobile .cardCornerSuit {
 }
 
 html.is-mobile .cardRank.cardRank--ten {
-  font-size: clamp(12px, calc(var(--cell) * 0.32), 22px);
+  font-size: clamp(11px, calc(var(--cell) * 0.295), 20px);
 }
 
 html.is-mobile .cardPip:not(.cardPip--faceArt) {
