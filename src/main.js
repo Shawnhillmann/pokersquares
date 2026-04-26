@@ -71,7 +71,7 @@ let successfulMoves = 0;
 const SCORE_OPTS = { minType: HAND_TYPE.TWO_PAIR };
 
 const GOAL_TARGETS = /** @type {const} */ ([
-  1000, 2000, 5000, 10000, 15000, 25000, 40000, 60000, 80000, 100000
+  1000, 2000, 4000, 8000, 12500, 20000, 30000, 50000, 75000, 100000
 ]);
 
 function goalTargetForIndex(idx) {
