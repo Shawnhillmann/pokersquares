@@ -54,6 +54,7 @@ const ui = {
   settingsMusicVolValue: /** @type {HTMLElement|null} */ (document.getElementById("settingsMusicVolValue")),
   settingsTheme: /** @type {HTMLSelectElement|null} */ (document.getElementById("settingsTheme")),
   settingsCrt: /** @type {HTMLInputElement|null} */ (document.getElementById("settingsCrt")),
+  settingsFullscreen: /** @type {HTMLInputElement|null} */ (document.getElementById("settingsFullscreen")),
   settingsNextTrackBtn: /** @type {HTMLButtonElement|null} */ (document.getElementById("settingsNextTrackBtn")),
   settingsTrackLabel: /** @type {HTMLElement|null} */ (document.getElementById("settingsTrackLabel"))
   ,orientationBlock: /** @type {HTMLElement|null} */ (document.getElementById("orientationBlock"))
@@ -597,7 +598,8 @@ const settings = {
   musicVol: 0.22,
   musicTrack: 1,
   theme: "green",
-  crt: false
+  crt: false,
+  fullscreen: false
 };
 
 function loadSettings() {
@@ -613,6 +615,7 @@ function loadSettings() {
       if (typeof v.musicTrack === "number") settings.musicTrack = Math.max(1, Math.floor(v.musicTrack));
       if (typeof v.theme === "string") settings.theme = v.theme;
       if (typeof v.crt === "boolean") settings.crt = v.crt;
+      if (typeof v.fullscreen === "boolean") settings.fullscreen = v.fullscreen;
     }
   } catch {
     // ignored
@@ -636,6 +639,7 @@ function syncSettingsUi() {
   if (ui.settingsMusicVolValue) ui.settingsMusicVolValue.textContent = `${Math.round(settings.musicVol * 100)}%`;
   if (ui.settingsTheme) ui.settingsTheme.value = settings.theme || "green";
   if (ui.settingsCrt) ui.settingsCrt.checked = !!settings.crt;
+  if (ui.settingsFullscreen) ui.settingsFullscreen.checked = document.fullscreenElement != null;
   if (ui.settingsTrackLabel) ui.settingsTrackLabel.textContent = `Track ${settings.musicTrack}`;
 }
 
@@ -713,6 +717,28 @@ ui.settingsCrt?.addEventListener("change", () => {
   settings.crt = !!ui.settingsCrt.checked;
   applySettings();
   saveSettings();
+});
+
+ui.settingsFullscreen?.addEventListener("change", async () => {
+  if (!ui.settingsFullscreen) return;
+  const want = !!ui.settingsFullscreen.checked;
+  settings.fullscreen = want;
+  saveSettings();
+  try {
+    if (want) {
+      if (!document.fullscreenElement) await document.documentElement.requestFullscreen();
+    } else {
+      if (document.fullscreenElement) await document.exitFullscreen();
+    }
+  } catch {
+    // ignored (browser may deny)
+  } finally {
+    if (ui.settingsFullscreen) ui.settingsFullscreen.checked = document.fullscreenElement != null;
+  }
+});
+
+document.addEventListener("fullscreenchange", () => {
+  if (ui.settingsFullscreen) ui.settingsFullscreen.checked = document.fullscreenElement != null;
 });
 
 ui.settingsNextTrackBtn?.addEventListener("click", async () => {

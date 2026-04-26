@@ -860,6 +860,7 @@ html.is-mobile .cell.is-swap-windup {
   transition: transform 160ms ease;
 }
 
+
 .cell:hover .cardFace {
   transform: translateY(-1px) scale(1.01);
 }
