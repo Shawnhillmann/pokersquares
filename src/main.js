@@ -219,8 +219,8 @@ function tryRestoreRun() {
 }
 
 function hintCost() {
-  // Always 5% of the current goal target.
-  return Math.max(1, Math.round(goalTarget * 0.05));
+  // Always 10% of the current goal target.
+  return Math.max(1, Math.round(goalTarget * 0.1));
 }
 
 function swapCost() {
@@ -229,10 +229,11 @@ function swapCost() {
   if (goalIndex === 1) base = 50;
   else if (goalIndex === 2) base = 100;
   else if (goalIndex === 3) base = 150;
-  // Goal 4+: 2% to keep the late game playable.
-  if (!base) base = Math.max(1, Math.round(goalTarget * 0.02));
+  // Goal 4+: 5% for higher stakes.
+  if (!base) base = Math.max(1, Math.round(goalTarget * 0.05));
   const stacks = Math.max(0, Math.floor(rewards.swapCouponStacks || 0));
-  const mult = stacks <= 0 ? 1 : Math.pow(0.85, stacks);
+  // Apply coupons after the per-goal cost is computed.
+  const mult = stacks <= 0 ? 1 : Math.pow(0.9, stacks);
   return Math.max(1, Math.round(base * mult));
 }
 
@@ -531,10 +532,10 @@ function updateRewardsTracker() {
     "Bigger Numbers": "Each stack makes number cards (and Aces) worth 3x more card value.",
     "2X Card Values": "Each stack doubles every card’s value again.",
     "Random Hints": "Grants a chance for free hints to appear.",
-    "Swap Coupons": "Each stack reduces swap cost by 15%.",
+    "Swap Coupons": "Each stack reduces swap cost by 10% (applied after goal scaling).",
     "Trips Disabled": "Three of a kind lines no longer clear.",
     "Two Pair Disabled": "Two pair lines no longer clear.",
-    "Kickers Are Good": "Kicker cards add to scores for hands like trips and two pair."
+    "Good Kickers": "Kicker cards add to scores for hands like trips and two pair."
   };
 
   const showTooltip = (label, ev) => {
@@ -690,13 +691,13 @@ function updateRewardsTracker() {
   } else addRow("Random Hints", "Off");
 
   if (rewards.swapCouponStacks > 0) {
-    addRow("Swap Coupons", `-${15 * rewards.swapCouponStacks}% · ${rewards.swapCouponStacks}×`);
+    addRow("Swap Coupons", `-${10 * rewards.swapCouponStacks}% · ${rewards.swapCouponStacks}×`);
   } else addRow("Swap Coupons", "Off");
 
   addRow("Trips Disabled", rewards.noClearTrips ? "On" : "Off");
   addRow("Two Pair Disabled", rewards.noClearTwoPair ? "On" : "Off");
 
-  addRow("Kickers Are Good", rewards.kickersCount ? "On" : "Off");
+  addRow("Good Kickers", rewards.kickersCount ? "On" : "Off");
 }
 
 let creditsDisplayValue = Math.max(0, Math.floor(state.credits));
@@ -1801,7 +1802,7 @@ const REWARD_DEFS = /** @type {const} */ ([
   {
     id: "swapCoupon",
     name: "Swap Coupons",
-    desc: "Swaps cost 15% less (Stackable)",
+    desc: "Swaps cost 10% less (Stackable)",
     stack: { kind: "stackable" }
   },
   {
@@ -1884,7 +1885,7 @@ const REWARD_DEFS = /** @type {const} */ ([
   },
   {
     id: "kickersCount",
-    name: "Kickers Are Good",
+    name: "Good Kickers",
     desc: "Kicker cards now add to scoring for hands like trips and two pair.",
     stack: { kind: "unique" }
   }
@@ -1913,7 +1914,7 @@ function applyReward(id) {
   if (id === "swapCoupon") {
     rewards.swapCouponStacks += 1;
     lastPickedRewardName = "Swap Coupons";
-    const pct = Math.round(15 * rewards.swapCouponStacks);
+    const pct = Math.round(10 * rewards.swapCouponStacks);
     const stacks = rewards.swapCouponStacks;
     enqueueRewardBurst(
       "Swap Coupons",
@@ -2036,8 +2037,8 @@ function applyReward(id) {
   }
   if (id === "kickersCount") {
     rewards.kickersCount = true;
-    lastPickedRewardName = "Kickers Are Good";
-    enqueueRewardBurst("Kickers Are Good", "Kickers now add to scores");
+    lastPickedRewardName = "Good Kickers";
+    enqueueRewardBurst("Good Kickers", "Kickers now add to scores");
     return;
   }
 }
