@@ -2287,22 +2287,22 @@ function showRewardPickModal(clearedGoal) {
   });
 }
 
-async function processGoalReachedSequence() {
+async function processGoalReachedSequence(completedGoalIndex, completedGoalTarget) {
   if (goalSequenceActive) return false;
+  const completed = Math.max(1, Math.floor(completedGoalIndex || goalIndex));
+  const completedTarget = Math.max(1, Math.floor(completedGoalTarget || goalTarget));
   const credits = Math.max(0, Math.floor(state.credits));
-  if (credits < goalTarget) return false;
+  if (credits < completedTarget) return false;
   goalSequenceActive = true;
   try {
-    const completed = goalIndex;
-
     // Fill to the current goal, then pause for the reward pick.
-    state.credits = goalTarget;
-    await animateCreditsToAsync(goalTarget, 420);
+    state.credits = completedTarget;
+    await animateCreditsToAsync(completedTarget, 420);
     peakGoalClearedThisRun = Math.max(peakGoalClearedThisRun, completed);
     bumpGoalCelebration();
 
     // Advance to the next goal *before* showing the picker so swap/hint costs reflect the new goal.
-    goalIndex += 1;
+    goalIndex = completed + 1;
     goalTarget = goalTargetForIndex(goalIndex);
     updateRewardLabel();
     updateGoalTitleLabel();
@@ -2312,9 +2312,9 @@ async function processGoalReachedSequence() {
     applyReward(picked);
     rerender();
 
-    // Keep credits at the completed goal; player can progress on the next action.
-    state.credits = Math.min(Math.max(0, Math.floor(state.credits)), goalTarget);
-    setCreditsInstant(state.credits);
+    // Keep credits at the completed goal while selecting the new goal reward.
+    state.credits = completedTarget;
+    setCreditsInstant(completedTarget);
     return true;
   } finally {
     goalSequenceActive = false;
@@ -2924,6 +2924,8 @@ async function resolveCascades() {
   const goalAtComboStart = goalTarget;
   let stopAfterGoalClear = false;
   let goalClearedThisResolve = false;
+  let goalClearedIndex = 0;
+  let goalClearedTarget = 0;
   // The single “breather” between a cascade landing and the next scoring check.
   // Tweak this number to change how fast scoring starts after a fill.
   const CASCADE_EVAL_DELAY_MS = 26;
@@ -3001,12 +3003,12 @@ async function resolveCascades() {
       sfx.scoreHand(line.type, state.comboStep);
       rerender();
 
-      // If this line reached the goal, animate the bar to full first, then show rewards.
-      const cleared = await processGoalReachedSequence();
-      if (cleared) {
+      // If this line reached the goal, stop after fully resolving clears/refill.
+      if (Math.max(0, Math.floor(state.credits)) >= goalTarget) {
         stopAfterGoalClear = true;
         goalClearedThisResolve = true;
-        break;
+        goalClearedIndex = goalIndex;
+        goalClearedTarget = goalTarget;
       }
 
       viewFx.dim = null;
@@ -3014,7 +3016,6 @@ async function resolveCascades() {
       // Delay between popups for multiple lines (and to let the popup breathe).
       await sleep(comboDelayMs(120, state.comboStep));
     }
-    if (stopAfterGoalClear) break;
 
     // Now clear everything that scored this evaluation in one removal step.
     // (Cards can belong to both a scoring row and column; removed once.)
@@ -3104,6 +3105,11 @@ async function resolveCascades() {
       viewFx.hint = null;
       rerender();
       showToast(ui.toast, "Fresh deal");
+
+      if (goalClearedIndex > 0) {
+        // Show rewards only after the scored line fully resolves (clear → refill).
+        await processGoalReachedSequence(goalClearedIndex, goalClearedTarget);
+      }
       break;
     }
   }
