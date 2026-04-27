@@ -722,7 +722,7 @@ main.stage {
   width: var(--game-stack-w);
   max-width: 100%;
   margin: 0 auto;
-  padding: 0 0 4px;
+  padding: 4px 0;
   display: flex;
   justify-content: center;
   align-items: center;
