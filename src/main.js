@@ -80,10 +80,10 @@ const GOAL_TARGETS = /** @type {const} */ ([
 function goalTargetForIndex(idx) {
   const i = Math.max(1, Math.floor(idx));
   if (i <= GOAL_TARGETS.length) return GOAL_TARGETS[i - 1];
-  // Goal 11+: increase 20% each goal (compounding). Goal 11 = 120,000.
+  // Goal 11+: increase 50% each goal (compounding). Goal 11 = 150,000.
   const base = GOAL_TARGETS[GOAL_TARGETS.length - 1]; // Goal 10
   const steps = i - GOAL_TARGETS.length;
-  return Math.max(1, Math.round(base * Math.pow(1.2, steps)));
+  return Math.max(1, Math.round(base * Math.pow(1.5, steps)));
 }
 
 const STARTING_POINTS = 500;
@@ -221,13 +221,13 @@ function tryRestoreRun() {
 }
 
 function hintCost() {
-  // Always 50% of the current goal target.
-  return Math.max(1, Math.round(goalTarget * 0.5));
+  // Always 25% of the current goal target.
+  return Math.max(1, Math.round(goalTarget * 0.25));
 }
 
 function swapCost() {
-  // Always 20% of the current goal target.
-  const base = Math.max(1, Math.round(goalTarget * 0.2));
+  // Always 10% of the current goal target.
+  const base = Math.max(1, Math.round(goalTarget * 0.1));
   const stacks = Math.max(0, Math.floor(rewards.swapCouponStacks || 0));
   // Apply coupons after the per-goal cost is computed.
   const mult = stacks <= 0 ? 1 : Math.pow(0.9, stacks);
@@ -1840,11 +1840,10 @@ function showHandBurst({ label, type, credits, chainPct = 0, luckyMult = 0 }) {
   n.className = "handBurst";
   const tier = handBurstTier(type);
   n.classList.add(`handBurst--${tier}`);
+  if (luckyMult > 0) n.classList.add("is-lucky");
   n.style.left = `${x}px`;
   n.style.top = `${y}px`;
   const amt = Math.max(0, Math.floor(Number(credits) || 0));
-  const lucky =
-    luckyMult > 0 ? `<span class="handBurst__lucky" aria-label="Lucky River">x${Math.round(luckyMult)}</span>` : "";
   const chain =
     chainPct > 0
       ? `<span class="handBurst__chain" aria-label="Combo Chain bonus">${Math.round(chainPct)}%</span>`
@@ -1857,7 +1856,7 @@ function showHandBurst({ label, type, credits, chainPct = 0, luckyMult = 0 }) {
   else if (len >= 5) n.classList.add("handBurst--n1");
 
   n.innerHTML =
-    `<div class="handBurst__label"><span class="handBurst__labelText">${label}</span>${lucky}</div>` +
+    `<div class="handBurst__label"><span class="handBurst__labelText">${label}</span></div>` +
     `<div class="handBurst__credits"><div class="handBurst__amt">+${shown}</div>${chain}</div>`;
   host.append(n);
   requestAnimationFrame(() => n.classList.add("is-showing"));
