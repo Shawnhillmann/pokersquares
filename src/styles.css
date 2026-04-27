@@ -2880,6 +2880,7 @@ html.is-mobile .creditDock {
   max-height: none;
   margin-left: auto;
   margin-right: auto;
+  margin-top: 12px;
   padding: 0 0 calc(12px + env(safe-area-inset-bottom, 0px));
   overflow: visible;
   pointer-events: auto;
