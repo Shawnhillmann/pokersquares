@@ -8,7 +8,7 @@ import {
 } from "./game/board.js";
 import { renderBoard, renderScoredLines, showToast } from "./render/renderBoard.js";
 import { el, sleep } from "./render/dom.js";
-import { HAND_PRIORITY, HAND_TYPE } from "./poker/evaluationTypes.js";
+import { HAND_LABEL, HAND_PRIORITY, HAND_TYPE } from "./poker/evaluationTypes.js";
 import { evaluateHand } from "./poker/evaluateHand.js";
 import { evaluateHandWild } from "./poker/evaluateHandWild.js";
 import { cardBaseValue, handMultiplier } from "./game/scoring.js";
@@ -106,6 +106,8 @@ const rewards = {
   biggerNumbersStacks: 0,
   /** Times Pocket Rockets picked; each quadruples Ace card value (stackable multiplier). */
   pocketRocketsStacks: 0,
+  /** One-time: flushes/straights can be made with 4 cards (incl. straight/royal flush). */
+  closeEnough: false,
   jokerWildcard: false, // Goal 3
   diagonalsScored: false, // Goal 4
   extraJoker: false, // Goal 5
@@ -258,13 +260,129 @@ function cardScoreValue(card) {
 
 function scoringOpts() {
   const useWildEval = rewards.jokerWildcard || rewards.extraJoker;
+  const baseEval = useWildEval
+    ? (cards) => evaluateHandWild(cards, { jokerWild: true })
+    : evaluateHand;
   return {
     ...SCORE_OPTS,
     includeDiagonals: rewards.diagonalsScored,
-    evaluateHand: useWildEval
-      ? (cards) => evaluateHandWild(cards, { jokerWild: true })
-      : evaluateHand
+    evaluateHand: (cards) => {
+      const base = baseEval(cards);
+      if (!rewards.closeEnough) return base;
+      const upgraded = upgradeEvalForCloseEnough(base, cards, useWildEval);
+      return upgraded;
+    }
   };
+}
+
+/**
+ * Upgrade hand eval when Close Enough is active (4-card straights/flushes).
+ * Only affects Straight / Flush / Straight Flush / Royal Flush.
+ * @param {any} baseEval
+ * @param {{rank:any,suit:any}[]} cards
+ * @param {boolean} jokerWild
+ */
+function upgradeEvalForCloseEnough(baseEval, cards, jokerWild) {
+  const baseType = String(baseEval?.type || "");
+  // If we're already at/above straight, Close Enough can't improve except for SF/Royal via 4-card logic,
+  // but those will also be >= straight anyway. We'll still compute the best and compare priority.
+
+  const SUITS = ["H", "D", "C", "S"];
+  const RANK_TO_VALUE = {
+    A: 14,
+    K: 13,
+    Q: 12,
+    J: 11,
+    10: 10,
+    9: 9,
+    8: 8,
+    7: 7,
+    6: 6,
+    5: 5,
+    4: 4,
+    3: 3,
+    2: 2
+  };
+
+  let wild = 0;
+  /** @type {{v:number,s:string}[]} */
+  const fixed = [];
+  for (const c of cards) {
+    const r = String(c.rank);
+    if (jokerWild && r === "JOKER") wild += 1;
+    else {
+      const v = RANK_TO_VALUE[r];
+      if (!v) continue;
+      fixed.push({ v, s: String(c.suit) });
+    }
+  }
+
+  const best = (() => {
+    // Royal Flush (4 of 5 ranks) in one suit.
+    for (const s of SUITS) {
+      const vals = new Set(fixed.filter((c) => c.s === s).map((c) => c.v));
+      const royalSet = new Set([10, 11, 12, 13, 14]);
+      let have = 0;
+      for (const v of vals) if (royalSet.has(v)) have += 1;
+      if (have + wild >= 4) return HAND_TYPE.ROYAL_FLUSH;
+    }
+
+    // Straight Flush (4-card straight) in one suit.
+    for (const s of SUITS) {
+      const vals = new Set(fixed.filter((c) => c.s === s).map((c) => c.v));
+      if (straight4Possible(vals, wild)) return HAND_TYPE.STRAIGHT_FLUSH;
+    }
+
+    // Flush (4 cards same suit).
+    for (const s of SUITS) {
+      const count = fixed.filter((c) => c.s === s).length;
+      if (count + wild >= 4) return HAND_TYPE.FLUSH;
+    }
+
+    // Straight (4-card straight).
+    const valsAll = new Set(fixed.map((c) => c.v));
+    if (straight4Possible(valsAll, wild)) return HAND_TYPE.STRAIGHT;
+
+    return null;
+  })();
+
+  if (!best) return baseEval;
+  const bestP = HAND_PRIORITY[best] ?? 0;
+  const baseP = HAND_PRIORITY[baseType] ?? (baseEval?.priority ?? 0);
+  if (bestP <= baseP) return baseEval;
+
+  return {
+    ...baseEval,
+    type: best,
+    label: HAND_LABEL[best] ?? String(best),
+    priority: bestP,
+    isScoring: best !== HAND_TYPE.HIGH_CARD,
+    meta: {
+      ...(baseEval?.meta || {}),
+      isFlush: best === HAND_TYPE.FLUSH || best === HAND_TYPE.STRAIGHT_FLUSH || best === HAND_TYPE.ROYAL_FLUSH,
+      isStraight: best === HAND_TYPE.STRAIGHT || best === HAND_TYPE.STRAIGHT_FLUSH || best === HAND_TYPE.ROYAL_FLUSH
+    }
+  };
+
+  /**
+   * @param {Set<number>} vals
+   * @param {number} wilds
+   */
+  function straight4Possible(vals, wilds) {
+    // 4-card sequences: hi..hi-3, plus A234 special.
+    /** @type {number[][]} */
+    const seqs = [];
+    seqs.push([14, 2, 3, 4]); // A234
+    for (let hi = 14; hi >= 5; hi--) {
+      seqs.push([hi, hi - 1, hi - 2, hi - 3]);
+    }
+    for (const seq of seqs) {
+      let have = 0;
+      for (const v of seq) if (vals.has(v)) have += 1;
+      if (have + wilds >= 4) return true;
+    }
+    return false;
+  }
 }
 
 function handScoreMultForReward(handType) {
@@ -402,6 +520,8 @@ function updateRewardsTracker() {
     "Pocket Rockets": "Aces are worth 4x more card value per stack.",
     Jokers: "Adds Joker cards to your deck (max 2). Jokers count as any rank for hand evaluation.",
     Diagonals: "Diagonals can be scored as poker hands.",
+    "Close Enough":
+      "Flushes and straights can be made with only 4 cards (includes straight flushes and royal flush).",
     "Combo Chain": "Each consecutive scored hand in a combo receives a 25% bonus per stack.",
     "Hand Multiplier": "Each stack adds +25% to all hand multipliers.",
     "Premium Hands":
@@ -532,6 +652,8 @@ function updateRewardsTracker() {
   else addRow("Jokers", "Off");
 
   addRow("Diagonals", rewards.diagonalsScored ? "On" : "Off");
+
+  addRow("Close Enough", rewards.closeEnough ? "On" : "Off");
 
   if (rewards.comboBonusStacks > 0) {
     const per = 25 * rewards.comboBonusStacks;
@@ -1100,6 +1222,7 @@ ui.newGameBtn.addEventListener("click", () => {
   rewards.boldFacesStacks = 0;
   rewards.biggerNumbersStacks = 0;
   rewards.pocketRocketsStacks = 0;
+  rewards.closeEnough = false;
   rewards.jokerWildcard = false;
   rewards.diagonalsScored = false;
   rewards.extraJoker = false;
@@ -1149,6 +1272,7 @@ ui.restartBtn.addEventListener("click", () => {
   rewards.boldFacesStacks = 0;
   rewards.biggerNumbersStacks = 0;
   rewards.pocketRocketsStacks = 0;
+  rewards.closeEnough = false;
   rewards.jokerWildcard = false;
   rewards.diagonalsScored = false;
   rewards.extraJoker = false;
@@ -1741,6 +1865,12 @@ const REWARD_DEFS = /** @type {const} */ ([
     stack: { kind: "unique" }
   },
   {
+    id: "closeEnough",
+    name: "Close Enough",
+    desc: "Flushes and straights can be made with only 4 cards (includes straight flushes and royal flush).",
+    stack: { kind: "unique" }
+  },
+  {
     id: "noClearTwoPair",
     name: "Two Pair Disabled",
     desc: "Two pair no longer clears a line, enabling higher scoring hands.",
@@ -1762,6 +1892,7 @@ const REWARD_DEFS = /** @type {const} */ ([
 
 function canOfferReward(id) {
   if (id === "diagonals") return !rewards.diagonalsScored;
+  if (id === "closeEnough") return !rewards.closeEnough;
   if (id === "noClearTwoPair") return !rewards.noClearTwoPair;
   if (id === "noClearTrips") return !rewards.noClearTrips;
   if (id === "kickersCount") return !rewards.kickersCount;
@@ -1876,6 +2007,12 @@ function applyReward(id) {
     rewards.diagonalsScored = true;
     lastPickedRewardName = "Diagonals";
     enqueueRewardBurst("Diagonals", "Diagonals can now be scored as well.");
+    return;
+  }
+  if (id === "closeEnough") {
+    rewards.closeEnough = true;
+    lastPickedRewardName = "Close Enough";
+    enqueueRewardBurst("Close Enough", "Straights and flushes now need only 4 cards");
     return;
   }
   if (id === "doubleCardValues") {
