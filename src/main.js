@@ -105,9 +105,9 @@ const rewards = {
   boldFacesStacks: 0,
   /** Times Bigger Numbers picked; each triples number card (and ace) value again. */
   biggerNumbersStacks: 0,
-  /** Times Pocket Rockets picked; each quadruples Ace card value (stackable multiplier). */
+  /** Times Pocket Rockets picked; each makes Aces worth 10x card value (stackable multiplier). */
   pocketRocketsStacks: 0,
-  /** Times Lucky River picked; each adds +5% proc chance to x5 a scored hand. */
+  /** Times Lucky River picked; each adds +5% proc chance to x10 a scored hand. */
   luckyRiverStacks: 0,
   /** One-time: flushes/straights can be made with 4 cards (incl. straight/royal flush). */
   closeEnough: false,
@@ -262,7 +262,7 @@ function cardScoreValue(card) {
   const isFace = String(card.rank) === "J" || String(card.rank) === "Q" || String(card.rank) === "K";
   const isNumberLike = !isJoker && !isFace; // includes A
   const aceStacks = Math.max(0, Math.floor(rewards.pocketRocketsStacks || 0));
-  const aceMult = aceStacks <= 0 ? 1 : Math.pow(4, aceStacks);
+  const aceMult = aceStacks <= 0 ? 1 : Math.pow(10, aceStacks);
   const faceStacks = Math.max(0, Math.floor(rewards.boldFacesStacks || 0));
   const faceMult = faceStacks <= 0 ? 1 : Math.pow(3, faceStacks);
   const numStacks = Math.max(0, Math.floor(rewards.biggerNumbersStacks || 0));
@@ -637,7 +637,7 @@ function updateRewardsTracker() {
   b.replaceChildren();
   /** @type {Record<string, string>} */
   const descByLabel = {
-    "Pocket Rockets": "Aces are worth 4x more card value per stack.",
+    "Pocket Rockets": "Aces are worth 10x more card value per stack.",
     Jokers: "Adds Joker cards to your deck (max 2). Jokers count as any rank for hand evaluation.",
     Diagonals: "Diagonals can be scored as poker hands.",
     "Close Enough":
@@ -650,7 +650,7 @@ function updateRewardsTracker() {
     "Bolder Faces": "Each stack makes face cards (J/Q/K) and Jokers worth 3x more card value.",
     "Bigger Numbers": "Each stack makes number cards (and Aces) worth 3x more card value.",
     "2X Card Values": "Each stack doubles every card’s value again.",
-    "Lucky River": "Each stack adds +5% chance for scored hands to pay x5.",
+    "Lucky River": "Each stack adds +5% chance for scored hands to pay 10x.",
     "Random Hints": "Grants a chance for free hints to appear.",
     "Swap Coupons": "Each stack reduces swap cost by 10% (applied after goal scaling).",
     "Trips Disabled": "Three of a kind lines no longer clear.",
@@ -766,7 +766,7 @@ function updateRewardsTracker() {
   }
   // Order matches requested "build" readability.
   if (rewards.pocketRocketsStacks > 0) {
-    addRow("Pocket Rockets", `Aces x${Math.pow(4, rewards.pocketRocketsStacks)} · ${rewards.pocketRocketsStacks}×`);
+    addRow("Pocket Rockets", `Aces ${fmtShort(Math.pow(10, rewards.pocketRocketsStacks))}x · ${rewards.pocketRocketsStacks}×`);
   } else addRow("Pocket Rockets", "Off");
 
   if (rewards.jokerWildcard || jokerCount > 0) addRow("Jokers", `${jokerCount} / 2 in deck`);
@@ -807,7 +807,7 @@ function updateRewardsTracker() {
   } else addRow("2X Card Values", "Off");
 
   if (rewards.luckyRiverStacks > 0) {
-    addRow("Lucky River", `x5 @ ${5 * rewards.luckyRiverStacks}% · ${rewards.luckyRiverStacks}×`);
+    addRow("Lucky River", `10x @ ${5 * rewards.luckyRiverStacks}% · ${rewards.luckyRiverStacks}×`);
   } else addRow("Lucky River", "Off");
 
   if (rewards.randomHints) {
@@ -1082,7 +1082,7 @@ function syncHandChartScores() {
     // @ts-ignore
     const base = Number(el.dataset.base || "1") || 1;
     const shown = formatHandChartMult(base * mult);
-    el.textContent = `x${shown}`;
+    el.textContent = `${shown}x`;
   });
 }
 
@@ -1941,7 +1941,7 @@ const REWARD_DEFS = /** @type {const} */ ([
   {
     id: "luckyRiver",
     name: "Lucky River",
-    desc: "Scored hands have a 5% chance to x5 their reward (Stackable).",
+    desc: "Scored hands have a 5% chance to 10x their reward (Stackable).",
     stack: { kind: "stackable" }
   },
   {
@@ -1989,7 +1989,7 @@ const REWARD_DEFS = /** @type {const} */ ([
   {
     id: "pocketRockets",
     name: "Pocket Rockets",
-    desc: "Aces are worth 4x card value (Stackable)",
+    desc: "Aces are worth 10x card value (Stackable)",
     stack: { kind: "stackable" }
   },
   {
@@ -2132,7 +2132,7 @@ function applyReward(id) {
     const stacks = rewards.pocketRocketsStacks;
     enqueueRewardBurst(
       "Pocket Rockets",
-      `Aces are now x${Math.pow(4, stacks)} value (${stacks} stack${stacks === 1 ? "" : "s"})`
+      `Aces are now ${Math.pow(10, stacks)}x value (${stacks} stack${stacks === 1 ? "" : "s"})`
     );
     return;
   }
@@ -2179,7 +2179,7 @@ function applyReward(id) {
     lastPickedRewardName = "Lucky River";
     const stacks = rewards.luckyRiverStacks;
     const pct = Math.min(95, 5 * stacks);
-    enqueueRewardBurst("Lucky River", `${pct}% chance to x5 scored hands`);
+    enqueueRewardBurst("Lucky River", `${pct}% chance to 10x scored hands`);
     return;
   }
   if (id === "noClearTwoPair") {
@@ -2992,7 +2992,7 @@ async function resolveCascades() {
       const lrRoll = lrChance > 0 ? state.rng.int(1_000_000) / 1_000_000 : 1;
       const luckyTriggered = lrChance > 0 && lrRoll < lrChance;
       if (luckyTriggered) {
-        gained *= 5;
+        gained *= 10;
         sfx.luckyRiver?.();
       }
       const chainPct = chainStacks > 0 ? 25 * chainStacks * chainStep : 0;
@@ -3001,7 +3001,7 @@ async function resolveCascades() {
         type: line.type,
         credits: gained,
         chainPct,
-        luckyMult: luckyTriggered ? 5 : 0
+        luckyMult: luckyTriggered ? 10 : 0
       });
       // Ensure the line highlight is visible before the sequential grow starts.
       await sleep(comboDelayMs(45, state.comboStep));
