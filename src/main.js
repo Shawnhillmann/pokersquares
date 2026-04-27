@@ -221,22 +221,37 @@ function tryRestoreRun() {
 }
 
 function hintCost() {
-  // Always 10% of the current goal target.
-  return Math.max(1, Math.round(goalTarget * 0.1));
+  // Always 50% of the current goal target.
+  return Math.max(1, Math.round(goalTarget * 0.5));
 }
 
 function swapCost() {
-  // Fixed early-game swap costs to prevent weird inversions where later goals cost less.
-  let base = 0;
-  if (goalIndex === 1) base = 50;
-  else if (goalIndex === 2) base = 100;
-  else if (goalIndex === 3) base = 150;
-  // Goal 4+: 5% for higher stakes.
-  if (!base) base = Math.max(1, Math.round(goalTarget * 0.05));
+  // Always 20% of the current goal target.
+  const base = Math.max(1, Math.round(goalTarget * 0.2));
   const stacks = Math.max(0, Math.floor(rewards.swapCouponStacks || 0));
   // Apply coupons after the per-goal cost is computed.
   const mult = stacks <= 0 ? 1 : Math.pow(0.9, stacks);
   return Math.max(1, Math.round(base * mult));
+}
+
+function fmtShort(n) {
+  const v = Math.max(0, Math.floor(Number(n) || 0));
+  if (v < 1000) return v.toLocaleString();
+  const UNITS = [
+    { v: 1e12, s: "t" },
+    { v: 1e9, s: "b" },
+    { v: 1e6, s: "m" },
+    { v: 1e3, s: "k" }
+  ];
+  for (const u of UNITS) {
+    if (v >= u.v) {
+      const x = v / u.v;
+      const oneDec = Math.round(x * 10) / 10;
+      const s = oneDec % 1 === 0 ? String(Math.round(oneDec)) : oneDec.toFixed(1);
+      return `${s}${u.s}`;
+    }
+  }
+  return v.toLocaleString();
 }
 
 function cardScoreValue(card) {
@@ -599,11 +614,11 @@ function updateHud() {
   const credits = Math.max(0, Math.floor(state.credits));
   peakCreditsThisRun = Math.max(peakCreditsThisRun, credits);
   updateGoalHud(credits);
-  ui.hintBtn.textContent = `Hint - ${hintCost()} Credits`;
-  const sc = swapCost().toLocaleString();
+  ui.hintBtn.textContent = `Hint - ${fmtShort(hintCost())} Credits`;
+  const sc = fmtShort(swapCost());
   if (ui.swapCostLine) ui.swapCostLine.textContent = `Swap cost: ${sc} credits`;
   if (ui.howToSwapCost) ui.howToSwapCost.textContent = sc;
-  if (ui.howToHintCost) ui.howToHintCost.textContent = hintCost().toLocaleString();
+  if (ui.howToHintCost) ui.howToHintCost.textContent = fmtShort(hintCost());
   updateRewardsTracker();
   scheduleSaveRun();
 }
@@ -1835,27 +1850,7 @@ function showHandBurst({ label, type, credits, chainPct = 0, luckyMult = 0 }) {
       ? `<span class="handBurst__chain" aria-label="Combo Chain bonus">${Math.round(chainPct)}%</span>`
       : "";
 
-  const fmtBig = (n) => {
-    const v = Math.max(0, Math.floor(Number(n) || 0));
-    if (v < 1000) return String(v);
-    const UNITS = [
-      { v: 1e12, s: "t" },
-      { v: 1e9, s: "b" },
-      { v: 1e6, s: "m" },
-      { v: 1e3, s: "k" }
-    ];
-    for (const u of UNITS) {
-      if (v >= u.v) {
-        const x = v / u.v;
-        const oneDec = Math.round(x * 10) / 10;
-        const s = oneDec % 1 === 0 ? String(Math.round(oneDec)) : oneDec.toFixed(1);
-        return `${s}${u.s}`;
-      }
-    }
-    return String(v);
-  };
-
-  const shown = fmtBig(amt);
+  const shown = fmtShort(amt);
   const len = shown.length;
   if (len >= 9) n.classList.add("handBurst--n3");
   else if (len >= 7) n.classList.add("handBurst--n2");
@@ -1863,7 +1858,7 @@ function showHandBurst({ label, type, credits, chainPct = 0, luckyMult = 0 }) {
 
   n.innerHTML =
     `<div class="handBurst__label"><span class="handBurst__labelText">${label}</span>${lucky}</div>` +
-    `<div class="handBurst__credits"><span class="handBurst__amt">+${shown}</span>${chain}</div>`;
+    `<div class="handBurst__credits"><div class="handBurst__amt">+${shown}</div>${chain}</div>`;
   host.append(n);
   requestAnimationFrame(() => n.classList.add("is-showing"));
 
@@ -2246,7 +2241,7 @@ function showRewardPickModal(clearedGoal) {
     const opts = pickRewardOptions3();
     const swapNotice = `
       <div class="swapNotice__line1">Goal <span class="swapNotice__goal">${clearedGoal}</span> Cleared</div>
-      <div class="swapNotice__line2">Swaps Now Cost <span class="swapNotice__cost">${swapCost().toLocaleString()}</span>, Hints Now Cost <span class="swapNotice__cost">${hintCost().toLocaleString()}</span></div>
+      <div class="swapNotice__line2">Swaps Now Cost <span class="swapNotice__cost">${fmtShort(swapCost())}</span>, Hints Now Cost <span class="swapNotice__cost">${fmtShort(hintCost())}</span></div>
     `;
     const overlay = document.createElement("div");
     overlay.className = "rewardPickOverlay";
