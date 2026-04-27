@@ -1839,10 +1839,17 @@ html.is-mobile .cardFace:not(.cardFace--jokerArt) img.cardPip--faceArt {
   align-items: center;
   gap: 6px;
   text-align: center;
-  width: clamp(210px, 70vw, 360px);
-  min-height: 84px;
+  width: fit-content;
+  min-width: clamp(190px, 56vw, 300px);
+  max-width: 92vw;
+  min-height: 0;
   max-width: 92vw;
   transition: opacity 140ms ease, transform 140ms ease;
+}
+
+.handBurst.has-chain {
+  min-width: clamp(210px, 70vw, 360px);
+  min-height: 84px;
 }
 
 .handBurst__label {
@@ -1902,8 +1909,7 @@ html.is-mobile .cardFace:not(.cardFace--jokerArt) img.cardPip--faceArt {
 }
 
 .handBurst__credits {
-  display: flex;
-  flex-direction: column;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   font-size: clamp(18px, 2.8vw, 22px);
@@ -1920,6 +1926,16 @@ html.is-mobile .cardFace:not(.cardFace--jokerArt) img.cardPip--faceArt {
 }
 
 .handBurst__credits .handBurst__chain {
+  display: none;
+}
+
+.handBurst.has-chain .handBurst__credits {
+  display: flex;
+  flex-direction: column;
+}
+
+.handBurst.has-chain .handBurst__credits .handBurst__chain {
+  display: inline-block;
   margin-left: 0;
   margin-top: 3px;
   font-size: 10px;

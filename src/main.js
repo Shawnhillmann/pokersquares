@@ -221,13 +221,13 @@ function tryRestoreRun() {
 }
 
 function hintCost() {
-  // Always 25% of the current goal target.
-  return Math.max(1, Math.round(goalTarget * 0.25));
+  // Always 20% of the current goal target.
+  return Math.max(1, Math.round(goalTarget * 0.2));
 }
 
 function swapCost() {
-  // Always 10% of the current goal target.
-  const base = Math.max(1, Math.round(goalTarget * 0.1));
+  // Always 7.5% of the current goal target.
+  const base = Math.max(1, Math.round(goalTarget * 0.075));
   const stacks = Math.max(0, Math.floor(rewards.swapCouponStacks || 0));
   // Apply coupons after the per-goal cost is computed.
   const mult = stacks <= 0 ? 1 : Math.pow(0.9, stacks);
@@ -1841,6 +1841,7 @@ function showHandBurst({ label, type, credits, chainPct = 0, luckyMult = 0 }) {
   const tier = handBurstTier(type);
   n.classList.add(`handBurst--${tier}`);
   if (luckyMult > 0) n.classList.add("is-lucky");
+  if (chainPct > 0) n.classList.add("has-chain");
   n.style.left = `${x}px`;
   n.style.top = `${y}px`;
   const amt = Math.max(0, Math.floor(Number(credits) || 0));
@@ -2286,37 +2287,35 @@ function showRewardPickModal(clearedGoal) {
   });
 }
 
-async function processGoalOvershootSequence() {
+async function processGoalReachedSequence() {
   if (goalSequenceActive) return false;
   const credits = Math.max(0, Math.floor(state.credits));
   if (credits < goalTarget) return false;
   goalSequenceActive = true;
-  let clearedAny = false;
   try {
-    while (Math.max(0, Math.floor(state.credits)) >= goalTarget) {
-      clearedAny = true;
-      const completed = goalIndex;
+    const completed = goalIndex;
 
-      // Fill to the current goal one at a time, then pause for the reward pick.
-      await animateCreditsToAsync(goalTarget, 420);
-      peakGoalClearedThisRun = Math.max(peakGoalClearedThisRun, completed);
-      bumpGoalCelebration();
+    // Fill to the current goal, then pause for the reward pick.
+    state.credits = goalTarget;
+    await animateCreditsToAsync(goalTarget, 420);
+    peakGoalClearedThisRun = Math.max(peakGoalClearedThisRun, completed);
+    bumpGoalCelebration();
 
-      // Advance to the next goal *before* showing the picker so swap/hint costs reflect the new goal.
-      goalIndex += 1;
-      goalTarget = goalTargetForIndex(goalIndex);
-      updateRewardLabel();
-      updateGoalTitleLabel();
-      if (ui.goalTarget) ui.goalTarget.textContent = goalTarget.toLocaleString();
+    // Advance to the next goal *before* showing the picker so swap/hint costs reflect the new goal.
+    goalIndex += 1;
+    goalTarget = goalTargetForIndex(goalIndex);
+    updateRewardLabel();
+    updateGoalTitleLabel();
+    if (ui.goalTarget) ui.goalTarget.textContent = goalTarget.toLocaleString();
 
-      const picked = await showRewardPickModal(completed);
-      applyReward(picked);
-      rerender();
-    }
+    const picked = await showRewardPickModal(completed);
+    applyReward(picked);
+    rerender();
 
-    // After stepping through all cleared goals, animate the remainder toward the next goal.
-    await animateCreditsToAsync(Math.max(0, Math.floor(state.credits)), 360);
-    return clearedAny;
+    // Keep credits at the completed goal; player can progress on the next action.
+    state.credits = Math.min(Math.max(0, Math.floor(state.credits)), goalTarget);
+    setCreditsInstant(state.credits);
+    return true;
   } finally {
     goalSequenceActive = false;
   }
@@ -2924,6 +2923,7 @@ async function resolveCascades() {
   let gainedTotal = 0;
   const goalAtComboStart = goalTarget;
   let stopAfterGoalClear = false;
+  let goalClearedThisResolve = false;
   // The single “breather” between a cascade landing and the next scoring check.
   // Tweak this number to change how fast scoring starts after a fill.
   const CASCADE_EVAL_DELAY_MS = 26;
@@ -2991,23 +2991,30 @@ async function resolveCascades() {
       await sleep(comboDelayMs(45, state.comboStep));
       await pulseScoredLine(line, state.comboStep, contribCells, dimCells, () => {}, handBurstEl);
 
+      // Goals cannot be exceeded: cap the credits gain at the remaining amount to the current goal.
+      const remainingToGoal = Math.max(0, Math.floor(goalTarget) - Math.floor(state.credits));
+      const applied = Math.min(gained, remainingToGoal);
       const goalIndexBefore = goalIndex;
-      state.credits += gained;
-      gainedTotal += gained;
+      state.credits += applied;
+      gainedTotal += applied;
 
       sfx.scoreHand(line.type, state.comboStep);
       rerender();
 
-      // If this line overshot one or more goals, step through them one at a time:
-      // fill → reward pick → next goal fill → ... (then stop cascades for clarity).
-      const cleared = await processGoalOvershootSequence();
-      if (cleared) stopAfterGoalClear = true;
+      // If this line reached the goal, animate the bar to full first, then show rewards.
+      const cleared = await processGoalReachedSequence();
+      if (cleared) {
+        stopAfterGoalClear = true;
+        goalClearedThisResolve = true;
+        break;
+      }
 
       viewFx.dim = null;
 
       // Delay between popups for multiple lines (and to let the popup breathe).
       await sleep(comboDelayMs(120, state.comboStep));
     }
+    if (stopAfterGoalClear) break;
 
     // Now clear everything that scored this evaluation in one removal step.
     // (Cards can belong to both a scoring row and column; removed once.)
@@ -3104,7 +3111,7 @@ async function resolveCascades() {
   state.comboStep = 0;
   // Special-case: Goal 1 big wins are too frequent; only show 75%+ tier there.
   const showBigWinThreshold = goalIndex === 1 ? 0.75 : 0.25;
-  if (gainedTotal > 0 && gainedTotal >= goalAtComboStart * showBigWinThreshold) {
+  if (!goalClearedThisResolve && gainedTotal > 0 && gainedTotal >= goalAtComboStart * showBigWinThreshold) {
     showBigWin(gainedTotal, goalAtComboStart);
   }
 }
