@@ -237,9 +237,10 @@ export function renderBoard(root, board, view, onCellClick) {
             cell.__pip = "img";
           }
         } else {
-          cornerSuit.textContent = "";
-          // Text suit pip.
-          pipDiv.textContent = suitSymbol(card.suit);
+          // Same corner treatment as face cards: rank + suit stacked top-left; no large center pip.
+          face.classList.add("cardFace--cornerStack");
+          cornerSuit.textContent = suitSymbol(card.suit);
+          pipDiv.textContent = "";
           // @ts-ignore
           if (cell.__pip !== "pip") {
             if (img.parentElement) img.remove();

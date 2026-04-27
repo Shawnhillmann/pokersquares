@@ -1054,8 +1054,8 @@ html.is-mobile .cell.is-swap-windup {
 
 .cardCorner {
   position: absolute;
-  left: 8px;
-  top: 6px;
+  left: 11px;
+  top: 9px;
   display: block;
   font-weight: 800;
   line-height: 1;
@@ -1084,6 +1084,15 @@ html.is-mobile .cell.is-swap-windup {
 /* Corner suit only for face cards (J/Q/K) */
 .cardFace--faceArt .cardCornerSuit {
   display: block;
+}
+
+/* Number/ace: same top-left rank + under-suit stack as face cards; no large center pip */
+.cardFace--cornerStack .cardCornerSuit {
+  display: block;
+}
+
+.cardFace--cornerStack .cardPip:not(.cardPip--faceArt) {
+  display: none;
 }
 
 /* (Aces are standard cards; no ace art mode) */
@@ -1139,18 +1148,9 @@ html.is-mobile .cell.is-swap-windup {
   overflow: hidden;
 }
 
+/* Joker: no rank/suit corner — only centered SVG */
 .cardFace--jokerArt .cardCorner {
-  position: absolute;
-  left: 0;
-  top: 8px;
-  width: 100%;
-  text-align: center;
-  pointer-events: none;
-}
-
-.cardFace--jokerArt .cardRank {
-  font-size: 18px;
-  letter-spacing: 0.04em;
+  display: none;
 }
 
 .cardFace--jokerArt img.cardPip--faceArt {
@@ -2979,8 +2979,8 @@ html.is-mobile .cell {
 }
 
 html.is-mobile .cardCorner {
-  top: 5px;
-  left: 6px;
+  top: 7px;
+  left: 9px;
   width: 26px;
 }
 
