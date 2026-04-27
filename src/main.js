@@ -1083,9 +1083,11 @@ function syncHandChartScores() {
   ui.handChart.querySelectorAll(".handRow__tag--score").forEach((el) => {
     // @ts-ignore
     if (!el.dataset.base) {
-      const m = String(el.textContent || "").match(/x\s*([0-9]+(?:\.[0-9]+)?)/i);
+      const txt = String(el.textContent || "").trim();
+      // Accept both legacy "x100" and preferred "100x" formats.
+      const m = txt.match(/(?:^x\s*([0-9]+(?:\.[0-9]+)?)$)|(?:^([0-9]+(?:\.[0-9]+)?)\s*x$)/i);
       // @ts-ignore
-      el.dataset.base = m ? m[1] : "1";
+      el.dataset.base = m ? String(m[1] || m[2] || "1") : "1";
     }
     // @ts-ignore
     const base = Number(el.dataset.base || "1") || 1;
