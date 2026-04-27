@@ -26,6 +26,7 @@ const ui = {
   handChart: /** @type {HTMLElement} */ (document.getElementById("handChart")),
   rulesPanel: /** @type {HTMLElement} */ (document.getElementById("rulesPanel")),
   runEndModal: /** @type {HTMLElement} */ (document.getElementById("runEndModal")),
+  runEndTitle: /** @type {HTMLElement|null} */ (document.getElementById("runEndTitle")),
   runEndReason: /** @type {HTMLElement|null} */ (document.getElementById("runEndReason")),
   finalScoreValue: /** @type {HTMLElement} */ (document.getElementById("finalScoreValue")),
   finalPeakCreditsValue: /** @type {HTMLElement|null} */ (document.getElementById("finalPeakCreditsValue")),
@@ -81,10 +82,16 @@ const GOAL_TARGETS = /** @type {const} */ ([
 function goalTargetForIndex(idx) {
   const i = Math.max(1, Math.floor(idx));
   if (i <= GOAL_TARGETS.length) return GOAL_TARGETS[i - 1];
-  // Goal 11+: increase 50% each goal (compounding). Goal 11 = 150,000.
-  const base = GOAL_TARGETS[GOAL_TARGETS.length - 1]; // Goal 10
-  const steps = i - GOAL_TARGETS.length;
-  return Math.max(1, Math.round(base * Math.pow(1.5, steps)));
+  const base10 = GOAL_TARGETS[GOAL_TARGETS.length - 1]; // Goal 10
+  // Goal 11–20: +100% each goal (x2 compounding). Goal 11 = 200,000.
+  if (i <= 20) {
+    const steps = i - 10;
+    return Math.max(1, Math.round(base10 * Math.pow(2, steps)));
+  }
+  // Goal 21+: +200% each goal (x3 compounding).
+  const base20 = Math.max(1, Math.round(base10 * Math.pow(2, 10))); // Goal 20
+  const steps = i - 20;
+  return Math.max(1, Math.round(base20 * Math.pow(3, steps)));
 }
 
 const STARTING_POINTS = 500;
@@ -509,20 +516,20 @@ function upgradeEvalForCloseEnough(baseEval, cards, jokerWild) {
 function handScoreMultForReward(handType) {
   const t = String(handType);
   const premium =
-    t === HAND_TYPE.FULL_HOUSE ||
     t === HAND_TYPE.FOUR_OF_A_KIND ||
     t === HAND_TYPE.STRAIGHT_FLUSH ||
     t === HAND_TYPE.FIVE_OF_A_KIND ||
     t === HAND_TYPE.ROYAL_FLUSH;
-  const lowRange =
+  const lowHands =
+    t === HAND_TYPE.FULL_HOUSE ||
     t === HAND_TYPE.FLUSH ||
     t === HAND_TYPE.STRAIGHT ||
     t === HAND_TYPE.THREE_OF_A_KIND ||
     t === HAND_TYPE.TWO_PAIR;
   const premStacks = Math.max(0, Math.floor(rewards.premiumHandsStacks || 0));
   const lowStacks = Math.max(0, Math.floor(rewards.lowRangeStacks || 0));
-  const premMult = premium && premStacks > 0 ? Math.pow(1.5, premStacks) : 1;
-  const lowMult = lowRange && lowStacks > 0 ? Math.pow(1.5, lowStacks) : 1;
+  const premMult = premium && premStacks > 0 ? Math.pow(3, premStacks) : 1;
+  const lowMult = lowHands && lowStacks > 0 ? Math.pow(6, lowStacks) : 1;
   return premMult * lowMult;
 }
 
@@ -549,10 +556,11 @@ function clampNonNegative(n) {
   return Math.max(0, Math.floor(n));
 }
 
-/** @typedef {"bankrupt"} RunEndKind */
+/** @typedef {"bankrupt"|"win"} RunEndKind */
 
 const RUN_END_COPY = /** @type {const} */ ({
-  bankrupt: "Not enough credits to swap."
+  bankrupt: "Not enough credits to swap.",
+  win: "You made it to Goal 31. Unreal run."
 });
 
 /**
@@ -561,6 +569,7 @@ const RUN_END_COPY = /** @type {const} */ ({
 function endRun(kind) {
   state.busy = true;
   state.selected = null;
+  if (ui.runEndTitle) ui.runEndTitle.textContent = kind === "win" ? "You win" : "Run ended";
   if (ui.finalPeakCreditsValue) ui.finalPeakCreditsValue.textContent = peakCreditsThisRun.toLocaleString();
   if (ui.finalPeakGoalValue) {
     ui.finalPeakGoalValue.textContent = peakGoalClearedThisRun <= 0 ? "None" : `Goal ${peakGoalClearedThisRun}`;
@@ -571,7 +580,8 @@ function endRun(kind) {
   if (ui.runEndReason) ui.runEndReason.textContent = line;
   ui.runEndModal.removeAttribute("hidden");
   showToast(ui.toast, line);
-  sfx.gameOver();
+  if (kind === "win") sfx.youWin();
+  else sfx.gameOver();
 }
 
 /**
@@ -652,9 +662,8 @@ function updateRewardsTracker() {
       "Flushes and straights can be made with only 4 cards (includes straight flushes and royal flush).",
     "Combo Chain": "Each consecutive scored hand in a combo receives a 0.25x bonus per stack.",
     "Hand Multiplier": "Each stack adds +0.25x to all hand multipliers.",
-    "Premium Hands":
-      "Each stack makes Full House, Four of a Kind, Straight Flush, Five of a Kind, and Royal Flush worth 0.5x more.",
-    "Low Hands": "Each stack makes Straights, Flushes, Trips, and Two Pair worth 0.5x more.",
+    "Premium Hands": "Each stack makes Four of a Kind+ hands worth 3x.",
+    "Low Hands": "Each stack makes Full House and lower hands worth 6x.",
     "Bolder Faces": "Each stack makes face cards (J/Q/K) and Jokers worth 3x more card value.",
     "Bigger Numbers": "Each stack makes number cards (and Aces) worth 3x more card value.",
     "2X Card Values": "Each stack doubles every card’s value again.",
@@ -795,11 +804,11 @@ function updateRewardsTracker() {
   } else addRow("Hand Multiplier", "Off");
 
   if (rewards.premiumHandsStacks > 0) {
-    addRow("Premium Hands", `x${Math.pow(1.5, rewards.premiumHandsStacks).toFixed(2)} · ${rewards.premiumHandsStacks}×`);
+    addRow("Premium Hands", `${fmtShort(Math.pow(3, rewards.premiumHandsStacks))}x · ${rewards.premiumHandsStacks}×`);
   } else addRow("Premium Hands", "Off");
 
   if (rewards.lowRangeStacks > 0) {
-    addRow("Low Hands", `x${Math.pow(1.5, rewards.lowRangeStacks).toFixed(2)} · ${rewards.lowRangeStacks}×`);
+    addRow("Low Hands", `${fmtShort(Math.pow(6, rewards.lowRangeStacks))}x · ${rewards.lowRangeStacks}×`);
   } else addRow("Low Hands", "Off");
 
   if (rewards.boldFacesStacks > 0) {
@@ -1985,13 +1994,13 @@ const REWARD_DEFS = /** @type {const} */ ([
   {
     id: "premiumHands",
     name: "Premium Hands",
-    desc: "Full house+ hands are worth 0.5x more (Stackable)",
+    desc: "Four of a Kind+ hands are worth 3x (Stackable).",
     stack: { kind: "stackable" }
   },
   {
     id: "lowRange",
     name: "Low Hands",
-    desc: "Straights, flushes, trips, and two pair are worth 0.5x more (Stackable)",
+    desc: "Full House and lower hands are worth 6x (Stackable).",
     stack: { kind: "stackable" }
   },
   {
@@ -2107,22 +2116,20 @@ function applyReward(id) {
   if (id === "premiumHands") {
     rewards.premiumHandsStacks += 1;
     lastPickedRewardName = "Premium Hands";
-    const pct = 50 * rewards.premiumHandsStacks;
     const stacks = rewards.premiumHandsStacks;
     enqueueRewardBurst(
       "Premium Hands",
-      `+${fmtBonusXFromPct(pct)} to premium hands (${stacks} stack${stacks === 1 ? "" : "s"})`
+      `Four of a Kind+ is now ${Math.pow(3, stacks)}x (${stacks} stack${stacks === 1 ? "" : "s"})`
     );
     return;
   }
   if (id === "lowRange") {
     rewards.lowRangeStacks += 1;
     lastPickedRewardName = "Low Hands";
-    const pct = 50 * rewards.lowRangeStacks;
     const stacks = rewards.lowRangeStacks;
     enqueueRewardBurst(
       "Low Hands",
-      `+${fmtBonusXFromPct(pct)} to low-range hands (${stacks} stack${stacks === 1 ? "" : "s"})`
+      `Full House and lower is now ${Math.pow(6, stacks)}x (${stacks} stack${stacks === 1 ? "" : "s"})`
     );
     return;
   }
@@ -2330,6 +2337,20 @@ async function processGoalReachedSequence(completedGoalIndex, completedGoalTarge
     await animateCreditsToAsync(completedTarget, 420);
     peakGoalClearedThisRun = Math.max(peakGoalClearedThisRun, completed);
     bumpGoalCelebration();
+
+    if (completed === 11) {
+      enqueueRewardBurst("Heating up!", "You're 1/3 there. Goals will be harder now.");
+    } else if (completed === 21) {
+      enqueueRewardBurst("Final Stretch!", "Can you make it to 31?");
+    }
+
+    if (completed >= 31) {
+      // Winning run: no more goals/rewards.
+      peakGoalClearedThisRun = Math.max(peakGoalClearedThisRun, 31);
+      endRun("win");
+      rerender();
+      return true;
+    }
 
     // Advance to the next goal *before* showing the picker so swap/hint costs reflect the new goal.
     goalIndex = completed + 1;
