@@ -17,9 +17,9 @@ export function cardBaseValue(rank) {
 
 // Hand-type multipliers (tuned for prototype feel; easy to tweak).
 export const HAND_MULT = /** @type {const} */ ({
-  [HAND_TYPE.TWO_PAIR]: 1,
+  [HAND_TYPE.TWO_PAIR]: 2,
   [HAND_TYPE.THREE_OF_A_KIND]: 3,
-  [HAND_TYPE.STRAIGHT]: 5,
+  [HAND_TYPE.STRAIGHT]: 10,
   [HAND_TYPE.FLUSH]: 10,
   [HAND_TYPE.FULL_HOUSE]: 20,
   [HAND_TYPE.FOUR_OF_A_KIND]: 40,
