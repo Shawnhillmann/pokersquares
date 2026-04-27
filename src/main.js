@@ -255,6 +255,14 @@ function fmtShort(n) {
   return v.toLocaleString();
 }
 
+function fmtBonusXFromPct(pct) {
+  const p = Number(pct);
+  if (!Number.isFinite(p) || p === 0) return "0x";
+  const x = Math.round((p / 100) * 100) / 100; // 2 decimals max
+  const s = Math.abs(x - Math.round(x)) < 1e-9 ? String(Math.round(x)) : String(x);
+  return `${s}x`;
+}
+
 function cardScoreValue(card) {
   if (!card) return 0;
   const isJoker = String(card.rank) === "JOKER";
@@ -642,11 +650,11 @@ function updateRewardsTracker() {
     Diagonals: "Diagonals can be scored as poker hands.",
     "Close Enough":
       "Flushes and straights can be made with only 4 cards (includes straight flushes and royal flush).",
-    "Combo Chain": "Each consecutive scored hand in a combo receives a 25% bonus per stack.",
-    "Hand Multiplier": "Each stack adds +25% to all hand multipliers.",
+    "Combo Chain": "Each consecutive scored hand in a combo receives a 0.25x bonus per stack.",
+    "Hand Multiplier": "Each stack adds +0.25x to all hand multipliers.",
     "Premium Hands":
-      "Each stack makes Full House, Four of a Kind, Straight Flush, Five of a Kind, and Royal Flush worth 50% more.",
-    "Low Hands": "Each stack makes Straights, Flushes, Trips, and Two Pair worth 50% more.",
+      "Each stack makes Full House, Four of a Kind, Straight Flush, Five of a Kind, and Royal Flush worth 0.5x more.",
+    "Low Hands": "Each stack makes Straights, Flushes, Trips, and Two Pair worth 0.5x more.",
     "Bolder Faces": "Each stack makes face cards (J/Q/K) and Jokers worth 3x more card value.",
     "Bigger Numbers": "Each stack makes number cards (and Aces) worth 3x more card value.",
     "2X Card Values": "Each stack doubles every card’s value again.",
@@ -778,12 +786,12 @@ function updateRewardsTracker() {
 
   if (rewards.comboBonusStacks > 0) {
     const per = 25 * rewards.comboBonusStacks;
-    addRow("Combo Chain", `+${per}% per chain step · ${rewards.comboBonusStacks}×`);
+    addRow("Combo Chain", `+${fmtBonusXFromPct(per)} per chain step · ${rewards.comboBonusStacks}×`);
   } else addRow("Combo Chain", "Off");
 
   if (rewards.handMultiplierStacks > 0) {
     const pct = 25 * rewards.handMultiplierStacks;
-    addRow("Hand Multiplier", `+${pct}% all hands · ${rewards.handMultiplierStacks}×`);
+    addRow("Hand Multiplier", `+${fmtBonusXFromPct(pct)} all hands · ${rewards.handMultiplierStacks}×`);
   } else addRow("Hand Multiplier", "Off");
 
   if (rewards.premiumHandsStacks > 0) {
@@ -1857,7 +1865,7 @@ function showHandBurst({ label, type, credits, chainPct = 0, luckyMult = 0 }) {
   const amt = Math.max(0, Math.floor(Number(credits) || 0));
   const chain =
     chainPct > 0
-      ? `<span class="handBurst__chain" aria-label="Combo Chain bonus">${Math.round(chainPct)}%</span>`
+      ? `<span class="handBurst__chain" aria-label="Combo Chain bonus">+${fmtBonusXFromPct(chainPct)}</span>`
       : "";
 
   const shown = fmtShort(amt);
@@ -1959,19 +1967,19 @@ const REWARD_DEFS = /** @type {const} */ ([
   {
     id: "comboBonus",
     name: "Combo Chain",
-    desc: "Each consecutive scored hand in a combo receives a 25% bonus (Stackable)",
+    desc: "Each consecutive scored hand in a combo receives a 0.25x bonus (Stackable)",
     stack: { kind: "stackable" }
   },
   {
     id: "premiumHands",
     name: "Premium Hands",
-    desc: "Full house+ hands are worth 50% more (Stackable)",
+    desc: "Full house+ hands are worth 0.5x more (Stackable)",
     stack: { kind: "stackable" }
   },
   {
     id: "lowRange",
     name: "Low Hands",
-    desc: "Straights, flushes, trips, and two pair are worth 50% more (Stackable)",
+    desc: "Straights, flushes, trips, and two pair are worth 0.5x more (Stackable)",
     stack: { kind: "stackable" }
   },
   {
@@ -1995,7 +2003,7 @@ const REWARD_DEFS = /** @type {const} */ ([
   {
     id: "handMultiplier",
     name: "Hand Multiplier",
-    desc: "Increases all hand type scores by 25% (Stackable)",
+    desc: "Increases all hand type scores by 0.25x (Stackable)",
     stack: { kind: "stackable" }
   },
   {
@@ -2080,7 +2088,7 @@ function applyReward(id) {
     const stacks = rewards.comboBonusStacks;
     enqueueRewardBurst(
       "Combo Chain",
-      `+${pct}% per chain step (${stacks} stack${stacks === 1 ? "" : "s"})`
+      `+${fmtBonusXFromPct(pct)} per chain step (${stacks} stack${stacks === 1 ? "" : "s"})`
     );
     return;
   }
@@ -2091,7 +2099,7 @@ function applyReward(id) {
     const stacks = rewards.premiumHandsStacks;
     enqueueRewardBurst(
       "Premium Hands",
-      `+${pct}% to premium hands (${stacks} stack${stacks === 1 ? "" : "s"})`
+      `+${fmtBonusXFromPct(pct)} to premium hands (${stacks} stack${stacks === 1 ? "" : "s"})`
     );
     return;
   }
@@ -2102,7 +2110,7 @@ function applyReward(id) {
     const stacks = rewards.lowRangeStacks;
     enqueueRewardBurst(
       "Low Hands",
-      `+${pct}% to low-range hands (${stacks} stack${stacks === 1 ? "" : "s"})`
+      `+${fmtBonusXFromPct(pct)} to low-range hands (${stacks} stack${stacks === 1 ? "" : "s"})`
     );
     return;
   }
@@ -2140,7 +2148,7 @@ function applyReward(id) {
     rewards.handMultiplierStacks += 1;
     lastPickedRewardName = "Hand Multiplier";
     const pct = 25 * rewards.handMultiplierStacks;
-    enqueueRewardBurst("Hand Multiplier", `+${pct}% to all hand scores`);
+    enqueueRewardBurst("Hand Multiplier", `+${fmtBonusXFromPct(pct)} to all hand scores`);
     syncHandChartScores();
     return;
   }
