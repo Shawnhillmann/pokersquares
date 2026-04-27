@@ -302,6 +302,13 @@ export const sfx = {
         playMetal({ freq: 880 + Math.min(6, combo) * 60, dur: 0.13, strength: strength2 });
       }
     }
+  },
+
+  luckyRiver() {
+    // Bright "jackpot" ping: coin + sparkle.
+    playMetal({ freq: 1240, dur: 0.14, strength: 1.15 });
+    setTimeout(() => playTone({ freq: 1560, dur: 0.08, type: "sine", sweepTo: 2080 }), 70);
+    setTimeout(() => playNoise({ dur: 0.04, highpassHz: 2000 }), 40);
   }
 };
 

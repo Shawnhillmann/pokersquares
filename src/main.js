@@ -106,6 +106,8 @@ const rewards = {
   biggerNumbersStacks: 0,
   /** Times Pocket Rockets picked; each quadruples Ace card value (stackable multiplier). */
   pocketRocketsStacks: 0,
+  /** Times Lucky River picked; each adds +5% proc chance to x5 a scored hand. */
+  luckyRiverStacks: 0,
   /** One-time: flushes/straights can be made with 4 cards (incl. straight/royal flush). */
   closeEnough: false,
   jokerWildcard: false, // Goal 3
@@ -531,6 +533,7 @@ function updateRewardsTracker() {
     "Bolder Faces": "Each stack makes face cards (J/Q/K) and Jokers worth 3x more card value.",
     "Bigger Numbers": "Each stack makes number cards (and Aces) worth 3x more card value.",
     "2X Card Values": "Each stack doubles every card’s value again.",
+    "Lucky River": "Each stack adds +5% chance for scored hands to pay x5.",
     "Random Hints": "Grants a chance for free hints to appear.",
     "Swap Coupons": "Each stack reduces swap cost by 10% (applied after goal scaling).",
     "Trips Disabled": "Three of a kind lines no longer clear.",
@@ -685,6 +688,10 @@ function updateRewardsTracker() {
   if (rewards.doubleCardValueStacks > 0) {
     addRow("2X Card Values", `x${Math.pow(2, rewards.doubleCardValueStacks)} · ${rewards.doubleCardValueStacks}× picked`);
   } else addRow("2X Card Values", "Off");
+
+  if (rewards.luckyRiverStacks > 0) {
+    addRow("Lucky River", `x5 @ ${5 * rewards.luckyRiverStacks}% · ${rewards.luckyRiverStacks}×`);
+  } else addRow("Lucky River", "Off");
 
   if (rewards.randomHints) {
     addRow("Random Hints", `${Math.round(randomHintChance * 100)}% roll · ${randomHintsPickCount} picked`);
@@ -1223,6 +1230,7 @@ ui.newGameBtn.addEventListener("click", () => {
   rewards.boldFacesStacks = 0;
   rewards.biggerNumbersStacks = 0;
   rewards.pocketRocketsStacks = 0;
+  rewards.luckyRiverStacks = 0;
   rewards.closeEnough = false;
   rewards.jokerWildcard = false;
   rewards.diagonalsScored = false;
@@ -1273,6 +1281,7 @@ ui.restartBtn.addEventListener("click", () => {
   rewards.boldFacesStacks = 0;
   rewards.biggerNumbersStacks = 0;
   rewards.pocketRocketsStacks = 0;
+  rewards.luckyRiverStacks = 0;
   rewards.closeEnough = false;
   rewards.jokerWildcard = false;
   rewards.diagonalsScored = false;
@@ -1711,7 +1720,7 @@ function burstGoldWin(x, y, intensity = 1) {
   }
 }
 
-function showHandBurst({ label, type, credits, chainPct = 0 }) {
+function showHandBurst({ label, type, credits, chainPct = 0, luckyMult = 0 }) {
   const host = ui.board.parentElement;
   if (!host) return;
   const rect = ui.board.getBoundingClientRect();
@@ -1729,7 +1738,9 @@ function showHandBurst({ label, type, credits, chainPct = 0 }) {
     chainPct > 0
       ? `<span class="handBurst__chain" aria-label="Combo Chain bonus">${Math.round(chainPct)}%</span>`
       : "";
-  n.innerHTML = `<div class="handBurst__label">${label}${chain}</div><div class="handBurst__credits">+${amt.toLocaleString()}</div>`;
+  const lucky =
+    luckyMult > 0 ? `<span class="handBurst__lucky" aria-label="Lucky River">x${Math.round(luckyMult)}</span>` : "";
+  n.innerHTML = `<div class="handBurst__label">${label}${chain}${lucky}</div><div class="handBurst__credits">+${amt.toLocaleString()}</div>`;
   host.append(n);
   requestAnimationFrame(() => n.classList.add("is-showing"));
 
@@ -1793,6 +1804,12 @@ const rewardBurstQueue = [];
 let rewardBurstShowing = false;
 
 const REWARD_DEFS = /** @type {const} */ ([
+  {
+    id: "luckyRiver",
+    name: "Lucky River",
+    desc: "Scored hands have a 5% chance to x5 their reward (Stackable).",
+    stack: { kind: "stackable" }
+  },
   {
     id: "randomHints",
     name: "Random Hints",
@@ -2021,6 +2038,14 @@ function applyReward(id) {
     lastPickedRewardName = "2X Card Values";
     const mult = Math.pow(2, rewards.doubleCardValueStacks);
     enqueueRewardBurst("2X Card Values", `Card values are now x${mult}`);
+    return;
+  }
+  if (id === "luckyRiver") {
+    rewards.luckyRiverStacks += 1;
+    lastPickedRewardName = "Lucky River";
+    const stacks = rewards.luckyRiverStacks;
+    const pct = Math.min(95, 5 * stacks);
+    enqueueRewardBurst("Lucky River", `${pct}% chance to x5 scored hands`);
     return;
   }
   if (id === "noClearTwoPair") {
@@ -2793,9 +2818,23 @@ async function resolveCascades() {
       const chainStacks = Math.max(0, Math.floor(rewards.comboBonusStacks || 0));
       const chainStep = Math.max(0, (state.comboStep || 1) - 1);
       const comboMult = chainStacks > 0 && chainStep > 0 ? 1 + 0.25 * chainStacks * chainStep : 1;
-      const gained = Math.floor(lineScore * comboMult * rewardMult * handScoreMultForReward(line.type));
+      let gained = Math.floor(lineScore * comboMult * rewardMult * handScoreMultForReward(line.type));
+      const lrStacks = Math.max(0, Math.floor(rewards.luckyRiverStacks || 0));
+      const lrChance = lrStacks <= 0 ? 0 : Math.min(0.95, 0.05 * lrStacks);
+      const lrRoll = lrChance > 0 ? state.rng.int(1_000_000) / 1_000_000 : 1;
+      const luckyTriggered = lrChance > 0 && lrRoll < lrChance;
+      if (luckyTriggered) {
+        gained *= 5;
+        sfx.luckyRiver?.();
+      }
       const chainPct = chainStacks > 0 ? 25 * chainStacks * chainStep : 0;
-      const handBurstEl = showHandBurst({ label: line.label, type: line.type, credits: gained, chainPct });
+      const handBurstEl = showHandBurst({
+        label: line.label,
+        type: line.type,
+        credits: gained,
+        chainPct,
+        luckyMult: luckyTriggered ? 5 : 0
+      });
       // Ensure the line highlight is visible before the sequential grow starts.
       await sleep(comboDelayMs(45, state.comboStep));
       await pulseScoredLine(line, state.comboStep, contribCells, dimCells, () => {}, handBurstEl);
