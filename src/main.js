@@ -249,7 +249,7 @@ function cardScoreValue(card) {
   const baseUnmult = rewards.jokerWildcard && isJoker ? 10 : cardBaseValue(String(card.rank));
   let base = baseUnmult;
   if (isAce) base *= aceMult;
-  if (isFace) base *= faceMult;
+  if (isFace || isJoker) base *= faceMult;
   if (isNumberLike) base *= numMult;
   const stacks = Math.max(0, Math.floor(rewards.doubleCardValueStacks || 0));
   const mult = stacks <= 0 ? 1 : Math.pow(2, stacks);
@@ -407,7 +407,7 @@ function updateRewardsTracker() {
     "Premium Hands":
       "Each stack makes Full House, Four of a Kind, Straight Flush, Five of a Kind, and Royal Flush worth 50% more.",
     "Low Hands": "Each stack makes Straights, Flushes, Trips, and Two Pair worth 50% more.",
-    "Bolder Faces": "Each stack makes face cards (J/Q/K) worth 3x more card value.",
+    "Bolder Faces": "Each stack makes face cards (J/Q/K) and Jokers worth 3x more card value.",
     "Bigger Numbers": "Each stack makes number cards (and Aces) worth 3x more card value.",
     "2X Card Values": "Each stack doubles every card’s value again.",
     "Random Hints": "Grants a chance for free hints to appear.",
@@ -1701,7 +1701,7 @@ const REWARD_DEFS = /** @type {const} */ ([
   {
     id: "boldFaces",
     name: "Bolder Faces",
-    desc: "Face cards (J/Q/K) are worth 3x more (Stackable)",
+    desc: "Face cards (J/Q/K) and Jokers are worth 3x more (Stackable)",
     stack: { kind: "stackable" }
   },
   {
@@ -1829,7 +1829,7 @@ function applyReward(id) {
     const stacks = rewards.boldFacesStacks;
     enqueueRewardBurst(
       "Bolder Faces",
-      `Face cards are now x${Math.pow(3, stacks)} value (${stacks} stack${stacks === 1 ? "" : "s"})`
+      `Face cards and Jokers are now x${Math.pow(3, stacks)} value (${stacks} stack${stacks === 1 ? "" : "s"})`
     );
     return;
   }
