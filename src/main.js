@@ -38,6 +38,7 @@ const ui = {
   goalFill: /** @type {HTMLElement|null} */ (document.getElementById("goalFill")),
   goalReward: /** @type {HTMLElement|null} */ (document.getElementById("goalReward")),
   goalLabelTitle: /** @type {HTMLElement|null} */ (document.getElementById("goalLabelTitle")),
+  lastSwapLine: /** @type {HTMLElement|null} */ (document.getElementById("lastSwapLine")),
   swapCostLine: /** @type {HTMLElement|null} */ (document.getElementById("swapCostLine")),
   howToSwapCost: /** @type {HTMLElement|null} */ (document.getElementById("howToSwapCost")),
   howToHintCost: /** @type {HTMLElement|null} */ (document.getElementById("howToHintCost")),
@@ -609,6 +610,13 @@ const viewFx = {
 let peakCreditsThisRun = 0;
 /** Highest numbered goal cleared this run (1–5); 0 if none yet. */
 let peakGoalClearedThisRun = 0;
+/** Combined credits gained from the most recent swap (incl. combo/cascades). */
+let lastSwapTotal = 0;
+function setLastSwapTotal(v) {
+  lastSwapTotal = Math.max(0, Math.floor(Number(v) || 0));
+  if (!ui.lastSwapLine) return;
+  ui.lastSwapLine.textContent = `Last Swap Total: ${lastSwapTotal > 0 ? fmtShort(lastSwapTotal) : "-"}`;
+}
 
 function updateHud() {
   const credits = Math.max(0, Math.floor(state.credits));
@@ -1323,6 +1331,7 @@ ui.newGameBtn.addEventListener("click", () => {
   clearSavedRun();
   successfulMoves = 0;
   ui.runEndModal.setAttribute("hidden", "");
+  setLastSwapTotal(0);
   newGame(state);
   goalIndex = 1;
   goalTarget = goalTargetForIndex(1);
@@ -1374,6 +1383,7 @@ ui.restartBtn.addEventListener("click", () => {
   successfulMoves = 0;
   ui.runEndModal.setAttribute("hidden", "");
   clearSavedRun();
+  setLastSwapTotal(0);
   newGame(state);
   goalIndex = 1;
   goalTarget = goalTargetForIndex(1);
@@ -2909,6 +2919,8 @@ async function onCellClick(pos) {
   sfx.swapSuccess();
   successfulMoves += 1;
   await resolveCascades();
+  // Show combined total for the swap (including combo/cascade lines).
+  setLastSwapTotal(lastSwapTotal);
   // End only if the player can no longer afford a swap.
   if (checkCantAffordSwapAndEnd()) return;
   state.busy = false;
@@ -2921,6 +2933,8 @@ async function resolveCascades() {
   state.comboStep = 0;
   state.lastHands = [];
   let gainedTotal = 0;
+  // Track per-swap total separately; reset each swap.
+  let swapTotal = 0;
   const goalAtComboStart = goalTarget;
   let stopAfterGoalClear = false;
   let goalClearedThisResolve = false;
@@ -2999,6 +3013,7 @@ async function resolveCascades() {
       const goalIndexBefore = goalIndex;
       state.credits += applied;
       gainedTotal += applied;
+      swapTotal += applied;
 
       sfx.scoreHand(line.type, state.comboStep);
       rerender();
@@ -3108,11 +3123,15 @@ async function resolveCascades() {
 
       if (goalClearedIndex > 0) {
         // Show rewards only after the scored line fully resolves (clear → refill).
+        setLastSwapTotal(0); // reset to "-" for the new goal, per UX request
         await processGoalReachedSequence(goalClearedIndex, goalClearedTarget);
       }
       break;
     }
   }
+
+  // Only publish swap total when the swap completes without goal clear.
+  if (!goalClearedThisResolve) setLastSwapTotal(swapTotal);
 
   state.comboStep = 0;
   // Special-case: Goal 1 big wins are too frequent; only show 75%+ tier there.
