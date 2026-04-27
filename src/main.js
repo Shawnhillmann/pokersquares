@@ -1340,6 +1340,7 @@ ui.newGameBtn.addEventListener("click", () => {
   successfulMoves = 0;
   ui.runEndModal.setAttribute("hidden", "");
   setLastSwapTotal(0);
+  goalSequenceActive = false;
   newGame(state);
   goalIndex = 1;
   goalTarget = goalTargetForIndex(1);
@@ -1370,6 +1371,10 @@ ui.newGameBtn.addEventListener("click", () => {
   // Keep main/gameState.js in sync for the starting bankroll.
   state.credits = STARTING_POINTS;
   peakCreditsThisRun = STARTING_POINTS;
+  // Hard reset progress/credit animation state so the goal bar can't carry over.
+  setCreditsInstant(state.credits);
+  lastGoalTextCredits = -1;
+  ui.goalBar?.querySelector(".goalBlock")?.classList.remove("is-goal-passed", "is-goal-win");
   showToast(ui.toast, "New deal");
   rerender();
   syncHandChartScores();
@@ -1392,6 +1397,7 @@ ui.restartBtn.addEventListener("click", () => {
   ui.runEndModal.setAttribute("hidden", "");
   clearSavedRun();
   setLastSwapTotal(0);
+  goalSequenceActive = false;
   newGame(state);
   goalIndex = 1;
   goalTarget = goalTargetForIndex(1);
@@ -1421,6 +1427,10 @@ ui.restartBtn.addEventListener("click", () => {
   peakGoalClearedThisRun = 0;
   state.credits = STARTING_POINTS;
   peakCreditsThisRun = STARTING_POINTS;
+  // Hard reset progress/credit animation state so the goal bar can't carry over.
+  setCreditsInstant(state.credits);
+  lastGoalTextCredits = -1;
+  ui.goalBar?.querySelector(".goalBlock")?.classList.remove("is-goal-passed", "is-goal-win");
   rerender();
   syncHandChartScores();
   if (settings.music) {
