@@ -1839,7 +1839,9 @@ html.is-mobile .cardFace:not(.cardFace--jokerArt) img.cardPip--faceArt {
   align-items: center;
   gap: 6px;
   text-align: center;
-  max-width: min(92vw, 420px);
+  width: clamp(240px, 78vw, 420px);
+  min-height: 96px;
+  max-width: 92vw;
   transition: opacity 140ms ease, transform 140ms ease;
 }
 
@@ -1850,11 +1852,23 @@ html.is-mobile .cardFace:not(.cardFace--jokerArt) img.cardPip--faceArt {
   color: rgba(247, 215, 116, 0.98);
   text-shadow: 0 0 22px rgba(247, 215, 116, 0.18), 0 18px 44px rgba(0, 0, 0, 0.62);
   line-height: 1.05;
-  font-size: 28px;
+  font-size: clamp(22px, 3.2vw, 28px);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+}
+
+.handBurst__labelText {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .handBurst__chain {
-  margin-left: 8px;
+  margin-left: 10px;
   padding: 2px 6px;
   border-radius: 999px;
   border: 1px solid rgba(247, 215, 116, 0.22);
@@ -1864,7 +1878,7 @@ html.is-mobile .cardFace:not(.cardFace--jokerArt) img.cardPip--faceArt {
   letter-spacing: 0.06em;
   font-size: 12px;
   display: inline-block;
-  transform: translateY(-3px);
+  transform: translateY(-1px);
   text-shadow: none;
 }
 
@@ -1879,17 +1893,35 @@ html.is-mobile .cardFace:not(.cardFace--jokerArt) img.cardPip--faceArt {
   letter-spacing: 0.06em;
   font-size: 12px;
   display: inline-block;
-  transform: translateY(-3px);
+  transform: translateY(-1px);
   text-shadow: none;
 }
 
 .handBurst__credits {
-  font-size: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: clamp(18px, 2.8vw, 22px);
   font-weight: 950;
   letter-spacing: 0.06em;
   text-transform: none;
   color: rgba(247, 215, 116, 0.98);
   text-shadow: 0 0 22px rgba(247, 215, 116, 0.18), 0 18px 44px rgba(0, 0, 0, 0.62);
+  font-variant-numeric: tabular-nums;
+}
+
+.handBurst__amt {
+  display: inline-block;
+}
+
+.handBurst.handBurst--n1 .handBurst__credits {
+  font-size: clamp(16px, 2.6vw, 20px);
+}
+.handBurst.handBurst--n2 .handBurst__credits {
+  font-size: clamp(15px, 2.4vw, 18px);
+}
+.handBurst.handBurst--n3 .handBurst__credits {
+  font-size: clamp(14px, 2.2vw, 16px);
 }
 
 /* .handBurst__mult removed (kept centered popup) */

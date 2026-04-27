@@ -307,63 +307,70 @@ function upgradeEvalForCloseEnough(baseEval, cards, jokerWild) {
     2: 2
   };
 
-  let wild = 0;
-  /** @type {{v:number,s:string}[]} */
+  /** @type {{ idx:number, v:number, s:string }[]} */
   const fixed = [];
-  for (const c of cards) {
+  /** @type {number[]} */
+  const wildIdxs = [];
+  for (let i = 0; i < cards.length; i++) {
+    const c = cards[i];
     const r = String(c.rank);
-    if (jokerWild && r === "JOKER") wild += 1;
+    if (jokerWild && r === "JOKER") wildIdxs.push(i);
     else {
       const v = RANK_TO_VALUE[r];
       if (!v) continue;
-      fixed.push({ v, s: String(c.suit) });
+      fixed.push({ idx: i, v, s: String(c.suit) });
     }
   }
 
   const best = (() => {
     // Royal Flush (4 of 5 ranks) in one suit.
     for (const s of SUITS) {
-      const vals = new Set(fixed.filter((c) => c.s === s).map((c) => c.v));
-      const royalSet = new Set([10, 11, 12, 13, 14]);
-      let have = 0;
-      for (const v of vals) if (royalSet.has(v)) have += 1;
-      if (have + wild >= 4) return HAND_TYPE.ROYAL_FLUSH;
+      const royal = pickRoyal4IdxsInSuit(s);
+      if (royal) return { type: HAND_TYPE.ROYAL_FLUSH, idxs: royal };
     }
 
     // Straight Flush (4-card straight) in one suit.
     for (const s of SUITS) {
-      const vals = new Set(fixed.filter((c) => c.s === s).map((c) => c.v));
-      if (straight4Possible(vals, wild)) return HAND_TYPE.STRAIGHT_FLUSH;
+      const sf = pickStraight4IdxsInSuit(s);
+      if (sf) return { type: HAND_TYPE.STRAIGHT_FLUSH, idxs: sf };
     }
 
     // Flush (4 cards same suit).
     for (const s of SUITS) {
-      const count = fixed.filter((c) => c.s === s).length;
-      if (count + wild >= 4) return HAND_TYPE.FLUSH;
+      const fl = pickFlush4IdxsInSuit(s);
+      if (fl) return { type: HAND_TYPE.FLUSH, idxs: fl };
     }
 
     // Straight (4-card straight).
-    const valsAll = new Set(fixed.map((c) => c.v));
-    if (straight4Possible(valsAll, wild)) return HAND_TYPE.STRAIGHT;
+    const st = pickStraight4IdxsAllSuits();
+    if (st) return { type: HAND_TYPE.STRAIGHT, idxs: st };
 
     return null;
   })();
 
   if (!best) return baseEval;
-  const bestP = HAND_PRIORITY[best] ?? 0;
+  const bestP = HAND_PRIORITY[best.type] ?? 0;
   const baseP = HAND_PRIORITY[baseType] ?? (baseEval?.priority ?? 0);
   if (bestP <= baseP) return baseEval;
 
   return {
     ...baseEval,
-    type: best,
-    label: HAND_LABEL[best] ?? String(best),
+    type: best.type,
+    label: HAND_LABEL[best.type] ?? String(best.type),
     priority: bestP,
-    isScoring: best !== HAND_TYPE.HIGH_CARD,
+    isScoring: best.type !== HAND_TYPE.HIGH_CARD,
     meta: {
       ...(baseEval?.meta || {}),
-      isFlush: best === HAND_TYPE.FLUSH || best === HAND_TYPE.STRAIGHT_FLUSH || best === HAND_TYPE.ROYAL_FLUSH,
-      isStraight: best === HAND_TYPE.STRAIGHT || best === HAND_TYPE.STRAIGHT_FLUSH || best === HAND_TYPE.ROYAL_FLUSH
+      isFlush:
+        best.type === HAND_TYPE.FLUSH ||
+        best.type === HAND_TYPE.STRAIGHT_FLUSH ||
+        best.type === HAND_TYPE.ROYAL_FLUSH,
+      isStraight:
+        best.type === HAND_TYPE.STRAIGHT ||
+        best.type === HAND_TYPE.STRAIGHT_FLUSH ||
+        best.type === HAND_TYPE.ROYAL_FLUSH,
+      // Close Enough: which 4 cards are the actual hand (5th is a kicker unless Good Kickers).
+      closeEnoughIdxs: Array.isArray(best.idxs) ? best.idxs.slice(0, 4) : null
     }
   };
 
@@ -385,6 +392,93 @@ function upgradeEvalForCloseEnough(baseEval, cards, jokerWild) {
       if (have + wilds >= 4) return true;
     }
     return false;
+  }
+
+  function pickFlush4IdxsInSuit(s) {
+    const inSuit = fixed.filter((c) => c.s === s).map((c) => c.idx);
+    if (inSuit.length + wildIdxs.length < 4) return null;
+    const idxs = [];
+    for (const i of inSuit) {
+      idxs.push(i);
+      if (idxs.length >= 4) break;
+    }
+    for (const i of wildIdxs) {
+      if (idxs.length >= 4) break;
+      idxs.push(i);
+    }
+    return idxs.length === 4 ? idxs : null;
+  }
+
+  function pickRoyal4IdxsInSuit(s) {
+    const royalSet = new Set([10, 11, 12, 13, 14]);
+    const byV = new Map();
+    for (const c of fixed) {
+      if (c.s !== s) continue;
+      if (!royalSet.has(c.v)) continue;
+      const arr = byV.get(c.v);
+      if (arr) arr.push(c.idx);
+      else byV.set(c.v, [c.idx]);
+    }
+    let have = 0;
+    for (const v of royalSet) if (byV.has(v)) have += 1;
+    if (have + wildIdxs.length < 4) return null;
+    const idxs = [];
+    for (const v of [10, 11, 12, 13, 14]) {
+      const arr = byV.get(v);
+      if (arr && arr.length) idxs.push(arr[0]);
+      if (idxs.length >= 4) break;
+    }
+    for (const wi of wildIdxs) {
+      if (idxs.length >= 4) break;
+      idxs.push(wi);
+    }
+    return idxs.length === 4 ? idxs : null;
+  }
+
+  function pickStraight4IdxsFromFixed(valsSet, fixedCandidates) {
+    // 4-card sequences: hi..hi-3, plus A234 special.
+    /** @type {number[][]} */
+    const seqs = [];
+    seqs.push([14, 2, 3, 4]); // A234
+    for (let hi = 14; hi >= 5; hi--) seqs.push([hi, hi - 1, hi - 2, hi - 3]);
+
+    const byV = new Map();
+    for (const c of fixedCandidates) {
+      const arr = byV.get(c.v);
+      if (arr) arr.push(c.idx);
+      else byV.set(c.v, [c.idx]);
+    }
+
+    for (const seq of seqs) {
+      let have = 0;
+      for (const v of seq) if (valsSet.has(v)) have += 1;
+      if (have + wildIdxs.length < 4) continue;
+      const idxs = [];
+      for (const v of seq) {
+        const arr = byV.get(v);
+        if (arr && arr.length) idxs.push(arr[0]);
+        if (idxs.length >= 4) break;
+      }
+      for (const wi of wildIdxs) {
+        if (idxs.length >= 4) break;
+        idxs.push(wi);
+      }
+      if (idxs.length === 4) return idxs;
+    }
+    return null;
+  }
+
+  function pickStraight4IdxsInSuit(s) {
+    const fixedCandidates = fixed.filter((c) => c.s === s);
+    const valsSet = new Set(fixedCandidates.map((c) => c.v));
+    if (!straight4Possible(valsSet, wildIdxs.length)) return null;
+    return pickStraight4IdxsFromFixed(valsSet, fixedCandidates);
+  }
+
+  function pickStraight4IdxsAllSuits() {
+    const valsSet = new Set(fixed.map((c) => c.v));
+    if (!straight4Possible(valsSet, wildIdxs.length)) return null;
+    return pickStraight4IdxsFromFixed(valsSet, fixed);
   }
 }
 
@@ -1734,13 +1828,42 @@ function showHandBurst({ label, type, credits, chainPct = 0, luckyMult = 0 }) {
   n.style.left = `${x}px`;
   n.style.top = `${y}px`;
   const amt = Math.max(0, Math.floor(Number(credits) || 0));
+  const lucky =
+    luckyMult > 0 ? `<span class="handBurst__lucky" aria-label="Lucky River">x${Math.round(luckyMult)}</span>` : "";
   const chain =
     chainPct > 0
       ? `<span class="handBurst__chain" aria-label="Combo Chain bonus">${Math.round(chainPct)}%</span>`
       : "";
-  const lucky =
-    luckyMult > 0 ? `<span class="handBurst__lucky" aria-label="Lucky River">x${Math.round(luckyMult)}</span>` : "";
-  n.innerHTML = `<div class="handBurst__label">${label}${chain}${lucky}</div><div class="handBurst__credits">+${amt.toLocaleString()}</div>`;
+
+  const fmtBig = (n) => {
+    const v = Math.max(0, Math.floor(Number(n) || 0));
+    if (v < 1000) return String(v);
+    const UNITS = [
+      { v: 1e12, s: "t" },
+      { v: 1e9, s: "b" },
+      { v: 1e6, s: "m" },
+      { v: 1e3, s: "k" }
+    ];
+    for (const u of UNITS) {
+      if (v >= u.v) {
+        const x = v / u.v;
+        const oneDec = Math.round(x * 10) / 10;
+        const s = oneDec % 1 === 0 ? String(Math.round(oneDec)) : oneDec.toFixed(1);
+        return `${s}${u.s}`;
+      }
+    }
+    return String(v);
+  };
+
+  const shown = fmtBig(amt);
+  const len = shown.length;
+  if (len >= 9) n.classList.add("handBurst--n3");
+  else if (len >= 7) n.classList.add("handBurst--n2");
+  else if (len >= 5) n.classList.add("handBurst--n1");
+
+  n.innerHTML =
+    `<div class="handBurst__label"><span class="handBurst__labelText">${label}</span>${lucky}</div>` +
+    `<div class="handBurst__credits"><span class="handBurst__amt">+${shown}</span>${chain}</div>`;
   host.append(n);
   requestAnimationFrame(() => n.classList.add("is-showing"));
 
@@ -2350,12 +2473,13 @@ function rankToValue14(rank) {
  * @param {{ type:string, label:string, cells:{r:number,c:number}[] }} line
  */
 function getContributionMaskForBoard(board, line) {
-  const cards = line.cells.map((p) => board[p.r][p.c]).filter(Boolean);
-  if (cards.length !== 5) {
+  const cards = line.cells.map((p) => board[p.r][p.c]);
+  const present = cards.filter(Boolean);
+  if (present.length !== 5) {
     return { contrib: new Set(), dim: new Set(), contribCells: [] };
   }
 
-  const evald = scoringOpts().evaluateHand(cards);
+  const evald = scoringOpts().evaluateHand(present);
   const vc = evald.meta.valueCounts;
 
   /** @type {Set<number>|null} */
@@ -2377,6 +2501,34 @@ function getContributionMaskForBoard(board, line) {
   const contribCells = [];
   /** @type {{r:number,c:number}[]} */
   const dimCells = [];
+
+  const addPicked = (p) => {
+    const k = `${p.r},${p.c}`;
+    if (contrib.has(k)) return;
+    contrib.add(k);
+    contribCells.push(p);
+  };
+
+  // Close Enough: if we upgraded a straight/flush via 4 cards, treat the 5th as a kicker
+  // unless the player has "Good Kickers".
+  if (!rewards.kickersCount && evald?.meta?.closeEnoughIdxs && Array.isArray(evald.meta.closeEnoughIdxs)) {
+    const pick = new Set(evald.meta.closeEnoughIdxs.map((i) => Number(i)).filter((i) => i >= 0 && i < 5));
+    if (pick.size > 0) {
+      for (let i = 0; i < line.cells.length; i++) {
+        const p = line.cells[i];
+        if (pick.has(i)) addPicked(p);
+      }
+      for (let i = 0; i < line.cells.length; i++) {
+        const p = line.cells[i];
+        const k = `${p.r},${p.c}`;
+        if (contrib.has(k)) continue;
+        if (!board[p.r][p.c]) continue;
+        dim.add(k);
+        dimCells.push(p);
+      }
+      return { contrib, dim, contribCells, dimCells };
+    }
+  }
 
   // Wildcards: keep kickers excluded unless the player has "Kickers Count".
   // We always include Joker cards as contributors, then fill contributing ranks up to the target size.
@@ -2411,18 +2563,17 @@ function getContributionMaskForBoard(board, line) {
 
     /** @type {Set<string>} */
     const pickedKeys = new Set();
-    const addPicked = (p) => {
+    const addPicked2 = (p) => {
       const k = `${p.r},${p.c}`;
       if (pickedKeys.has(k)) return;
       pickedKeys.add(k);
-      contrib.add(k);
-      contribCells.push(p);
+      addPicked(p);
     };
 
     // Always count jokers as contributing cards.
     for (const j of jokers) {
       if (contribCells.length >= target) break;
-      addPicked(j.p);
+      addPicked2(j.p);
     }
 
     // Add the main group ranks first (pairs/trips/quads) if they exist among fixed cards.
@@ -2432,7 +2583,7 @@ function getContributionMaskForBoard(board, line) {
         if (!group) continue;
         for (const it of group.items) {
           if (contribCells.length >= target) break;
-          addPicked(it.p);
+          addPicked2(it.p);
         }
         if (contribCells.length >= target) break;
       }
@@ -2450,7 +2601,7 @@ function getContributionMaskForBoard(board, line) {
         });
       for (const it of remaining) {
         if (contribCells.length >= target) break;
-        addPicked(it.p);
+        addPicked2(it.p);
       }
     }
 
