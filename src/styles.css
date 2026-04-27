@@ -463,7 +463,7 @@ body {
   width: var(--game-stack-w);
   max-width: 100%;
   margin: 0 auto;
-  padding: 6px 0 10px;
+  padding: 4px 0 6px;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -709,6 +709,13 @@ main.stage {
   min-height: 0;
 }
 
+/* Desktop/tablet: top-align columns so center stack matches side panels. */
+@media (min-width: 721px) {
+  .stage {
+    align-items: start;
+  }
+}
+
 .table {
   position: relative;
   padding: var(--table-pad-x);
@@ -722,7 +729,7 @@ main.stage {
   width: var(--game-stack-w);
   max-width: 100%;
   margin: 0 auto;
-  padding: 4px 0;
+  padding: 2px 0;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -754,7 +761,7 @@ main.stage {
   justify-items: center;
   justify-self: center;
   width: 100%;
-  padding-top: 2px;
+  padding-top: 0;
   box-sizing: border-box;
 }
 
@@ -764,7 +771,7 @@ main.stage {
   align-items: stretch;
   gap: 10px;
   flex-wrap: wrap;
-  margin-top: 10px;
+  margin-top: 6px;
 }
 
 .belowGameStack {
