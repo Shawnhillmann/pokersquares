@@ -1768,6 +1768,14 @@ html.is-mobile .cardFace:not(.cardFace--jokerArt) img.cardPip--faceArt {
   transition: opacity 140ms ease, transform 140ms ease;
 }
 
+.pipPopup.pipPopup--3d {
+  font-size: 15px;
+}
+
+.pipPopup.pipPopup--k {
+  font-size: 15px;
+}
+
 .pipPopup.is-showing {
   opacity: 1;
   transform: translate(-50%, -50%) translateY(0px);
@@ -1843,6 +1851,21 @@ html.is-mobile .cardFace:not(.cardFace--jokerArt) img.cardPip--faceArt {
   text-shadow: 0 0 22px rgba(247, 215, 116, 0.18), 0 18px 44px rgba(0, 0, 0, 0.62);
   line-height: 1.05;
   font-size: 28px;
+}
+
+.handBurst__chain {
+  margin-left: 8px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  border: 1px solid rgba(247, 215, 116, 0.22);
+  background: rgba(247, 180, 64, 0.08);
+  color: rgba(247, 215, 116, 0.98);
+  font-weight: 850;
+  letter-spacing: 0.06em;
+  font-size: 12px;
+  display: inline-block;
+  transform: translateY(-3px);
+  text-shadow: none;
 }
 
 .handBurst__credits {

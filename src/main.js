@@ -1476,11 +1476,21 @@ function showCardValuePopup(p, value, opts = {}) {
   const pop = document.createElement("div");
   pop.className = "pipPopup";
   if (opts.variant === "zero") pop.classList.add("pipPopup--zero");
-  pop.textContent = opts.variant === "zero" ? "0" : `+${value}`;
+  const abs = Math.max(0, Math.floor(Number(value) || 0));
+  const fmtK = (n) => {
+    if (n < 1000) return String(n);
+    const k = n / 1000;
+    const s = (Math.round(k * 10) / 10).toFixed(1);
+    return `${s}k`;
+  };
+  const shown = opts.variant === "zero" ? "0" : `+${fmtK(abs)}`;
+  pop.textContent = shown;
+  if (abs >= 100) pop.classList.add("pipPopup--3d");
+  if (abs >= 1000) pop.classList.add("pipPopup--k");
 
   // Use integer pixel centers to avoid occasional sub-pixel drift on some devices/zooms.
-  const x = Math.round(rect.left + rect.width / 2);
-  const y = Math.round(rect.top + rect.height / 2);
+  const x = Math.round(rect.x + rect.width / 2);
+  const y = Math.round(rect.y + rect.height / 2);
   pop.style.left = `${x}px`;
   pop.style.top = `${y}px`;
 
@@ -1576,7 +1586,7 @@ function burstGoldWin(x, y, intensity = 1) {
   }
 }
 
-function showHandBurst({ label, type, credits }) {
+function showHandBurst({ label, type, credits, chainPct = 0 }) {
   const host = ui.board.parentElement;
   if (!host) return;
   const rect = ui.board.getBoundingClientRect();
@@ -1590,7 +1600,11 @@ function showHandBurst({ label, type, credits }) {
   n.style.left = `${x}px`;
   n.style.top = `${y}px`;
   const amt = Math.max(0, Math.floor(Number(credits) || 0));
-  n.innerHTML = `<div class="handBurst__label">${label}</div><div class="handBurst__credits">+${amt.toLocaleString()}</div>`;
+  const chain =
+    chainPct > 0
+      ? `<span class="handBurst__chain" aria-label="Combo Chain bonus">${Math.round(chainPct)}%</span>`
+      : "";
+  n.innerHTML = `<div class="handBurst__label">${label}${chain}</div><div class="handBurst__credits">+${amt.toLocaleString()}</div>`;
   host.append(n);
   requestAnimationFrame(() => n.classList.add("is-showing"));
 
@@ -2642,7 +2656,8 @@ async function resolveCascades() {
       const chainStep = Math.max(0, (state.comboStep || 1) - 1);
       const comboMult = chainStacks > 0 && chainStep > 0 ? 1 + 0.25 * chainStacks * chainStep : 1;
       const gained = Math.floor(lineScore * comboMult * rewardMult * handScoreMultForReward(line.type));
-      const handBurstEl = showHandBurst({ label: line.label, type: line.type, credits: gained });
+      const chainPct = chainStacks > 0 ? 25 * chainStacks * chainStep : 0;
+      const handBurstEl = showHandBurst({ label: line.label, type: line.type, credits: gained, chainPct });
       // Ensure the line highlight is visible before the sequential grow starts.
       await sleep(comboDelayMs(45, state.comboStep));
       await pulseScoredLine(line, state.comboStep, contribCells, dimCells, () => {}, handBurstEl);
