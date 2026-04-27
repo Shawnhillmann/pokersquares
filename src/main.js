@@ -1799,6 +1799,12 @@ function dismissRewardBursts() {
   document.querySelectorAll(".handBurst--reward").forEach((n) => n.remove());
 }
 
+function ensureJokersInDeckAfterRegenerate() {
+  if (!state.deck?.addJoker) return;
+  const want = Math.max(0, Math.min(2, Math.floor(jokerCount || 0)));
+  for (let i = 0; i < want; i++) state.deck.addJoker();
+}
+
 /** @type {{ title:string, desc:string }[]} */
 const rewardBurstQueue = [];
 let rewardBurstShowing = false;
@@ -2785,6 +2791,7 @@ async function resolveCascades() {
     if (state.comboStep >= MAX_COMBO - 1) {
       // Extremely unlikely, but prevents runaway auto-resolve.
       regenerateBoardForFairness(state, { maxAttempts: 2500, lineClearOpts: boardLineOpts() });
+      ensureJokersInDeckAfterRegenerate();
       showToast(ui.toast, "Fresh deal (runaway cascade)");
       break;
     }
@@ -2936,6 +2943,7 @@ async function resolveCascades() {
       // otherwise it looks like a bug (e.g., visible two pair that "doesn't clear").
       // Re-deal a fair stable board and keep the run stats/rewards/credits.
       regenerateBoardForFairness(state, { maxAttempts: 2500, lineClearOpts: boardLineOpts() });
+      ensureJokersInDeckAfterRegenerate();
       state.selected = null;
       viewFx.scoring = null;
       viewFx.scoredLines = null;
