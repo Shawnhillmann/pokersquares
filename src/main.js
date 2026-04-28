@@ -128,7 +128,9 @@ const rewards = {
   /** One-time: three of a kind lines do not clear (straight+ still does). */
   noClearTrips: false,
   /** One-time: kickers count toward the line score (normally off for 2-pair/trips/quads). */
-  kickersCount: false
+  kickersCount: false,
+  /** One-time: each hand type multiplier gains +1 per time that hand was scored this run. */
+  ladderUp: false
 };
 
 let randomHintChance = 0;
@@ -136,6 +138,24 @@ let randomHintChance = 0;
 let randomHintsPickCount = 0;
 let lastPickedRewardName = "____";
 let jokerCount = 0;
+/** Per-run count of how many times each hand type scored. */
+let handTypePlayCounts = /** @type {Record<string, number>} */ (Object.create(null));
+
+function getHandTypePlayCount(type) {
+  const v = handTypePlayCounts?.[String(type)];
+  return Number.isFinite(v) ? Math.max(0, Math.floor(v)) : 0;
+}
+
+function incHandTypePlayCount(type) {
+  const t = String(type);
+  handTypePlayCounts[t] = getHandTypePlayCount(t) + 1;
+}
+
+function effectiveHandMultiplier(type) {
+  const base = handMultiplier(type);
+  if (!rewards.ladderUp) return base;
+  return base + getHandTypePlayCount(type);
+}
 
 function clearSavedRun() {
   try {
@@ -164,6 +184,7 @@ function snapshotRun() {
     randomHintsPickCount,
     lastPickedRewardName,
     jokerCount,
+    handTypePlayCounts,
     rewards: { ...rewards }
   };
 }
@@ -202,6 +223,17 @@ function tryRestoreRun() {
     randomHintsPickCount = Math.max(0, Math.floor(v.randomHintsPickCount || 0));
     lastPickedRewardName = String(v.lastPickedRewardName || "____");
     jokerCount = Math.max(0, Math.floor(v.jokerCount || 0));
+    if (v.handTypePlayCounts && typeof v.handTypePlayCounts === "object") {
+      /** @type {Record<string, number>} */
+      const next = Object.create(null);
+      for (const [k, n] of Object.entries(v.handTypePlayCounts)) {
+        const num = Number(n);
+        if (Number.isFinite(num) && num >= 0) next[String(k)] = Math.floor(num);
+      }
+      handTypePlayCounts = next;
+    } else {
+      handTypePlayCounts = Object.create(null);
+    }
 
     if (v.rewards && typeof v.rewards === "object") {
       for (const k of Object.keys(rewards)) {
@@ -672,7 +704,8 @@ function updateRewardsTracker() {
     "Swap Coupons": "Each stack reduces swap cost by 10% (applied after goal scaling).",
     "Trips Disabled": "Three of a kind lines no longer clear.",
     "Two Pair Disabled": "Two pair lines no longer clear.",
-    "Good Kickers": "Kicker cards add to scores for hands like trips and two pair."
+    "Good Kickers": "Kicker cards add to scores for hands like trips and two pair.",
+    "Ladder Up": "One-time. Each time you score a hand type, its multiplier increases by +1x for the rest of the run."
   };
 
   const showTooltip = (label, ev) => {
@@ -839,6 +872,7 @@ function updateRewardsTracker() {
   addRow("Two Pair Disabled", rewards.noClearTwoPair ? "On" : "Off");
 
   addRow("Good Kickers", rewards.kickersCount ? "On" : "Off");
+  addRow("Ladder Up", rewards.ladderUp ? "On" : "Off");
 }
 
 let creditsDisplayValue = Math.max(0, Math.floor(state.credits));
@@ -1100,7 +1134,25 @@ function syncHandChartScores() {
     }
     // @ts-ignore
     const base = Number(el.dataset.base || "1") || 1;
-    const shown = formatHandChartMult(base * mult);
+    let baseShown = base;
+    if (rewards.ladderUp) {
+      const row = /** @type {HTMLElement|null} */ (el.closest(".handRow"));
+      const nameEl = row?.querySelector(".handRow__name");
+      const nm = String(nameEl?.textContent || "").trim();
+      /** @type {string|null} */
+      let t = null;
+      if (nm === "Two Pair") t = HAND_TYPE.TWO_PAIR;
+      else if (nm === "Three of a Kind") t = HAND_TYPE.THREE_OF_A_KIND;
+      else if (nm === "Straight") t = HAND_TYPE.STRAIGHT;
+      else if (nm === "Flush") t = HAND_TYPE.FLUSH;
+      else if (nm === "Full House") t = HAND_TYPE.FULL_HOUSE;
+      else if (nm === "Four of a Kind") t = HAND_TYPE.FOUR_OF_A_KIND;
+      else if (nm === "Straight Flush") t = HAND_TYPE.STRAIGHT_FLUSH;
+      else if (nm === "Five of a Kind") t = HAND_TYPE.FIVE_OF_A_KIND;
+      else if (nm === "Royal Flush") t = HAND_TYPE.ROYAL_FLUSH;
+      if (t) baseShown = base + getHandTypePlayCount(t);
+    }
+    const shown = formatHandChartMult(baseShown * mult);
     el.textContent = `${shown}x`;
   });
 }
@@ -1377,6 +1429,8 @@ ui.newGameBtn.addEventListener("click", () => {
   rewards.noClearTwoPair = false;
   rewards.noClearTrips = false;
   rewards.kickersCount = false;
+  rewards.ladderUp = false;
+  handTypePlayCounts = Object.create(null);
   pendingRewardPicks = 0;
   peakGoalClearedThisRun = 0;
   // Keep main/gameState.js in sync for the starting bankroll.
@@ -1434,6 +1488,8 @@ ui.restartBtn.addEventListener("click", () => {
   rewards.noClearTwoPair = false;
   rewards.noClearTrips = false;
   rewards.kickersCount = false;
+  rewards.ladderUp = false;
+  handTypePlayCounts = Object.create(null);
   pendingRewardPicks = 0;
   peakGoalClearedThisRun = 0;
   state.credits = STARTING_POINTS;
@@ -2068,6 +2124,12 @@ const REWARD_DEFS = /** @type {const} */ ([
     name: "Good Kickers",
     desc: "Kicker cards now add to scoring for hands like trips and two pair.",
     stack: { kind: "unique" }
+  },
+  {
+    id: "ladderUp",
+    name: "Ladder Up",
+    desc: "One-time: each hand type gains +1x multiplier per time it has been scored this run.",
+    stack: { kind: "unique" }
   }
 ]);
 
@@ -2077,6 +2139,7 @@ function canOfferReward(id) {
   if (id === "noClearTwoPair") return !rewards.noClearTwoPair;
   if (id === "noClearTrips") return !rewards.noClearTrips;
   if (id === "kickersCount") return !rewards.kickersCount;
+  if (id === "ladderUp") return !rewards.ladderUp;
   if (id === "jokerCard") return jokerCount < 2;
   return true;
 }
@@ -2169,6 +2232,14 @@ function applyReward(id) {
     const pct = 25 * rewards.handMultiplierStacks;
     enqueueRewardBurst("Hand Multiplier", `+${fmtBonusXFromPct(pct)} to all hand scores`);
     syncHandChartScores();
+    return;
+  }
+  if (id === "ladderUp") {
+    rewards.ladderUp = true;
+    lastPickedRewardName = "Ladder Up";
+    enqueueRewardBurst("Ladder Up", "Hand multipliers now grow as you repeat them");
+    syncHandChartScores();
+    scheduleSaveRun();
     return;
   }
   if (id === "jokerCard") {
@@ -2692,7 +2763,7 @@ function computeImmediateLineScoreForBoard(board, line) {
     if (!card) continue;
     pipSum += cardScoreValue(card);
   }
-  const hm = handMultiplier(line.type);
+  const hm = effectiveHandMultiplier(line.type);
   const rewardMult = 1 + 0.25 * Math.max(0, Math.floor(rewards.handMultiplierStacks || 0));
   return pipSum * hm * rewardMult * handScoreMultForReward(line.type);
 }
@@ -3016,7 +3087,7 @@ async function resolveCascades() {
       viewFx.scoredLines = [line];
 
       rerender();
-      const hm = handMultiplier(line.type);
+      const hm = effectiveHandMultiplier(line.type);
       let pipSum = 0;
       for (const p of orderCellsForLine(line, contribCells)) {
         const card = state.board[p.r][p.c];
@@ -3057,7 +3128,11 @@ async function resolveCascades() {
       swapTotal += applied;
 
       sfx.scoreHand(line.type, state.comboStep);
+      // Track plays for Ladder Up (counts accrue all run; effect only visible when reward is active).
+      incHandTypePlayCount(line.type);
+      if (rewards.ladderUp) syncHandChartScores();
       rerender();
+      scheduleSaveRun();
 
       // If this line reached the goal, stop after fully resolving clears/refill.
       if (Math.max(0, Math.floor(state.credits)) >= goalTarget) {
