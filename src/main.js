@@ -1821,13 +1821,7 @@ function showCardValuePopup(p, value, opts = {}) {
   pop.className = "pipPopup";
   if (opts.variant === "zero") pop.classList.add("pipPopup--zero");
   const abs = Math.max(0, Math.floor(Number(value) || 0));
-  const fmtK = (n) => {
-    if (n < 1000) return String(n);
-    const k = n / 1000;
-    const s = (Math.round(k * 10) / 10).toFixed(1);
-    return `${s}k`;
-  };
-  const shown = opts.variant === "zero" ? "0" : `+${fmtK(abs)}`;
+  const shown = opts.variant === "zero" ? "0" : `+${fmtShort(abs)}`;
   pop.textContent = shown;
   if (abs >= 100) pop.classList.add("pipPopup--3d");
   if (abs >= 1000) pop.classList.add("pipPopup--k");
@@ -2246,6 +2240,8 @@ function applyReward(id) {
   }
   if (id === "ladderUp") {
     rewards.ladderUp = true;
+    // Ladder Up should start counting from the moment it is picked.
+    handTypePlayCounts = Object.create(null);
     lastPickedRewardName = "Ladder Up";
     enqueueRewardBurst("Ladder Up", "Hand multipliers now grow as you repeat them");
     syncHandChartScores();
@@ -3140,9 +3136,11 @@ async function resolveCascades() {
       swapTotal += applied;
 
       sfx.scoreHand(line.type, state.comboStep);
-      // Track plays for Ladder Up (counts accrue all run; effect only visible when reward is active).
-      incHandTypePlayCount(line.type);
-      if (rewards.ladderUp) syncHandChartScores();
+      // Ladder Up only counts plays after being picked.
+      if (rewards.ladderUp) {
+        incHandTypePlayCount(line.type);
+        syncHandChartScores();
+      }
       rerender();
       scheduleSaveRun();
 
