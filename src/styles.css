@@ -576,6 +576,24 @@ body {
   transition: width 220ms ease;
 }
 
+.goalBlock.is-goal-glow .goalBlock__fill {
+  animation: goalGlowPulse 360ms ease-out 1;
+}
+
+.goalBlock.is-goal-full .goalBlock__fill {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 70, 220, 0.95),
+    rgba(60, 240, 255, 0.95),
+    rgba(110, 255, 150, 0.95),
+    rgba(255, 230, 90, 0.95),
+    rgba(255, 70, 220, 0.95)
+  );
+  background-size: 300% 100%;
+  box-shadow: 0 0 22px rgba(140, 235, 255, 0.22), 0 0 34px rgba(255, 120, 245, 0.14);
+  animation: rainbowFlow 1.2s linear infinite;
+}
+
 .goalBlock.is-goal-passed {
   animation: goalPassed 520ms ease-out;
 }
@@ -968,6 +986,33 @@ main.stage {
 
 .cell.is-clearing {
   animation: popOut 220ms ease forwards;
+}
+
+.cell.is-perfect .cardFace {
+  position: relative;
+  border-color: rgba(255, 255, 255, 0.22);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.14), 0 0 22px rgba(255, 120, 245, 0.22);
+}
+
+.cell.is-perfect .cardFace::before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 70, 220, 0.55),
+    rgba(60, 240, 255, 0.55),
+    rgba(110, 255, 150, 0.55),
+    rgba(255, 230, 90, 0.55),
+    rgba(255, 70, 220, 0.55)
+  );
+  background-size: 300% 100%;
+  filter: blur(6px);
+  opacity: 0.75;
+  pointer-events: none;
+  animation: rainbowFlow 900ms linear infinite;
+  z-index: -1;
 }
 
 .cell.is-border-pop {
@@ -1963,6 +2008,15 @@ html.is-mobile .cardFace--jokerArt img.cardPip--faceArt {
   }
 }
 
+@keyframes rainbowFlow {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 100% 50%;
+  }
+}
+
 .handBurst__credits {
   display: inline-flex;
   align-items: center;
@@ -2588,6 +2642,18 @@ html.is-mobile .cardFace--jokerArt img.cardPip--faceArt {
     filter: brightness(1);
   }
   35% {
+    filter: brightness(1.25);
+  }
+  100% {
+    filter: brightness(1);
+  }
+}
+
+@keyframes goalGlowPulse {
+  0% {
+    filter: brightness(1);
+  }
+  45% {
     filter: brightness(1.25);
   }
   100% {

@@ -116,6 +116,8 @@ const rewards = {
   pocketRocketsStacks: 0,
   /** Times Lucky River picked; each adds +5% proc chance to x10 a scored hand. */
   luckyRiverStacks: 0,
+  /** Times Perfect Card picked; each adds +1% chance per card to be worth 50x. */
+  perfectCardStacks: 0,
   /** One-time: scored hands have a 50% chance to be worth 2x or 0x. */
   pureBluff: false,
   /** One-time: flushes/straights can be made with 4 cards (incl. straight/royal flush). */
@@ -324,6 +326,34 @@ function cardScoreValue(card) {
   const stacks = Math.max(0, Math.floor(rewards.doubleCardValueStacks || 0));
   const mult = stacks <= 0 ? 1 : Math.pow(2, stacks);
   return base * mult;
+}
+
+function perfectCardChance() {
+  const stacks = Math.max(0, Math.floor(rewards.perfectCardStacks || 0));
+  if (stacks <= 0) return 0;
+  return Math.min(0.95, 0.01 * stacks);
+}
+
+function perfectCardExpectedMult() {
+  const ch = perfectCardChance();
+  return ch <= 0 ? 1 : 1 + ch * (50 - 1);
+}
+
+/**
+ * @param {any} card
+ * @returns {{ value:number, perfect:boolean }}
+ */
+function cardScoreValueWithPerfect(card) {
+  const base = cardScoreValue(card);
+  const ch = perfectCardChance();
+  if (ch <= 0) return { value: base, perfect: false };
+  const roll = state.rng.int(1_000_000) / 1_000_000;
+  const hit = roll < ch;
+  return { value: hit ? base * 50 : base, perfect: hit };
+}
+
+function cardScoreValueExpected(card) {
+  return cardScoreValue(card) * perfectCardExpectedMult();
 }
 
 function scoringOpts() {
@@ -644,12 +674,13 @@ function checkCantAffordSwapAndEnd() {
 
 // Removed: "no moves / no two-pair possible" game-over.
 
-/** @type {{ clearing:Set<string>|null, scoredLines: any[]|null, scoring:Set<string>|null, dim:Set<string>|null, dropRowsById: Map<string,number>|null, dropMsById: Map<string,number>|null, hint:Set<string>|null, dropMode: "gravity"|"refill"|null }} */
+/** @type {{ clearing:Set<string>|null, scoredLines: any[]|null, scoring:Set<string>|null, dim:Set<string>|null, perfect:Set<string>|null, dropRowsById: Map<string,number>|null, dropMsById: Map<string,number>|null, hint:Set<string>|null, dropMode: "gravity"|"refill"|null }} */
 const viewFx = {
   clearing: null,
   scoredLines: null,
   scoring: null,
   dim: null,
+  perfect: null,
   dropRowsById: null,
   dropMsById: null,
   hint: null,
@@ -703,6 +734,7 @@ function updateRewardsTracker() {
     "2X Card Values": "Each stack doubles every card’s value again.",
     "Lucky River": "Each stack adds +5% chance for scored hands to pay 10x.",
     "Pure Bluff": "One-time. Each scored hand has a 50% chance to pay 2x or 0x.",
+    "Perfect Card": "Each stack adds +1% chance for each scoring card to be worth 50x.",
     "Random Hints": "Grants a chance for free hints to appear.",
     "Swap Coupons": "Each stack reduces swap cost by 10% (applied after goal scaling).",
     "Trips Disabled": "Three of a kind lines no longer clear.",
@@ -827,6 +859,11 @@ function updateRewardsTracker() {
 
   addRow("Diagonals", rewards.diagonalsScored ? "On" : "Off");
 
+  if (rewards.perfectCardStacks > 0) {
+    const chPct = Math.round(perfectCardChance() * 100);
+    addRow("Perfect Card", `${chPct}% @ 50x · ${rewards.perfectCardStacks}×`);
+  } else addRow("Perfect Card", "Off");
+
   addRow("Close Enough", rewards.closeEnough ? "On" : "Off");
 
   if (rewards.comboBonusStacks > 0) {
@@ -885,6 +922,21 @@ let creditsAnimRaf = /** @type {number|null} */ (null);
 let creditsAnimTo = creditsDisplayValue;
 let lastGoalTextCredits = -1;
 let goalSequenceActive = false;
+let goalGlowTimer = /** @type {number|null} */ (null);
+
+function pulseGoalGlow() {
+  const block = ui.goalBar?.querySelector(".goalBlock");
+  if (!block) return;
+  block.classList.remove("is-goal-glow");
+  // eslint-disable-next-line no-unused-expressions
+  block.offsetHeight;
+  block.classList.add("is-goal-glow");
+  if (goalGlowTimer != null) clearTimeout(goalGlowTimer);
+  goalGlowTimer = window.setTimeout(() => {
+    goalGlowTimer = null;
+    block.classList.remove("is-goal-glow");
+  }, 360);
+}
 
 function setCreditsInstant(n) {
   const v = Math.max(0, Math.floor(n));
@@ -892,6 +944,7 @@ function setCreditsInstant(n) {
   creditsAnimRaf = null;
   creditsAnimTo = v;
   creditsDisplayValue = v;
+  pulseGoalGlow();
 }
 
 /**
@@ -913,6 +966,7 @@ function animateCreditsTo(to) {
     const v = Math.floor(from + (currentTo - from) * e);
     creditsDisplayValue = v;
     updateGoalText(v);
+    pulseGoalGlow();
     if (p < 1) creditsAnimRaf = requestAnimationFrame(tick);
     else {
       creditsAnimRaf = null;
@@ -987,6 +1041,8 @@ function updateGoalHud(credits) {
     const p = Math.max(0, Math.min(1, creditsDisplayValue / goalTarget));
     ui.goalFill.style.width = `${Math.round(p * 1000) / 10}%`;
   }
+  const block = ui.goalBar?.querySelector(".goalBlock");
+  if (block) block.classList.toggle("is-goal-full", creditsDisplayValue >= goalTarget);
   if (ui.goalBar) {
     const track = ui.goalBar.querySelector(".goalBlock__track");
     if (track) {
@@ -1048,6 +1104,7 @@ function rerender() {
       selected: state.selected,
       clearing: viewFx.clearing,
       scoring: viewFx.scoring,
+      perfect: viewFx.perfect,
       dim: viewFx.dim,
       hint: viewFx.hint,
       dropRowsById: viewFx.dropRowsById ?? undefined,
@@ -1432,6 +1489,7 @@ ui.newGameBtn.addEventListener("click", () => {
   rewards.biggerNumbersStacks = 0;
   rewards.pocketRocketsStacks = 0;
   rewards.luckyRiverStacks = 0;
+  rewards.perfectCardStacks = 0;
   rewards.pureBluff = false;
   rewards.closeEnough = false;
   rewards.jokerWildcard = false;
@@ -1492,6 +1550,7 @@ ui.restartBtn.addEventListener("click", () => {
   rewards.biggerNumbersStacks = 0;
   rewards.pocketRocketsStacks = 0;
   rewards.luckyRiverStacks = 0;
+  rewards.perfectCardStacks = 0;
   rewards.pureBluff = false;
   rewards.closeEnough = false;
   rewards.jokerWildcard = false;
@@ -2045,6 +2104,12 @@ const REWARD_DEFS = /** @type {const} */ ([
     stack: { kind: "unique" }
   },
   {
+    id: "perfectCard",
+    name: "Perfect Card",
+    desc: "Each stack adds +1% chance per card to be worth 50x (Stackable).",
+    stack: { kind: "stackable" }
+  },
+  {
     id: "randomHints",
     name: "Random Hints",
     desc: "10% chance a free hint appears randomly",
@@ -2156,11 +2221,22 @@ function canOfferReward(id) {
   if (id === "kickersCount") return !rewards.kickersCount;
   if (id === "ladderUp") return !rewards.ladderUp;
   if (id === "pureBluff") return !rewards.pureBluff;
+  if (id === "perfectCard") return true;
   if (id === "jokerCard") return jokerCount < 2;
   return true;
 }
 
 function applyReward(id) {
+  if (id === "perfectCard") {
+    rewards.perfectCardStacks += 1;
+    lastPickedRewardName = "Perfect Card";
+    const stacks = rewards.perfectCardStacks;
+    const pct = Math.round(perfectCardChance() * 100);
+    enqueueRewardBurst("Perfect Card", `${pct}% chance per card to be worth 50x (${stacks} stack${stacks === 1 ? "" : "s"})`);
+    updateRewardsTracker();
+    scheduleSaveRun();
+    return;
+  }
   if (id === "pureBluff") {
     rewards.pureBluff = true;
     lastPickedRewardName = "Pure Bluff";
@@ -2793,7 +2869,7 @@ function computeImmediateLineScoreForBoard(board, line) {
   for (const p of ordered) {
     const card = board[p.r][p.c];
     if (!card) continue;
-    pipSum += cardScoreValue(card);
+    pipSum += cardScoreValueExpected(card);
   }
   const hm = effectiveHandMultiplier(line.type);
   const rewardMult = 1 + 0.25 * Math.max(0, Math.floor(rewards.handMultiplierStacks || 0));
@@ -2923,7 +2999,7 @@ async function kickDropAnimation() {
  * Diagonals pulse left->right.
  * @param {{ kind:"row"|"col"|"diagDown"|"diagUp", cells:{r:number,c:number}[] }} line
  */
-async function pulseScoredLine(line, combo, contribCells, dimCells, onTotal, handBurstEl) {
+async function pulseScoredLine(line, combo, contribCells, dimCells, onTotal, handBurstEl, valueByKey = null) {
   // DOM nodes exist only after a render.
   const ordered = orderCellsForLine(line, contribCells); // only scoring cards
   const orderedDim = orderCellsForLine(line, dimCells);
@@ -2946,9 +3022,9 @@ async function pulseScoredLine(line, combo, contribCells, dimCells, onTotal, han
     if (!el) continue;
     el.style.setProperty("--combo-speed", String(comboSpeed(combo)));
     // Per-card value popup when it enlarges.
-    const card = state.board[p.r]?.[p.c];
-    if (card) {
-      const v = cardScoreValue(card);
+    const k = `${p.r},${p.c}`;
+    const v = valueByKey && valueByKey.has(k) ? Number(valueByKey.get(k) || 0) : 0;
+    if (v > 0 || (valueByKey && valueByKey.has(k))) {
       running += v;
       onTotal(running);
       const pop = showCardValuePopup(p, v);
@@ -3121,9 +3197,18 @@ async function resolveCascades() {
       rerender();
       const hm = effectiveHandMultiplier(line.type);
       let pipSum = 0;
+      /** @type {Map<string, number>} */
+      const valueByKey = new Map();
+      /** @type {Set<string>} */
+      const perfectKeys = new Set();
       for (const p of orderCellsForLine(line, contribCells)) {
         const card = state.board[p.r][p.c];
-        if (card) pipSum += cardScoreValue(card);
+        if (!card) continue;
+        const { value, perfect } = cardScoreValueWithPerfect(card);
+        const k = `${p.r},${p.c}`;
+        valueByKey.set(k, value);
+        if (perfect) perfectKeys.add(k);
+        pipSum += value;
       }
       const lineScore = pipSum * hm;
       const rewardMult = 1 + 0.25 * Math.max(0, Math.floor(rewards.handMultiplierStacks || 0));
@@ -3151,6 +3236,8 @@ async function resolveCascades() {
         sfx.luckyRiver?.();
       }
       const chainPct = chainStacks > 0 ? 25 * chainStacks * chainStep : 0;
+      // Highlight any Perfect Card procs during the scoring pulse.
+      viewFx.perfect = perfectKeys.size > 0 ? perfectKeys : null;
       const handBurstEl = showHandBurst({
         label: line.label,
         type: line.type,
@@ -3161,7 +3248,8 @@ async function resolveCascades() {
       });
       // Ensure the line highlight is visible before the sequential grow starts.
       await sleep(comboDelayMs(45, state.comboStep));
-      await pulseScoredLine(line, state.comboStep, contribCells, dimCells, () => {}, handBurstEl);
+      await pulseScoredLine(line, state.comboStep, contribCells, dimCells, () => {}, handBurstEl, valueByKey);
+      viewFx.perfect = null;
 
       // Goals cannot be exceeded: cap the credits gain at the remaining amount to the current goal.
       const remainingToGoal = Math.max(0, Math.floor(goalTarget) - Math.floor(state.credits));

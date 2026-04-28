@@ -58,6 +58,7 @@ export function renderBoard(root, board, view, onCellClick) {
       if (view.hint && view.hint.has(`${r},${c}`)) cell.classList.add("is-hint");
       if (view.dim && view.dim.has(`${r},${c}`)) cell.classList.add("is-dim");
       if (view.clearing && view.clearing.has(`${r},${c}`)) cell.classList.add("is-clearing");
+      if (view.perfect && view.perfect.has(`${r},${c}`)) cell.classList.add("is-perfect");
 
       if (!card) {
         cell.classList.add("is-empty");
