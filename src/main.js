@@ -116,6 +116,8 @@ const rewards = {
   pocketRocketsStacks: 0,
   /** Times Lucky River picked; each adds +5% proc chance to x10 a scored hand. */
   luckyRiverStacks: 0,
+  /** One-time: scored hands have a 50% chance to be worth 2x or 0x. */
+  pureBluff: false,
   /** One-time: flushes/straights can be made with 4 cards (incl. straight/royal flush). */
   closeEnough: false,
   jokerWildcard: false, // Goal 3
@@ -700,6 +702,7 @@ function updateRewardsTracker() {
     "Bigger Numbers": "Each stack makes number cards (and Aces) worth 3x more card value.",
     "2X Card Values": "Each stack doubles every card’s value again.",
     "Lucky River": "Each stack adds +5% chance for scored hands to pay 10x.",
+    "Pure Bluff": "One-time. Each scored hand has a 50% chance to pay 2x or 0x.",
     "Random Hints": "Grants a chance for free hints to appear.",
     "Swap Coupons": "Each stack reduces swap cost by 10% (applied after goal scaling).",
     "Trips Disabled": "Three of a kind lines no longer clear.",
@@ -859,6 +862,8 @@ function updateRewardsTracker() {
   if (rewards.luckyRiverStacks > 0) {
     addRow("Lucky River", `10x @ ${5 * rewards.luckyRiverStacks}% · ${rewards.luckyRiverStacks}×`);
   } else addRow("Lucky River", "Off");
+
+  addRow("Pure Bluff", rewards.pureBluff ? "On" : "Off");
 
   if (rewards.randomHints) {
     addRow("Random Hints", `${Math.round(randomHintChance * 100)}% roll · ${randomHintsPickCount} picked`);
@@ -1427,6 +1432,7 @@ ui.newGameBtn.addEventListener("click", () => {
   rewards.biggerNumbersStacks = 0;
   rewards.pocketRocketsStacks = 0;
   rewards.luckyRiverStacks = 0;
+  rewards.pureBluff = false;
   rewards.closeEnough = false;
   rewards.jokerWildcard = false;
   rewards.diagonalsScored = false;
@@ -1486,6 +1492,7 @@ ui.restartBtn.addEventListener("click", () => {
   rewards.biggerNumbersStacks = 0;
   rewards.pocketRocketsStacks = 0;
   rewards.luckyRiverStacks = 0;
+  rewards.pureBluff = false;
   rewards.closeEnough = false;
   rewards.jokerWildcard = false;
   rewards.diagonalsScored = false;
@@ -1924,7 +1931,7 @@ function burstGoldWin(x, y, intensity = 1) {
   }
 }
 
-function showHandBurst({ label, type, credits, chainPct = 0, luckyMult = 0 }) {
+function showHandBurst({ label, type, credits, chainPct = 0, luckyMult = 0, pureBluff = "" }) {
   const host = ui.board.parentElement;
   if (!host) return;
   const rect = ui.board.getBoundingClientRect();
@@ -1935,6 +1942,8 @@ function showHandBurst({ label, type, credits, chainPct = 0, luckyMult = 0 }) {
   n.className = "handBurst";
   const tier = handBurstTier(type);
   n.classList.add(`handBurst--${tier}`);
+  if (pureBluff === "win") n.classList.add("is-bluff-win");
+  else if (pureBluff === "lose") n.classList.add("is-bluff-lose");
   if (luckyMult > 0) n.classList.add("is-lucky");
   if (chainPct > 0) n.classList.add("has-chain");
   n.style.left = `${x}px`;
@@ -2028,6 +2037,12 @@ const REWARD_DEFS = /** @type {const} */ ([
     name: "Lucky River",
     desc: "Scored hands have a 5% chance to 10x their reward (Stackable).",
     stack: { kind: "stackable" }
+  },
+  {
+    id: "pureBluff",
+    name: "Pure Bluff",
+    desc: "One-time: scored hands have a 50% chance to be worth 2x or 0x.",
+    stack: { kind: "unique" }
   },
   {
     id: "randomHints",
@@ -2140,11 +2155,20 @@ function canOfferReward(id) {
   if (id === "noClearTrips") return !rewards.noClearTrips;
   if (id === "kickersCount") return !rewards.kickersCount;
   if (id === "ladderUp") return !rewards.ladderUp;
+  if (id === "pureBluff") return !rewards.pureBluff;
   if (id === "jokerCard") return jokerCount < 2;
   return true;
 }
 
 function applyReward(id) {
+  if (id === "pureBluff") {
+    rewards.pureBluff = true;
+    lastPickedRewardName = "Pure Bluff";
+    enqueueRewardBurst("Pure Bluff", "Each scored hand: 50% pays 2x, 50% pays 0");
+    updateRewardsTracker();
+    scheduleSaveRun();
+    return;
+  }
   if (id === "randomHints") {
     rewards.randomHints = true;
     // First pick sets it to 10%, then +10% per additional pick.
@@ -3107,6 +3131,17 @@ async function resolveCascades() {
       const chainStep = Math.max(0, (state.comboStep || 1) - 1);
       const comboMult = chainStacks > 0 && chainStep > 0 ? 1 + 0.25 * chainStacks * chainStep : 1;
       let gained = Math.floor(lineScore * comboMult * rewardMult * handScoreMultForReward(line.type));
+
+      /** @type {""|"win"|"lose"} */
+      let bluff = "";
+      if (rewards.pureBluff) {
+        const roll = state.rng.int(1_000_000) / 1_000_000;
+        const win = roll < 0.5;
+        bluff = win ? "win" : "lose";
+        gained = win ? gained * 2 : 0;
+        if (win) sfx.pureBluffWin?.();
+        else sfx.pureBluffLose?.();
+      }
       const lrStacks = Math.max(0, Math.floor(rewards.luckyRiverStacks || 0));
       const lrChance = lrStacks <= 0 ? 0 : Math.min(0.95, 0.05 * lrStacks);
       const lrRoll = lrChance > 0 ? state.rng.int(1_000_000) / 1_000_000 : 1;
@@ -3121,7 +3156,8 @@ async function resolveCascades() {
         type: line.type,
         credits: gained,
         chainPct,
-        luckyMult: luckyTriggered ? 10 : 0
+        luckyMult: luckyTriggered ? 10 : 0,
+        pureBluff: bluff
       });
       // Ensure the line highlight is visible before the sequential grow starts.
       await sleep(comboDelayMs(45, state.comboStep));

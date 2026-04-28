@@ -1932,6 +1932,18 @@ html.is-mobile .cardFace--jokerArt img.cardPip--faceArt {
   text-shadow: none;
 }
 
+.handBurst.is-bluff-win .handBurst__label,
+.handBurst.is-bluff-win .handBurst__credits {
+  color: rgba(170, 255, 190, 0.98);
+  text-shadow: 0 0 26px rgba(70, 255, 150, 0.24), 0 18px 44px rgba(0, 0, 0, 0.62);
+}
+
+.handBurst.is-bluff-lose .handBurst__label,
+.handBurst.is-bluff-lose .handBurst__credits {
+  color: rgba(255, 120, 235, 0.98);
+  text-shadow: 0 0 26px rgba(255, 90, 230, 0.26), 0 18px 44px rgba(0, 0, 0, 0.62);
+}
+
 .handBurst.is-lucky .handBurst__label,
 .handBurst.is-lucky .handBurst__credits {
   color: rgba(150, 245, 255, 0.98);

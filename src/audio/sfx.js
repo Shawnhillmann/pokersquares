@@ -309,6 +309,18 @@ export const sfx = {
     playMetal({ freq: 1240, dur: 0.14, strength: 1.15 });
     setTimeout(() => playTone({ freq: 1560, dur: 0.08, type: "sine", sweepTo: 2080 }), 70);
     setTimeout(() => playNoise({ dur: 0.04, highpassHz: 2000 }), 40);
+  },
+
+  pureBluffWin() {
+    // Bright green-ish "hit" chirp.
+    playTone({ freq: 880, dur: 0.06, type: "triangle", sweepTo: 1320 });
+    setTimeout(() => playMetal({ freq: 1320, dur: 0.1, strength: 0.85 }), 45);
+  },
+
+  pureBluffLose() {
+    // Magenta-ish "whiff": low blip + noise.
+    playTone({ freq: 240, dur: 0.09, type: "square", sweepTo: 160, detune: -10 });
+    setTimeout(() => playNoise({ dur: 0.07, highpassHz: 900 }), 30);
   }
 };
 
