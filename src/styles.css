@@ -2986,11 +2986,11 @@ html.is-mobile .cell {
 }
 
 html.is-mobile .cardCorner {
-  top: 2px;
-  left: 3px;
+  top: 5px;
+  left: 6px;
   width: 26px;
   /* One size for rank + suit on mobile */
-  --mob-corner-type: clamp(11px, calc(var(--cell) * 0.31), 20px);
+  --mob-corner-type: clamp(12px, calc(var(--cell) * 0.335), 22px);
 }
 
 html.is-mobile .cardRank {
