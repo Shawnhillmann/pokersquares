@@ -577,7 +577,7 @@ body {
 }
 
 .goalBlock.is-goal-glow .goalBlock__fill {
-  animation: goalGlowPulse 360ms ease-out 1;
+  box-shadow: 0 0 20px rgba(120, 235, 255, 0.22), 0 0 34px rgba(120, 235, 255, 0.14);
 }
 
 .goalBlock.is-goal-passed {
@@ -2625,17 +2625,7 @@ html.is-mobile .cardFace--jokerArt img.cardPip--faceArt {
   }
 }
 
-@keyframes goalGlowPulse {
-  0% {
-    filter: brightness(1);
-  }
-  45% {
-    filter: brightness(1.25);
-  }
-  100% {
-    filter: brightness(1);
-  }
-}
+/* goalGlowPulse removed (using simple shadow glow now). */
 
 /* Wide desktop: keep hand chart beside the board — no empty 1fr side gutters */
 @media (min-width: 1101px) {

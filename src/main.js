@@ -69,7 +69,6 @@ const RUN_STORAGE_KEY = "speed_poker_run_v1";
 
 const state = createGameState({ seed: null });
 newGame(state);
-wrapDeckDrawForPerfectCards();
 state.credits = 500;
 
 let successfulMoves = 0;
@@ -254,7 +253,6 @@ function tryRestoreRun() {
     if (Array.isArray(v.deck) && state.deck && /** @type {any} */ (state.deck).restore) {
       /** @type {any} */ (state.deck).restore(v.deck);
     }
-    wrapDeckDrawForPerfectCards();
 
     // Ensure we resume in a stable, interactive state.
     state.busy = false;
@@ -341,26 +339,16 @@ function perfectCardChance() {
 function maybeMarkPerfectCard(card) {
   if (!card) return;
   if (!rewards.perfectCardStacks) return;
-  // Don't reroll if already marked.
-  if (/** @type {any} */ (card).perfect) return;
+  // When a card spawns on the board, re-roll whether it's "perfect" for this appearance.
+  // (Perfect status should not persist across cycles in the deck.)
+  delete /** @type {any} */ (card).perfect;
   const ch = perfectCardChance();
   if (ch <= 0) return;
   const roll = state.rng.int(1_000_000) / 1_000_000;
   if (roll < ch) /** @type {any} */ (card).perfect = true;
 }
 
-function wrapDeckDrawForPerfectCards() {
-  const d = /** @type {any} */ (state.deck);
-  if (!d || typeof d.draw !== "function") return;
-  if (d.__perfectWrapped) return;
-  const orig = d.draw.bind(d);
-  d.draw = () => {
-    const c = orig();
-    maybeMarkPerfectCard(c);
-    return c;
-  };
-  d.__perfectWrapped = true;
-}
+// Perfect Cards are rolled when a card *spawns onto the board* (not stored in the deck).
 
 function scoringOpts() {
   const useWildEval = rewards.jokerWildcard || rewards.extraJoker;
@@ -929,7 +917,7 @@ let lastGoalTextCredits = -1;
 let goalSequenceActive = false;
 let goalGlowTimer = /** @type {number|null} */ (null);
 
-function pulseGoalGlow() {
+function glowGoalOnIncrease() {
   const block = ui.goalBar?.querySelector(".goalBlock");
   if (!block) return;
   block.classList.remove("is-goal-glow");
@@ -940,7 +928,7 @@ function pulseGoalGlow() {
   goalGlowTimer = window.setTimeout(() => {
     goalGlowTimer = null;
     block.classList.remove("is-goal-glow");
-  }, 360);
+  }, 700);
 }
 
 function setCreditsInstant(n) {
@@ -950,7 +938,7 @@ function setCreditsInstant(n) {
   creditsAnimRaf = null;
   creditsAnimTo = v;
   creditsDisplayValue = v;
-  if (v > prev) pulseGoalGlow();
+  if (v > prev) glowGoalOnIncrease();
 }
 
 /**
@@ -961,7 +949,7 @@ function animateCreditsTo(to) {
   if (creditsAnimRaf != null) cancelAnimationFrame(creditsAnimRaf);
   const from = creditsDisplayValue;
   creditsAnimTo = to;
-  if (to > from) pulseGoalGlow();
+  if (to > from) glowGoalOnIncrease();
   const start = performance.now();
   const duration = 360;
 
@@ -1476,7 +1464,6 @@ ui.newGameBtn.addEventListener("click", () => {
   setLastSwapTotal(0);
   goalSequenceActive = false;
   newGame(state);
-  wrapDeckDrawForPerfectCards();
   goalIndex = 1;
   goalTarget = goalTargetForIndex(1);
   rewards.randomHints = false;
@@ -1538,7 +1525,6 @@ ui.restartBtn.addEventListener("click", () => {
   setLastSwapTotal(0);
   goalSequenceActive = false;
   newGame(state);
-  wrapDeckDrawForPerfectCards();
   goalIndex = 1;
   goalTarget = goalTargetForIndex(1);
   rewards.randomHints = false;
@@ -1659,6 +1645,17 @@ preloadFaceArtSvgs();
 
 // Restore saved run state (board/credits/goals/rewards) after deck exists.
 const restoredRun = tryRestoreRun();
+// Ensure newly dealt boards get Perfect Card rolls.
+function rollPerfectCardsOnBoard() {
+  if (!rewards.perfectCardStacks) return;
+  for (let r = 0; r < 5; r++) {
+    for (let c = 0; c < 5; c++) {
+      const card = state.board?.[r]?.[c];
+      if (card) maybeMarkPerfectCard(card);
+    }
+  }
+}
+rollPerfectCardsOnBoard();
 
 function isMobileLayout() {
   return document.documentElement.classList.contains("is-mobile");
@@ -2238,6 +2235,7 @@ function applyReward(id) {
     const stacks = rewards.perfectCardStacks;
     const pct = Math.round(perfectCardChance() * 100);
     enqueueRewardBurst("Perfect Card", `${pct}% chance per card to be worth 50x (${stacks} stack${stacks === 1 ? "" : "s"})`);
+    rollPerfectCardsOnBoard();
     updateRewardsTracker();
     scheduleSaveRun();
     return;
@@ -3295,7 +3293,11 @@ async function resolveCascades() {
     for (const key of clearSetAll) {
       const [r, c] = key.split(",").map(Number);
       const card = state.board[r][c];
-      if (card) removed.push(card);
+      if (card) {
+        // Perfect status is only for a card's current board life.
+        delete /** @type {any} */ (card).perfect;
+        removed.push(card);
+      }
       state.board[r][c] = null;
     }
     if (removed.length) state.deck.recycle(removed);
@@ -3328,6 +3330,7 @@ async function resolveCascades() {
       for (let cc = 0; cc < 5; cc++) {
         if (state.board[rr][cc]) continue;
         const card = state.deck.draw();
+        maybeMarkPerfectCard(card);
         state.board[rr][cc] = card;
         const dropRows = rr + 1 + REFILL_SPAWN_PAD;
         dropsNew.set(card.id, dropRows);
