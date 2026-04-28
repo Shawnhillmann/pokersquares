@@ -333,7 +333,7 @@ function cardScoreValue(card) {
 function perfectCardChance() {
   const stacks = Math.max(0, Math.floor(rewards.perfectCardStacks || 0));
   if (stacks <= 0) return 0;
-  return Math.min(0.95, 0.01 * stacks);
+  return Math.min(0.95, 0.02 * stacks);
 }
 
 function maybeMarkPerfectCard(card) {
