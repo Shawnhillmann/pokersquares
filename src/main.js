@@ -972,7 +972,8 @@ function updateGoalHud(credits) {
   }
 
   if (ui.goalTarget) {
-    ui.goalTarget.textContent = fmtShort(goalTarget);
+    ui.goalTarget.textContent =
+      goalTarget >= 1_000_000_000 ? fmtShort(goalTarget) : goalTarget.toLocaleString();
   }
   updateGoalText(creditsDisplayValue);
   updateRewardLabel();
@@ -994,7 +995,7 @@ function updateGoalText(n) {
   const v = Math.max(0, Math.floor(n));
   if (v === lastGoalTextCredits) return;
   lastGoalTextCredits = v;
-  if (ui.goalCurrent) ui.goalCurrent.textContent = fmtShort(v);
+  if (ui.goalCurrent) ui.goalCurrent.textContent = v >= 1_000_000_000 ? fmtShort(v) : v.toLocaleString();
 }
 
 function bumpGoalCelebration(isWin = false) {
@@ -2437,7 +2438,9 @@ async function processGoalReachedSequence(completedGoalIndex, completedGoalTarge
     goalTarget = goalTargetForIndex(goalIndex);
     updateRewardLabel();
     updateGoalTitleLabel();
-    if (ui.goalTarget) ui.goalTarget.textContent = fmtShort(goalTarget);
+    if (ui.goalTarget)
+      ui.goalTarget.textContent =
+        goalTarget >= 1_000_000_000 ? fmtShort(goalTarget) : goalTarget.toLocaleString();
 
     const picked = await showRewardPickModal(completed);
     applyReward(picked);
