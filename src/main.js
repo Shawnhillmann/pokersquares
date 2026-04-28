@@ -2549,16 +2549,16 @@ function showBigWin(amount, goalAtStart) {
   const duration = 1900; // slower count-up
   const start = performance.now();
   const from = Math.max(0, Math.floor(to * (0.72 + Math.random() * 0.18)));
-  if (valueEl) valueEl.textContent = `+${from.toLocaleString()}`;
+  if (valueEl) valueEl.textContent = `+${fmtShort(from)}`;
 
   const tick = (t) => {
     const p = Math.min(1, (t - start) / duration);
     // Ease out so it feels like a jackpot meter.
     const e = 1 - Math.pow(1 - p, 2.35);
     const v = Math.floor(from + (to - from) * e);
-    if (valueEl) valueEl.textContent = `+${v.toLocaleString()}`;
+    if (valueEl) valueEl.textContent = `+${fmtShort(v)}`;
     if (p < 1) requestAnimationFrame(tick);
-    else if (valueEl) valueEl.textContent = `+${to.toLocaleString()}`;
+    else if (valueEl) valueEl.textContent = `+${fmtShort(to)}`;
   };
   requestAnimationFrame(tick);
 
