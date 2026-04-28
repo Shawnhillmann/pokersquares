@@ -1054,8 +1054,8 @@ html.is-mobile .cell.is-swap-windup {
 
 .cardCorner {
   position: absolute;
-  left: 11px;
-  top: 9px;
+  left: 13px;
+  top: 12px;
   display: block;
   font-weight: 800;
   line-height: 1;
@@ -1098,8 +1098,8 @@ html.is-mobile .cell.is-swap-windup {
 /* (Aces are standard cards; no ace art mode) */
 
 .cardRank.cardRank--ten {
-  font-size: 30px;
-  letter-spacing: -0.03em;
+  font-size: 28px;
+  letter-spacing: -0.04em;
 }
 
 .cardPip {
@@ -2979,9 +2979,9 @@ html.is-mobile .cell {
 }
 
 html.is-mobile .cardCorner {
-  top: 7px;
-  left: 9px;
-  width: 26px;
+  top: 10px;
+  left: 11px;
+  width: 28px;
 }
 
 html.is-mobile .cardRank {
@@ -2993,14 +2993,20 @@ html.is-mobile .cardCornerSuit {
   font-size: clamp(12px, calc(var(--cell) * 0.26), 18px);
   width: 100%;
   text-align: center;
-  transform: translateX(-5px);
+  transform: translateX(-2px);
 }
 
 html.is-mobile .cardRank.cardRank--ten {
-  font-size: clamp(10px, calc(var(--cell) * 0.275), 19px);
+  font-size: clamp(9px, calc(var(--cell) * 0.252), 17px);
+  letter-spacing: -0.04em;
 }
 
-html.is-mobile .cardPip:not(.cardPip--faceArt) {
+/* Numbered/ace: same top-left stack as face cards; hide unused text pip on mobile */
+html.is-mobile .cardFace--cornerStack .cardPip:not(.cardPip--faceArt) {
+  display: none;
+}
+
+html.is-mobile .cardFace:not(.cardFace--cornerStack) .cardPip:not(.cardPip--faceArt) {
   font-size: clamp(13px, calc(var(--cell) * 0.36), 30px);
   top: 65%;
 }
