@@ -1171,10 +1171,17 @@ html.is-mobile .cell.is-swap-windup {
   align-self: center;
 }
 
-/* Mobile: avoid bottom-right spill on face cards only */
+/* Mobile: tighter corner art; smaller portrait than desktop */
 html.is-mobile .cardFace:not(.cardFace--jokerArt) img.cardPip--faceArt {
   right: 0;
   bottom: 0;
+  width: 68%;
+  height: 68%;
+}
+
+html.is-mobile .cardFace--jokerArt img.cardPip--faceArt {
+  width: min(62%, 100%);
+  max-height: 62%;
 }
 
 /* Make red suits pop more at a distance */
@@ -2979,25 +2986,25 @@ html.is-mobile .cell {
 }
 
 html.is-mobile .cardCorner {
-  top: 10px;
-  left: 11px;
-  width: 28px;
+  top: 5px;
+  left: 6px;
+  width: 24px;
 }
 
 html.is-mobile .cardRank {
-  font-size: clamp(12px, calc(var(--cell) * 0.325), 23px);
+  font-size: clamp(10px, calc(var(--cell) * 0.28), 19px);
 }
 
 html.is-mobile .cardCornerSuit {
-  margin-top: 2px;
-  font-size: clamp(12px, calc(var(--cell) * 0.26), 18px);
+  margin-top: 1px;
+  font-size: clamp(9px, calc(var(--cell) * 0.21), 15px);
   width: 100%;
   text-align: center;
-  transform: translateX(-2px);
+  transform: translateX(-1px);
 }
 
 html.is-mobile .cardRank.cardRank--ten {
-  font-size: clamp(9px, calc(var(--cell) * 0.252), 17px);
+  font-size: clamp(8px, calc(var(--cell) * 0.218), 14px);
   letter-spacing: -0.04em;
 }
 
