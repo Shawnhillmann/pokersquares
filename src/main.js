@@ -3043,7 +3043,11 @@ async function pulseScoredLine(line, combo, contribCells, dimCells, onTotal, han
     // Ensure the browser starts the CSS animation, then play the tick.
     await nextFrame();
     // Keep the animation beat unchanged, but don't tick for dimmed kickers.
-    if (!dimKeySet.has(`${p.r},${p.c}`)) sfx.cardFlipTick(i, combo);
+    if (!dimKeySet.has(`${p.r},${p.c}`)) {
+      const c = state.board[p.r]?.[p.c];
+      if (c && c.perfect) sfx.perfectCardTick?.(i, combo);
+      else sfx.cardFlipTick(i, combo);
+    }
 
     // When grow finishes, trigger border pop exactly on the same beat.
     await new Promise((resolve) => {

@@ -224,6 +224,15 @@ export const sfx = {
     playTone({ freq: base, dur: 0.03 / sp, type: "triangle", sweepTo: base * 1.08 });
   },
 
+  perfectCardTick(i = 0, combo = 1) {
+    // Brighter, more "precious" tick for Perfect Cards.
+    const c = Math.min(8, Math.max(1, combo));
+    const base = 1320 + c * 24 + i * 14;
+    const sp = speedFromCombo(combo);
+    playMetal({ freq: base, dur: 0.09 / sp, strength: 0.95 + c * 0.03 });
+    setTimeout(() => playTone({ freq: base * 1.22, dur: 0.04 / sp, type: "sine", sweepTo: base * 1.36 }), 25 / sp);
+  },
+
   shuffle() {
     // Short riffle/shuffle noise burst.
     playNoise({ dur: 0.06, highpassHz: 900 });
