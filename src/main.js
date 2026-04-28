@@ -2630,7 +2630,7 @@ function maybeTriggerRandomHint() {
   showHintHighlightForMove(move);
 }
 
-function showBigWin(amount, goalAtStart) {
+function showBigWin(amount, goalAtStart, hadChain = false) {
   const host = ui.board.parentElement;
   if (!host) return;
   const rect = ui.board.getBoundingClientRect();
@@ -2642,16 +2642,7 @@ function showBigWin(amount, goalAtStart) {
   n.style.left = `${x}px`;
   n.style.top = `${y}px`;
   const to = Math.max(0, Math.floor(amount));
-  const goal = Math.max(1, Math.floor(goalAtStart || goalTarget));
-  const pct = to / goal;
-  const phrase =
-    pct >= 1
-      ? "STACKED!"
-      : pct >= 0.75
-        ? "MONSTER HIT!"
-        : pct >= 0.5
-          ? "GOOD RUN!"
-          : "NICE HAND!";
+  const phrase = hadChain ? "GOOD RUN!" : "NICE HAND!";
   n.innerHTML = `<div class="bigWinBurst__title">${phrase}</div><div class="bigWinBurst__value">+0</div>`;
   host.append(n);
   requestAnimationFrame(() => n.classList.add("is-showing"));
@@ -2660,16 +2651,17 @@ function showBigWin(amount, goalAtStart) {
   const duration = 1900; // slower count-up
   const start = performance.now();
   const from = Math.max(0, Math.floor(to * (0.72 + Math.random() * 0.18)));
-  if (valueEl) valueEl.textContent = `+${fmtShort(from)}`;
+  const fmtBigWin = (n) => (n >= 1_000_000_000 ? fmtShort(n) : n.toLocaleString());
+  if (valueEl) valueEl.textContent = `+${fmtBigWin(from)}`;
 
   const tick = (t) => {
     const p = Math.min(1, (t - start) / duration);
     // Ease out so it feels like a jackpot meter.
     const e = 1 - Math.pow(1 - p, 2.35);
     const v = Math.floor(from + (to - from) * e);
-    if (valueEl) valueEl.textContent = `+${fmtShort(v)}`;
+    if (valueEl) valueEl.textContent = `+${fmtBigWin(v)}`;
     if (p < 1) requestAnimationFrame(tick);
-    else if (valueEl) valueEl.textContent = `+${fmtShort(to)}`;
+    else if (valueEl) valueEl.textContent = `+${fmtBigWin(to)}`;
   };
   requestAnimationFrame(tick);
 
@@ -3160,6 +3152,7 @@ async function resolveCascades() {
   state.comboStep = 0;
   state.lastHands = [];
   let gainedTotal = 0;
+  let scoredLineCount = 0;
   // Track per-swap total separately; reset each swap.
   let swapTotal = 0;
   const goalAtComboStart = goalTarget;
@@ -3254,6 +3247,7 @@ async function resolveCascades() {
       state.credits += applied;
       gainedTotal += applied;
       swapTotal += applied;
+      if (applied > 0) scoredLineCount += 1;
 
       sfx.scoreHand(line.type, state.comboStep);
       // Ladder Up only counts plays after being picked.
@@ -3388,7 +3382,7 @@ async function resolveCascades() {
   // Special-case: Goal 1 big wins are too frequent; only show 75%+ tier there.
   const showBigWinThreshold = goalIndex === 1 ? 0.75 : 0.25;
   if (!goalClearedThisResolve && gainedTotal > 0 && gainedTotal >= goalAtComboStart * showBigWinThreshold) {
-    showBigWin(gainedTotal, goalAtComboStart);
+    showBigWin(gainedTotal, goalAtComboStart, scoredLineCount > 1);
   }
 }
 

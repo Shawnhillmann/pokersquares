@@ -2385,8 +2385,8 @@ html.is-mobile .cardFace--jokerArt img.cardPip--faceArt {
 .bigWinBurst {
   position: fixed;
   z-index: 13;
-  padding: 16px 22px;
-  border-radius: 18px;
+  padding: 12px 16px;
+  border-radius: 16px;
   border: 1px solid rgba(247, 215, 116, 0.5);
   background: rgba(10, 12, 18, 0.82);
   box-shadow: 0 18px 60px rgba(0, 0, 0, 0.58);
@@ -2394,7 +2394,7 @@ html.is-mobile .cardFace--jokerArt img.cardPip--faceArt {
   opacity: 0;
   pointer-events: none;
   text-align: center;
-  max-width: min(92vw, 520px);
+  max-width: min(92vw, 420px);
   transition: opacity 140ms ease, transform 140ms ease;
 }
 
@@ -2410,24 +2410,24 @@ html.is-mobile .cardFace--jokerArt img.cardPip--faceArt {
 }
 
 .bigWinBurst__title {
-  font-weight: 950;
+  font-weight: 850;
   letter-spacing: 0.22em;
   text-transform: uppercase;
-  font-size: 16px;
+  font-size: 14px;
   color: rgba(247, 215, 116, 0.98);
   text-shadow: 0 0 20px rgba(247, 215, 116, 0.18), 0 16px 44px rgba(0, 0, 0, 0.62);
 }
 
 .bigWinBurst__value {
   margin-top: 6px;
-  font-weight: 950;
-  font-size: 56px;
+  font-weight: 700;
+  font-size: 44px;
   letter-spacing: 0.02em;
   color: rgba(247, 215, 116, 0.98);
   text-shadow: 0 0 22px rgba(247, 215, 116, 0.2), 0 18px 44px rgba(0, 0, 0, 0.62);
   font-variant-numeric: tabular-nums;
   display: inline-block;
-  width: clamp(220px, 70vw, 360px);
+  width: clamp(200px, 68vw, 320px);
   max-width: 100%;
   white-space: nowrap;
   text-align: center;
