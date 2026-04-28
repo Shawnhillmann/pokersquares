@@ -972,7 +972,7 @@ function updateGoalHud(credits) {
   }
 
   if (ui.goalTarget) {
-    ui.goalTarget.textContent = goalTarget.toLocaleString();
+    ui.goalTarget.textContent = fmtShort(goalTarget);
   }
   updateGoalText(creditsDisplayValue);
   updateRewardLabel();
@@ -994,7 +994,7 @@ function updateGoalText(n) {
   const v = Math.max(0, Math.floor(n));
   if (v === lastGoalTextCredits) return;
   lastGoalTextCredits = v;
-  if (ui.goalCurrent) ui.goalCurrent.textContent = v.toLocaleString();
+  if (ui.goalCurrent) ui.goalCurrent.textContent = fmtShort(v);
 }
 
 function bumpGoalCelebration(isWin = false) {
@@ -1114,6 +1114,7 @@ document.addEventListener("visibilitychange", () => {
 function formatHandChartMult(n) {
   const v = Number(n);
   if (!Number.isFinite(v)) return "";
+  if (Math.abs(v) >= 1000) return fmtShort(v);
   const rounded = Math.round(v * 10) / 10;
   if (Math.abs(rounded - Math.round(rounded)) < 1e-9) return String(Math.round(rounded));
   return String(rounded);
@@ -2436,7 +2437,7 @@ async function processGoalReachedSequence(completedGoalIndex, completedGoalTarge
     goalTarget = goalTargetForIndex(goalIndex);
     updateRewardLabel();
     updateGoalTitleLabel();
-    if (ui.goalTarget) ui.goalTarget.textContent = goalTarget.toLocaleString();
+    if (ui.goalTarget) ui.goalTarget.textContent = fmtShort(goalTarget);
 
     const picked = await showRewardPickModal(completed);
     applyReward(picked);
