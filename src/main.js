@@ -1134,25 +1134,29 @@ function syncHandChartScores() {
     }
     // @ts-ignore
     const base = Number(el.dataset.base || "1") || 1;
+    const row = /** @type {HTMLElement|null} */ (el.closest(".handRow"));
+    const nameEl = row?.querySelector(".handRow__name");
+    const nm = String(nameEl?.textContent || "").trim();
+    /** @type {string|null} */
+    let t = null;
+    if (nm === "Two Pair") t = HAND_TYPE.TWO_PAIR;
+    else if (nm === "Three of a Kind") t = HAND_TYPE.THREE_OF_A_KIND;
+    else if (nm === "Straight") t = HAND_TYPE.STRAIGHT;
+    else if (nm === "Flush") t = HAND_TYPE.FLUSH;
+    else if (nm === "Full House") t = HAND_TYPE.FULL_HOUSE;
+    else if (nm === "Four of a Kind") t = HAND_TYPE.FOUR_OF_A_KIND;
+    else if (nm === "Straight Flush") t = HAND_TYPE.STRAIGHT_FLUSH;
+    else if (nm === "Five of a Kind") t = HAND_TYPE.FIVE_OF_A_KIND;
+    else if (nm === "Royal Flush") t = HAND_TYPE.ROYAL_FLUSH;
+
+    // Show the same effective multiplier used by scoring:
+    // - Hand Multiplier reward stacks (+0.25x each) always apply
+    // - Premium Hands / Low Hands apply by hand type
+    // - Ladder Up (if active) adds +1x per time that hand has been scored this run
     let baseShown = base;
-    if (rewards.ladderUp) {
-      const row = /** @type {HTMLElement|null} */ (el.closest(".handRow"));
-      const nameEl = row?.querySelector(".handRow__name");
-      const nm = String(nameEl?.textContent || "").trim();
-      /** @type {string|null} */
-      let t = null;
-      if (nm === "Two Pair") t = HAND_TYPE.TWO_PAIR;
-      else if (nm === "Three of a Kind") t = HAND_TYPE.THREE_OF_A_KIND;
-      else if (nm === "Straight") t = HAND_TYPE.STRAIGHT;
-      else if (nm === "Flush") t = HAND_TYPE.FLUSH;
-      else if (nm === "Full House") t = HAND_TYPE.FULL_HOUSE;
-      else if (nm === "Four of a Kind") t = HAND_TYPE.FOUR_OF_A_KIND;
-      else if (nm === "Straight Flush") t = HAND_TYPE.STRAIGHT_FLUSH;
-      else if (nm === "Five of a Kind") t = HAND_TYPE.FIVE_OF_A_KIND;
-      else if (nm === "Royal Flush") t = HAND_TYPE.ROYAL_FLUSH;
-      if (t) baseShown = base + getHandTypePlayCount(t);
-    }
-    const shown = formatHandChartMult(baseShown * mult);
+    if (t && rewards.ladderUp) baseShown = base + getHandTypePlayCount(t);
+    const rewardTypeMult = t ? handScoreMultForReward(t) : 1;
+    const shown = formatHandChartMult(baseShown * mult * rewardTypeMult);
     el.textContent = `${shown}x`;
   });
 }
@@ -2184,6 +2188,8 @@ function applyReward(id) {
       "Premium Hands",
       `Four of a Kind+ is now ${Math.pow(3, stacks)}x (${stacks} stack${stacks === 1 ? "" : "s"})`
     );
+    syncHandChartScores();
+    scheduleSaveRun();
     return;
   }
   if (id === "lowRange") {
@@ -2194,6 +2200,8 @@ function applyReward(id) {
       "Low Hands",
       `Full House and lower is now ${Math.pow(6, stacks)}x (${stacks} stack${stacks === 1 ? "" : "s"})`
     );
+    syncHandChartScores();
+    scheduleSaveRun();
     return;
   }
   if (id === "boldFaces") {
