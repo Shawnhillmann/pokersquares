@@ -580,20 +580,6 @@ body {
   animation: goalGlowPulse 360ms ease-out 1;
 }
 
-.goalBlock.is-goal-full .goalBlock__fill {
-  background: linear-gradient(
-    90deg,
-    rgba(255, 70, 220, 0.95),
-    rgba(60, 240, 255, 0.95),
-    rgba(110, 255, 150, 0.95),
-    rgba(255, 230, 90, 0.95),
-    rgba(255, 70, 220, 0.95)
-  );
-  background-size: 300% 100%;
-  box-shadow: 0 0 22px rgba(140, 235, 255, 0.22), 0 0 34px rgba(255, 120, 245, 0.14);
-  animation: rainbowFlow 1.2s linear infinite;
-}
-
 .goalBlock.is-goal-passed {
   animation: goalPassed 520ms ease-out;
 }
@@ -989,30 +975,20 @@ main.stage {
 }
 
 .cell.is-perfect .cardFace {
-  position: relative;
   border-color: rgba(255, 255, 255, 0.22);
   box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.14), 0 0 22px rgba(255, 120, 245, 0.22);
-}
-
-.cell.is-perfect .cardFace::before {
-  content: "";
-  position: absolute;
-  inset: -2px;
-  border-radius: inherit;
   background: linear-gradient(
-    90deg,
-    rgba(255, 70, 220, 0.55),
-    rgba(60, 240, 255, 0.55),
-    rgba(110, 255, 150, 0.55),
-    rgba(255, 230, 90, 0.55),
-    rgba(255, 70, 220, 0.55)
-  );
-  background-size: 300% 100%;
-  filter: blur(6px);
-  opacity: 0.75;
-  pointer-events: none;
+      90deg,
+      rgba(255, 70, 220, 0.42),
+      rgba(60, 240, 255, 0.42),
+      rgba(110, 255, 150, 0.42),
+      rgba(255, 230, 90, 0.42),
+      rgba(255, 70, 220, 0.42)
+    ),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(245, 248, 255, 0.9));
+  background-size: 320% 100%, auto;
+  background-position: 0% 50%, 0 0;
   animation: rainbowFlow 900ms linear infinite;
-  z-index: -1;
 }
 
 .cell.is-border-pop {

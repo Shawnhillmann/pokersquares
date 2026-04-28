@@ -69,6 +69,7 @@ const RUN_STORAGE_KEY = "speed_poker_run_v1";
 
 const state = createGameState({ seed: null });
 newGame(state);
+wrapDeckDrawForPerfectCards();
 state.credits = 500;
 
 let successfulMoves = 0;
@@ -253,6 +254,7 @@ function tryRestoreRun() {
     if (Array.isArray(v.deck) && state.deck && /** @type {any} */ (state.deck).restore) {
       /** @type {any} */ (state.deck).restore(v.deck);
     }
+    wrapDeckDrawForPerfectCards();
 
     // Ensure we resume in a stable, interactive state.
     state.busy = false;
@@ -325,7 +327,9 @@ function cardScoreValue(card) {
   if (isNumberLike) base *= numMult;
   const stacks = Math.max(0, Math.floor(rewards.doubleCardValueStacks || 0));
   const mult = stacks <= 0 ? 1 : Math.pow(2, stacks);
-  return base * mult;
+  let v = base * mult;
+  if (card && /** @type {any} */ (card).perfect) v *= 50;
+  return v;
 }
 
 function perfectCardChance() {
@@ -334,26 +338,28 @@ function perfectCardChance() {
   return Math.min(0.95, 0.01 * stacks);
 }
 
-function perfectCardExpectedMult() {
+function maybeMarkPerfectCard(card) {
+  if (!card) return;
+  if (!rewards.perfectCardStacks) return;
+  // Don't reroll if already marked.
+  if (/** @type {any} */ (card).perfect) return;
   const ch = perfectCardChance();
-  return ch <= 0 ? 1 : 1 + ch * (50 - 1);
-}
-
-/**
- * @param {any} card
- * @returns {{ value:number, perfect:boolean }}
- */
-function cardScoreValueWithPerfect(card) {
-  const base = cardScoreValue(card);
-  const ch = perfectCardChance();
-  if (ch <= 0) return { value: base, perfect: false };
+  if (ch <= 0) return;
   const roll = state.rng.int(1_000_000) / 1_000_000;
-  const hit = roll < ch;
-  return { value: hit ? base * 50 : base, perfect: hit };
+  if (roll < ch) /** @type {any} */ (card).perfect = true;
 }
 
-function cardScoreValueExpected(card) {
-  return cardScoreValue(card) * perfectCardExpectedMult();
+function wrapDeckDrawForPerfectCards() {
+  const d = /** @type {any} */ (state.deck);
+  if (!d || typeof d.draw !== "function") return;
+  if (d.__perfectWrapped) return;
+  const orig = d.draw.bind(d);
+  d.draw = () => {
+    const c = orig();
+    maybeMarkPerfectCard(c);
+    return c;
+  };
+  d.__perfectWrapped = true;
 }
 
 function scoringOpts() {
@@ -674,13 +680,12 @@ function checkCantAffordSwapAndEnd() {
 
 // Removed: "no moves / no two-pair possible" game-over.
 
-/** @type {{ clearing:Set<string>|null, scoredLines: any[]|null, scoring:Set<string>|null, dim:Set<string>|null, perfect:Set<string>|null, dropRowsById: Map<string,number>|null, dropMsById: Map<string,number>|null, hint:Set<string>|null, dropMode: "gravity"|"refill"|null }} */
+/** @type {{ clearing:Set<string>|null, scoredLines: any[]|null, scoring:Set<string>|null, dim:Set<string>|null, dropRowsById: Map<string,number>|null, dropMsById: Map<string,number>|null, hint:Set<string>|null, dropMode: "gravity"|"refill"|null }} */
 const viewFx = {
   clearing: null,
   scoredLines: null,
   scoring: null,
   dim: null,
-  perfect: null,
   dropRowsById: null,
   dropMsById: null,
   hint: null,
@@ -939,12 +944,13 @@ function pulseGoalGlow() {
 }
 
 function setCreditsInstant(n) {
+  const prev = creditsDisplayValue;
   const v = Math.max(0, Math.floor(n));
   if (creditsAnimRaf != null) cancelAnimationFrame(creditsAnimRaf);
   creditsAnimRaf = null;
   creditsAnimTo = v;
   creditsDisplayValue = v;
-  pulseGoalGlow();
+  if (v > prev) pulseGoalGlow();
 }
 
 /**
@@ -955,6 +961,7 @@ function animateCreditsTo(to) {
   if (creditsAnimRaf != null) cancelAnimationFrame(creditsAnimRaf);
   const from = creditsDisplayValue;
   creditsAnimTo = to;
+  if (to > from) pulseGoalGlow();
   const start = performance.now();
   const duration = 360;
 
@@ -966,7 +973,6 @@ function animateCreditsTo(to) {
     const v = Math.floor(from + (currentTo - from) * e);
     creditsDisplayValue = v;
     updateGoalText(v);
-    pulseGoalGlow();
     if (p < 1) creditsAnimRaf = requestAnimationFrame(tick);
     else {
       creditsAnimRaf = null;
@@ -1041,8 +1047,6 @@ function updateGoalHud(credits) {
     const p = Math.max(0, Math.min(1, creditsDisplayValue / goalTarget));
     ui.goalFill.style.width = `${Math.round(p * 1000) / 10}%`;
   }
-  const block = ui.goalBar?.querySelector(".goalBlock");
-  if (block) block.classList.toggle("is-goal-full", creditsDisplayValue >= goalTarget);
   if (ui.goalBar) {
     const track = ui.goalBar.querySelector(".goalBlock__track");
     if (track) {
@@ -1104,7 +1108,6 @@ function rerender() {
       selected: state.selected,
       clearing: viewFx.clearing,
       scoring: viewFx.scoring,
-      perfect: viewFx.perfect,
       dim: viewFx.dim,
       hint: viewFx.hint,
       dropRowsById: viewFx.dropRowsById ?? undefined,
@@ -1473,6 +1476,7 @@ ui.newGameBtn.addEventListener("click", () => {
   setLastSwapTotal(0);
   goalSequenceActive = false;
   newGame(state);
+  wrapDeckDrawForPerfectCards();
   goalIndex = 1;
   goalTarget = goalTargetForIndex(1);
   rewards.randomHints = false;
@@ -1534,6 +1538,7 @@ ui.restartBtn.addEventListener("click", () => {
   setLastSwapTotal(0);
   goalSequenceActive = false;
   newGame(state);
+  wrapDeckDrawForPerfectCards();
   goalIndex = 1;
   goalTarget = goalTargetForIndex(1);
   rewards.randomHints = false;
@@ -2869,7 +2874,7 @@ function computeImmediateLineScoreForBoard(board, line) {
   for (const p of ordered) {
     const card = board[p.r][p.c];
     if (!card) continue;
-    pipSum += cardScoreValueExpected(card);
+    pipSum += cardScoreValue(card);
   }
   const hm = effectiveHandMultiplier(line.type);
   const rewardMult = 1 + 0.25 * Math.max(0, Math.floor(rewards.handMultiplierStacks || 0));
@@ -2999,7 +3004,7 @@ async function kickDropAnimation() {
  * Diagonals pulse left->right.
  * @param {{ kind:"row"|"col"|"diagDown"|"diagUp", cells:{r:number,c:number}[] }} line
  */
-async function pulseScoredLine(line, combo, contribCells, dimCells, onTotal, handBurstEl, valueByKey = null) {
+async function pulseScoredLine(line, combo, contribCells, dimCells, onTotal, handBurstEl) {
   // DOM nodes exist only after a render.
   const ordered = orderCellsForLine(line, contribCells); // only scoring cards
   const orderedDim = orderCellsForLine(line, dimCells);
@@ -3022,9 +3027,9 @@ async function pulseScoredLine(line, combo, contribCells, dimCells, onTotal, han
     if (!el) continue;
     el.style.setProperty("--combo-speed", String(comboSpeed(combo)));
     // Per-card value popup when it enlarges.
-    const k = `${p.r},${p.c}`;
-    const v = valueByKey && valueByKey.has(k) ? Number(valueByKey.get(k) || 0) : 0;
-    if (v > 0 || (valueByKey && valueByKey.has(k))) {
+    const card = state.board[p.r]?.[p.c];
+    if (card) {
+      const v = cardScoreValue(card);
       running += v;
       onTotal(running);
       const pop = showCardValuePopup(p, v);
@@ -3197,18 +3202,10 @@ async function resolveCascades() {
       rerender();
       const hm = effectiveHandMultiplier(line.type);
       let pipSum = 0;
-      /** @type {Map<string, number>} */
-      const valueByKey = new Map();
-      /** @type {Set<string>} */
-      const perfectKeys = new Set();
       for (const p of orderCellsForLine(line, contribCells)) {
         const card = state.board[p.r][p.c];
         if (!card) continue;
-        const { value, perfect } = cardScoreValueWithPerfect(card);
-        const k = `${p.r},${p.c}`;
-        valueByKey.set(k, value);
-        if (perfect) perfectKeys.add(k);
-        pipSum += value;
+        pipSum += cardScoreValue(card);
       }
       const lineScore = pipSum * hm;
       const rewardMult = 1 + 0.25 * Math.max(0, Math.floor(rewards.handMultiplierStacks || 0));
@@ -3236,8 +3233,6 @@ async function resolveCascades() {
         sfx.luckyRiver?.();
       }
       const chainPct = chainStacks > 0 ? 25 * chainStacks * chainStep : 0;
-      // Highlight any Perfect Card procs during the scoring pulse.
-      viewFx.perfect = perfectKeys.size > 0 ? perfectKeys : null;
       const handBurstEl = showHandBurst({
         label: line.label,
         type: line.type,
@@ -3248,8 +3243,7 @@ async function resolveCascades() {
       });
       // Ensure the line highlight is visible before the sequential grow starts.
       await sleep(comboDelayMs(45, state.comboStep));
-      await pulseScoredLine(line, state.comboStep, contribCells, dimCells, () => {}, handBurstEl, valueByKey);
-      viewFx.perfect = null;
+      await pulseScoredLine(line, state.comboStep, contribCells, dimCells, () => {}, handBurstEl);
 
       // Goals cannot be exceeded: cap the credits gain at the remaining amount to the current goal.
       const remainingToGoal = Math.max(0, Math.floor(goalTarget) - Math.floor(state.credits));

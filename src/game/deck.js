@@ -68,7 +68,7 @@ export function createDeck(rng) {
      * @returns {Card[]}
      */
     snapshot() {
-      return queue.map((c) => ({ id: c.id, rank: c.rank, suit: c.suit }));
+      return queue.map((c) => ({ id: c.id, rank: c.rank, suit: c.suit, perfect: !!c.perfect }));
     },
     /**
      * Restore the remaining draw pool (front-to-back).
@@ -78,7 +78,7 @@ export function createDeck(rng) {
       queue.length = 0;
       for (const c of nextQueue || []) {
         if (!c) continue;
-        queue.push({ id: String(c.id), rank: c.rank, suit: c.suit });
+        queue.push({ id: String(c.id), rank: c.rank, suit: c.suit, perfect: !!c.perfect });
       }
     },
     size() {
