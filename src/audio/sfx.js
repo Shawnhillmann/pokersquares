@@ -225,7 +225,7 @@ export const sfx = {
   },
 
   perfectCardTick(i = 0, combo = 1) {
-    // Brighter, more "precious" tick for Perfect Cards.
+    // Brighter, more "precious" tick for Gold Cards.
     const c = Math.min(8, Math.max(1, combo));
     const base = 1320 + c * 24 + i * 14;
     const sp = speedFromCombo(combo);

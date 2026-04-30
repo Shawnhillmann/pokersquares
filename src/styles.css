@@ -1960,6 +1960,24 @@ html.is-mobile .cardFace--jokerArt img.cardPip--faceArt {
   text-shadow: none;
 }
 
+.handBurst__multTag {
+  position: absolute;
+  left: 50%;
+  top: 6px;
+  transform: translate(-50%, -100%);
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(247, 215, 116, 0.26);
+  background: rgba(10, 12, 18, 0.72);
+  color: rgba(247, 215, 116, 0.98);
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  font-size: 12px;
+  line-height: 1;
+  text-shadow: none;
+  pointer-events: none;
+}
+
 .handBurst.is-bluff-win .handBurst__label,
 .handBurst.is-bluff-win .handBurst__credits {
   color: rgba(170, 255, 190, 0.98);
