@@ -2985,8 +2985,7 @@ html.is-mobile {
   -webkit-text-size-adjust: 100%;
   /* Board scales to width; scroll the page for credits / hint (nothing overlays the grid) */
   --gap: 4px;
-  /* Use dynamic viewport width so initial iOS layout doesn't start off-center until a pinch/resize. */
-  --cell-board-w: calc((100dvw - 28px - 4 * var(--gap)) / 5);
+  --cell-board-w: calc((100vw - 28px - 4 * var(--gap)) / 5);
   --cell: min(84px, var(--cell-board-w));
   --board-inner-w: calc(5 * var(--cell) + 4 * var(--gap));
   --table-pad-x: 8px;
