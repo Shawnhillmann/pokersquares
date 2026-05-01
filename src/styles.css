@@ -367,6 +367,8 @@ body {
   min-height: 100dvh;
   overflow-x: hidden;
   overflow-y: auto;
+  /* Prevent tiny layout shifts when scrollbars appear/disappear during swap effects. */
+  scrollbar-gutter: stable;
 }
 
 .orientationBlock[hidden] {
