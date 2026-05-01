@@ -1187,28 +1187,6 @@ main.stage {
   animation: perfectGoldGlow 3200ms ease-in-out infinite;
 }
 
-.cell.is-silver .cardFace {
-  border-color: rgba(170, 182, 198, 0.45);
-  /* Matte silver: cooler mid-tones (avoid a white cap that reads like a normal card). */
-  background: linear-gradient(180deg, rgba(222, 228, 238, 0.96), rgba(156, 166, 184, 0.9)),
-    linear-gradient(180deg, rgba(190, 198, 214, 0.84), rgba(132, 142, 160, 0.82));
-  background-blend-mode: multiply;
-  box-shadow: 0 0 0 2px rgba(185, 198, 218, 0.26), 0 0 22px rgba(170, 186, 210, 0.22);
-  animation: silverGlow 3400ms ease-in-out infinite;
-}
-
-@keyframes silverGlow {
-  0%,
-  100% {
-    filter: brightness(1);
-    box-shadow: 0 0 0 2px rgba(185, 198, 218, 0.24), 0 0 18px rgba(160, 178, 205, 0.18);
-  }
-  50% {
-    filter: brightness(1.045);
-    box-shadow: 0 0 0 2px rgba(210, 220, 236, 0.3), 0 0 28px rgba(185, 202, 226, 0.24);
-  }
-}
-
 @keyframes perfectGoldGlow {
   0%,
   100% {
