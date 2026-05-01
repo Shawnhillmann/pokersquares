@@ -18,7 +18,7 @@
   --cell: 116px;
   --gap: 10px;
   /* Used to keep goal bar aligned to table width */
-  --table-pad-x: 26px;
+  --table-pad-x: 20px;
   --board-inner-w: calc(5 * var(--cell) + 4 * var(--gap));
   --game-stack-w: calc(var(--board-inner-w) + 2 * var(--table-pad-x));
   --radius: 14px;
@@ -642,6 +642,13 @@ body {
   grid-column: 2;
   display: flex;
   justify-content: center;
+}
+
+.brand {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .hud__right {
