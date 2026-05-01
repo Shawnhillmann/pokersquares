@@ -1,7 +1,7 @@
 import { RANKS, SUITS } from "./cards.js";
 
 /**
- * @typedef {{ id: string, rank: any, suit: any }} Card
+ * @typedef {{ id: string, rank: any, suit: any, bigger?: number }} Card
  */
 
 /**
@@ -68,7 +68,12 @@ export function createDeck(rng) {
      * @returns {Card[]}
      */
     snapshot() {
-      return queue.map((c) => ({ id: c.id, rank: c.rank, suit: c.suit }));
+      return queue.map((c) => ({
+        id: c.id,
+        rank: c.rank,
+        suit: c.suit,
+        bigger: typeof c.bigger === "number" ? c.bigger : undefined
+      }));
     },
     /**
      * Restore the remaining draw pool (front-to-back).
@@ -78,7 +83,8 @@ export function createDeck(rng) {
       queue.length = 0;
       for (const c of nextQueue || []) {
         if (!c) continue;
-        queue.push({ id: String(c.id), rank: c.rank, suit: c.suit });
+        const bigger = typeof c.bigger === "number" ? c.bigger : undefined;
+        queue.push({ id: String(c.id), rank: c.rank, suit: c.suit, bigger });
       }
     },
     size() {

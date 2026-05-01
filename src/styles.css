@@ -2206,6 +2206,57 @@ html.is-mobile .cardFace--jokerArt img.cardPip--faceArt {
   animation: luckyRiverGlow 820ms ease-in-out 1;
 }
 
+.handBurst.is-jackpot {
+  min-width: clamp(230px, 70vw, 380px);
+  padding: 14px 18px;
+  border-color: rgba(120, 230, 255, 0.55);
+  box-shadow: 0 18px 60px rgba(60, 210, 255, 0.12), 0 14px 40px rgba(0, 0, 0, 0.55);
+}
+
+.handBurst__jackpot {
+  font-weight: 950;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(150, 245, 255, 0.98);
+  text-shadow: 0 0 30px rgba(80, 225, 255, 0.32), 0 18px 44px rgba(0, 0, 0, 0.62);
+  font-size: clamp(14px, 2.2vw, 18px);
+  margin-top: -2px;
+  margin-bottom: -2px;
+}
+
+.handBurst.is-jackpot .handBurst__label,
+.handBurst.is-jackpot .handBurst__credits {
+  color: rgba(150, 245, 255, 0.98);
+  text-shadow: 0 0 30px rgba(80, 225, 255, 0.3), 0 18px 44px rgba(0, 0, 0, 0.62);
+}
+
+.jackpotSpark {
+  position: fixed;
+  z-index: 11;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: hsla(var(--hue, 200), 100%, 70%, 0.95);
+  box-shadow: 0 0 22px hsla(var(--hue, 200), 100%, 70%, 0.45);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  animation: jackpotSparkFly 920ms cubic-bezier(0.19, 0.86, 0.2, 1) forwards;
+}
+
+@keyframes jackpotSparkFly {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.75);
+  }
+  10% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) translate(var(--dx), var(--dy)) rotate(var(--rot)) scale(0.1);
+  }
+}
+
 @keyframes luckyRiverGlow {
   0% {
     filter: brightness(1);
