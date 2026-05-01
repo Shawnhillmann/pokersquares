@@ -117,8 +117,12 @@ const rewards = {
   pocketRocketsStacks: 0,
   /** Times Lucky River picked; each adds +5% proc chance to x10 a scored hand. */
   luckyRiverStacks: 0,
-  /** Times Gold Cards picked; chance stacks (see perfectCardChance). Player-facing: 2% per stack to spawn as gold 50x. */
+  /** Times Gold Cards picked; chance stacks (see perfectCardChance). Player-facing: 2% per stack to spawn as gold (50× value). */
   perfectCardStacks: 0,
+  /** Times Broadway Cards picked; 10/J/Q/K/A card value ×2 per stack (compounding). */
+  broadwayCardsStacks: 0,
+  /** Times Low Cards picked; ranks 2–9 card value ×3 per stack (compounding). */
+  lowCardsStacks: 0,
   /** Scored hands have an 80% chance to be worth 2x or 0x. */
   pureBluff: false,
   /** Flushes/straights can be made with 4 cards (incl. straight/royal flush). */
@@ -285,6 +289,15 @@ function tryRestoreRun() {
           rewards[k] = v.rewards[k];
         }
       }
+      // Legacy save key before "Broadway Cards" rename.
+      /** @type {any} */
+      const vr = v.rewards;
+      if (typeof vr.faceCardsStacks === "number") {
+        rewards.broadwayCardsStacks = Math.max(
+          rewards.broadwayCardsStacks || 0,
+          Math.floor(vr.faceCardsStacks)
+        );
+      }
     }
 
     // Restore the remaining draw pool so cascades continue naturally.
@@ -340,18 +353,39 @@ function fmtBonusXFromPct(pct) {
   return `${s}x`;
 }
 
+/** Multiplier when a card spawns as gold (Gold Cards reward). */
+const GOLD_CARD_PERFECT_MULT = 50;
+
+function rankIsBroadway(rank) {
+  const r = String(rank);
+  return r === "10" || r === "J" || r === "Q" || r === "K" || r === "A";
+}
+
+function rankIsLow23456789(rank) {
+  const r = String(rank);
+  if (r === "10" || r === "J" || r === "Q" || r === "K" || r === "A" || r === "JOKER") return false;
+  const n = Number(r);
+  return Number.isFinite(n) && n >= 2 && n <= 9;
+}
+
 function cardScoreValue(card) {
   if (!card) return 0;
-  const isJoker = String(card.rank) === "JOKER";
-  const isAce = String(card.rank) === "A";
+  const rank = String(card.rank);
+  const isJoker = rank === "JOKER";
+  const isAce = rank === "A";
   const aceStacks = Math.max(0, Math.floor(rewards.pocketRocketsStacks || 0));
   const aceMult = aceStacks <= 0 ? 1 : Math.pow(10, aceStacks);
+  const broadwayStacks = Math.max(0, Math.floor(rewards.broadwayCardsStacks || 0));
+  const broadwayMult =
+    rankIsBroadway(rank) && broadwayStacks > 0 ? Math.pow(2, broadwayStacks) : 1;
+  const lowStacks = Math.max(0, Math.floor(rewards.lowCardsStacks || 0));
+  const lowMult = rankIsLow23456789(rank) && lowStacks > 0 ? Math.pow(3, lowStacks) : 1;
   const bigger = rewards.biggerNumbers ? Math.max(0, Math.floor(rewards.biggerNumbersBonus || 0)) : 0;
-  const baseUnmult = (rewards.jokerWildcard && isJoker ? 10 : cardBaseValue(String(card.rank))) + bigger;
+  const baseUnmult = (rewards.jokerWildcard && isJoker ? 10 : cardBaseValue(rank)) + bigger;
   let base = baseUnmult;
   if (isAce) base *= aceMult;
-  let v = base;
-  if (card && /** @type {any} */ (card).perfect) v *= 50;
+  let v = base * broadwayMult * lowMult;
+  if (card && /** @type {any} */ (card).perfect) v *= GOLD_CARD_PERFECT_MULT;
   return v;
 }
 
@@ -620,32 +654,23 @@ function clampNonNegative(n) {
   return Math.max(0, Math.floor(n));
 }
 
-/** @typedef {"bankrupt"|"win"} RunEndKind */
+const RUN_END_BANKRUPT_LINE = "Not enough credits to swap.";
 
-const RUN_END_COPY = /** @type {const} */ ({
-  bankrupt: "Not enough credits to swap.",
-  win: "You made it to Goal 31. Unreal run."
-});
-
-/**
- * @param {RunEndKind} kind
- */
-function endRun(kind) {
+function endRun() {
   state.busy = true;
   state.selected = null;
-  if (ui.runEndTitle) ui.runEndTitle.textContent = kind === "win" ? "You win" : "Run ended";
+  if (ui.runEndTitle) ui.runEndTitle.textContent = "Run ended";
   if (ui.finalPeakCreditsValue) ui.finalPeakCreditsValue.textContent = peakCreditsThisRun.toLocaleString();
   if (ui.finalPeakGoalValue) {
-    ui.finalPeakGoalValue.textContent = peakGoalClearedThisRun <= 0 ? "None" : `Goal ${peakGoalClearedThisRun}`;
+    ui.finalPeakGoalValue.textContent =
+      peakGoalClearedThisRun <= 0 ? "None" : `Round ${peakGoalClearedThisRun}`;
   }
   ui.finalScoreValue.textContent = state.credits.toLocaleString();
   ui.finalMovesValue.textContent = successfulMoves.toLocaleString();
-  const line = RUN_END_COPY[kind];
-  if (ui.runEndReason) ui.runEndReason.textContent = line;
+  if (ui.runEndReason) ui.runEndReason.textContent = RUN_END_BANKRUPT_LINE;
   ui.runEndModal.removeAttribute("hidden");
-  showToast(ui.toast, line);
-  if (kind === "win") sfx.youWin();
-  else sfx.gameOver();
+  showToast(ui.toast, RUN_END_BANKRUPT_LINE);
+  sfx.gameOver();
 }
 
 /**
@@ -668,7 +693,7 @@ function spendSwapCost() {
 
 function checkCantAffordSwapAndEnd() {
   if (canAffordSwap()) return false;
-  endRun("bankrupt");
+  endRun();
   return true;
 }
 
@@ -690,7 +715,7 @@ const viewFx = {
 
 /** Best credits reached this run (authoritative bankroll, not mid-animation display). */
 let peakCreditsThisRun = 0;
-/** Highest numbered goal cleared this run (1–5); 0 if none yet. */
+/** Highest round index cleared this run; 0 if none yet. */
 let peakGoalClearedThisRun = 0;
 /** Combined credits gained from the most recent swap (incl. combo/cascades). */
 let lastSwapTotal = 0;
@@ -733,8 +758,10 @@ function updateRewardsTracker() {
     "Bigger Numbers": "Each time you score a hand, all card values increase by +1 for the rest of the run.",
     "Lucky River": "Each stack adds +5% chance for scored hands to pay 10x.",
     "Risky Moves": "Each scored hand has an 80% chance to pay 2x or a 20% chance to pay 0x.",
-    "Gold Cards": "Each card has a 2% chance to spawn as a gold card worth 50x.",
-    "Playing Tight": "Two Pair and Trips are disabled, enabling less frequent but higher scoring hands.",
+    "Gold Cards": "Each card has a 2% chance to spawn as a gold card worth 50×.",
+    "Broadway Cards": "10s, Jacks, Queens, Kings, and Aces are worth 2x card value per stack (compounding).",
+    "Low Cards": "Twos through Nines are worth 3x card value per stack (compounding).",
+    "Instant Fold": "Two Pair and Trips are disabled, enabling less frequent but higher scoring hands.",
     "Ladder Up": "Each time you score a hand type, its multiplier increases by +1x for the rest of the run."
   };
 
@@ -856,8 +883,22 @@ function updateRewardsTracker() {
 
   if (rewards.perfectCardStacks > 0) {
     const chPct = Math.round(perfectCardChance() * 100);
-    addRow("Gold Cards", `${chPct}% spawn · 50× · ${rewards.perfectCardStacks}×`);
+    addRow("Gold Cards", `${chPct}% spawn · ${GOLD_CARD_PERFECT_MULT}× · ${rewards.perfectCardStacks}×`);
   } else addRow("Gold Cards", "Off");
+
+  if (rewards.broadwayCardsStacks > 0) {
+    addRow(
+      "Broadway Cards",
+      `10–A ${fmtShort(Math.pow(2, rewards.broadwayCardsStacks))}x · ${rewards.broadwayCardsStacks}×`
+    );
+  } else addRow("Broadway Cards", "Off");
+
+  if (rewards.lowCardsStacks > 0) {
+    addRow(
+      "Low Cards",
+      `2–9 ${fmtShort(Math.pow(3, rewards.lowCardsStacks))}x · ${rewards.lowCardsStacks}×`
+    );
+  } else addRow("Low Cards", "Off");
 
   addRow("Close Enough", rewards.closeEnough ? "On" : "Off");
 
@@ -895,7 +936,7 @@ function updateRewardsTracker() {
 
   addRow("Risky Moves", rewards.pureBluff ? "On" : "Off");
 
-  addRow("Playing Tight", rewards.noClearTrips || rewards.noClearTwoPair ? "On" : "Off");
+  addRow("Instant Fold", rewards.noClearTrips || rewards.noClearTwoPair ? "On" : "Off");
 
   addRow("Ladder Up", rewards.ladderUp ? "On" : "Off");
 }
@@ -999,9 +1040,12 @@ let pendingRewardPicks = 0;
 /** FIFO of goal numbers that granted a reward pick (for messaging). */
 const clearedGoalsForRewardPick = [];
 
+/** Shown after current round number so total rounds stay mysterious. */
+const ROUND_LABEL_TOTAL_PLACEHOLDER = " / ??";
+
 function updateGoalTitleLabel() {
   if (!ui.goalLabelTitle) return;
-  ui.goalLabelTitle.textContent = `Goal ${goalIndex}`;
+  ui.goalLabelTitle.textContent = `Round ${goalIndex}${ROUND_LABEL_TOTAL_PLACEHOLDER}`;
 }
 
 function updateGoalHud(credits) {
@@ -1514,6 +1558,8 @@ ui.newGameBtn.addEventListener("click", () => {
   rewards.pocketRocketsStacks = 0;
   rewards.luckyRiverStacks = 0;
   rewards.perfectCardStacks = 0;
+  rewards.broadwayCardsStacks = 0;
+  rewards.lowCardsStacks = 0;
   rewards.pureBluff = false;
   rewards.closeEnough = false;
   rewards.jokerWildcard = false;
@@ -1571,6 +1617,8 @@ ui.restartBtn.addEventListener("click", () => {
   rewards.pocketRocketsStacks = 0;
   rewards.luckyRiverStacks = 0;
   rewards.perfectCardStacks = 0;
+  rewards.broadwayCardsStacks = 0;
+  rewards.lowCardsStacks = 0;
   rewards.pureBluff = false;
   rewards.closeEnough = false;
   rewards.jokerWildcard = false;
@@ -1913,7 +1961,9 @@ function showCardValuePopup(p, value, opts = {}) {
   const host = ui.board.parentElement;
   if (!host) return;
 
-  const rect = cell.getBoundingClientRect();
+  const faceEl = cell.querySelector(".cardFace");
+  const faceRect = faceEl?.getBoundingClientRect();
+  const rect = faceRect && faceRect.width > 0 ? faceRect : cell.getBoundingClientRect();
   const pop = document.createElement("div");
   pop.className = "pipPopup";
   if (opts.variant === "zero") pop.classList.add("pipPopup--zero");
@@ -2146,7 +2196,7 @@ const REWARD_DEFS = /** @type {const} */ ([
   {
     id: "perfectCard",
     name: "Gold Cards",
-    desc: "Each card has a 2% chance to spawn as a gold card worth 50x.",
+    desc: "Each card has a 2% chance to spawn as a gold card worth 50×.",
     stack: { kind: "stackable" }
   },
   {
@@ -2198,6 +2248,18 @@ const REWARD_DEFS = /** @type {const} */ ([
     stack: { kind: "stackable" }
   },
   {
+    id: "broadwayCards",
+    name: "Broadway Cards",
+    desc: "10s, Jacks, Queens, Kings, and Aces are worth 2x (stackable).",
+    stack: { kind: "stackable" }
+  },
+  {
+    id: "lowCards",
+    name: "Low Cards",
+    desc: "Twos through Nines are worth 3x (stackable).",
+    stack: { kind: "stackable" }
+  },
+  {
     id: "jokerCard",
     name: "Joker Card",
     desc: "Counts as any card.",
@@ -2217,7 +2279,7 @@ const REWARD_DEFS = /** @type {const} */ ([
   },
   {
     id: "playingTight",
-    name: "Playing Tight",
+    name: "Instant Fold",
     desc: "Two Pair and Trips are disabled, enabling less frequent but higher scoring hands.",
     stack: { kind: "unique" }
   },
@@ -2239,6 +2301,8 @@ function canOfferReward(id) {
   if (id === "gutterball") return !rewards.gutterball;
   if (id === "biggerNumbers") return !rewards.biggerNumbers;
   if (id === "perfectCard") return true;
+  if (id === "broadwayCards") return true;
+  if (id === "lowCards") return true;
   if (id === "jokerCard") return jokerCount < 2;
   return true;
 }
@@ -2250,7 +2314,7 @@ function applyReward(id) {
     const stacks = rewards.perfectCardStacks;
     enqueueRewardBurst(
       "Gold Cards",
-      `Each card has a 2% chance to spawn as a gold card worth 50x (${stacks} stack${stacks === 1 ? "" : "s"})`
+      `Each card has a 2% chance to spawn as a gold card worth ${GOLD_CARD_PERFECT_MULT}× (${stacks} stack${stacks === 1 ? "" : "s"})`
     );
     rollPerfectCardsOnBoard();
     updateRewardsTracker();
@@ -2349,6 +2413,30 @@ function applyReward(id) {
     );
     return;
   }
+  if (id === "broadwayCards") {
+    rewards.broadwayCardsStacks += 1;
+    lastPickedRewardName = "Broadway Cards";
+    const stacks = rewards.broadwayCardsStacks;
+    enqueueRewardBurst(
+      "Broadway Cards",
+      `10s through Aces are now ${Math.pow(2, stacks)}× (${stacks} stack${stacks === 1 ? "" : "s"})`
+    );
+    updateRewardsTracker();
+    scheduleSaveRun();
+    return;
+  }
+  if (id === "lowCards") {
+    rewards.lowCardsStacks += 1;
+    lastPickedRewardName = "Low Cards";
+    const stacks = rewards.lowCardsStacks;
+    enqueueRewardBurst(
+      "Low Cards",
+      `Twos through Nines are now ${Math.pow(3, stacks)}× (${stacks} stack${stacks === 1 ? "" : "s"})`
+    );
+    updateRewardsTracker();
+    scheduleSaveRun();
+    return;
+  }
   if (id === "ladderUp") {
     rewards.ladderUp = true;
     // Ladder Up should start counting from the moment it is picked.
@@ -2393,16 +2481,16 @@ function applyReward(id) {
   if (id === "playingTight") {
     rewards.noClearTwoPair = true;
     rewards.noClearTrips = true;
-    lastPickedRewardName = "Playing Tight";
-    enqueueRewardBurst("Playing Tight", "Two Pair and Trips are now disabled");
+    lastPickedRewardName = "Instant Fold";
+    enqueueRewardBurst("Instant Fold", "Two Pair and Trips are now disabled");
     return;
   }
   // Backward compat: legacy split rewards now map to Playing Tight.
   if (id === "noClearTwoPair" || id === "noClearTrips") {
     rewards.noClearTwoPair = true;
     rewards.noClearTrips = true;
-    lastPickedRewardName = "Playing Tight";
-    enqueueRewardBurst("Playing Tight", "Two Pair and Trips are now disabled");
+    lastPickedRewardName = "Instant Fold";
+    enqueueRewardBurst("Instant Fold", "Two Pair and Trips are now disabled");
     return;
   }
 }
@@ -2455,7 +2543,7 @@ function showRewardPickModal(clearedGoal) {
   return new Promise((resolve) => {
     const opts = pickRewardOptions3();
     const swapNotice = `
-      <div class="swapNotice__line1">Goal <span class="swapNotice__goal">${clearedGoal}</span> Cleared</div>
+      <div class="swapNotice__line1">Round <span class="swapNotice__goal">${clearedGoal}</span> Cleared</div>
       <div class="swapNotice__line2">Swaps Now Cost <span class="swapNotice__cost">${fmtShort(swapCost())}</span>, Hints Now Cost <span class="swapNotice__cost">${fmtShort(hintCost())}</span></div>
     `;
     const overlay = document.createElement("div");
@@ -2517,20 +2605,12 @@ async function processGoalReachedSequence(completedGoalIndex, completedGoalTarge
     bumpGoalCelebration();
 
     if (completed === 11) {
-      enqueueRewardBurst("Heating up!", "You're 1/3 there. Goals will be harder now.");
+      enqueueRewardBurst("Heating up!", "You're 1/3 in. Credit targets ramp harder now.");
     } else if (completed === 21) {
-      enqueueRewardBurst("Final Stretch!", "Can you make it to 31?");
+      enqueueRewardBurst("Final stretch!", "Targets jump much faster—how far can you go?");
     }
 
-    if (completed >= 31) {
-      // Winning run: no more goals/rewards.
-      peakGoalClearedThisRun = Math.max(peakGoalClearedThisRun, 31);
-      endRun("win");
-      rerender();
-      return true;
-    }
-
-    // Advance to the next goal *before* showing the picker so swap/hint costs reflect the new goal.
+    // Advance to the next round *before* showing the picker so swap/hint costs reflect the new target.
     goalIndex = completed + 1;
     goalTarget = goalTargetForIndex(goalIndex);
     updateRewardLabel();
@@ -2543,7 +2623,7 @@ async function processGoalReachedSequence(completedGoalIndex, completedGoalTarge
     applyReward(picked);
     rerender();
 
-    // Keep credits at the completed goal while selecting the new goal reward.
+    // Keep credits at the completed round target while selecting the new reward.
     state.credits = completedTarget;
     setCreditsInstant(completedTarget);
     return true;
@@ -2598,7 +2678,6 @@ function enqueueRewardBurst(title, desc) {
       while (rewardBurstQueue.length) {
         const next = rewardBurstQueue.shift();
         if (!next) break;
-        // Don't show reward bursts while the win overlay is active; queue will resume after.
         await playRewardBurst(next);
       }
     } finally {
@@ -3019,7 +3098,15 @@ async function pulseScoredLine(line, combo, contribCells, dimCells, onTotal, han
     const el = ui.board.querySelector(`.cell[data-r="${p.r}"][data-c="${p.c}"]`);
     if (!el) continue;
     el.style.setProperty("--combo-speed", String(comboSpeed(combo)));
-    // Per-card value popup when it enlarges.
+    const face = el.querySelector(".cardFace");
+    // Hold the "grown" pose before measuring so popups align with the scaled face
+    // (avoids a subtle center drift vs the raw cell box, especially on mobile).
+    el.classList.add("is-seq-grown");
+    el.classList.remove("is-seq-grow");
+    el.classList.remove("is-border-pop");
+    // eslint-disable-next-line no-unused-expressions
+    el.offsetHeight;
+    // Per-card value popup once layout matches the pulse pose.
     const card = state.board[p.r]?.[p.c];
     if (card) {
       const v = cardScoreValue(card);
@@ -3028,12 +3115,6 @@ async function pulseScoredLine(line, combo, contribCells, dimCells, onTotal, han
       const pop = showCardValuePopup(p, v);
       if (pop) valuePops.push(pop);
     }
-    const face = el.querySelector(".cardFace");
-    el.classList.add("is-seq-grown");
-    el.classList.remove("is-seq-grow");
-    el.classList.remove("is-border-pop");
-    // eslint-disable-next-line no-unused-expressions
-    el.offsetHeight;
     el.classList.add("is-seq-grow");
     // Ensure the browser starts the CSS animation, then play the tick.
     await nextFrame();
@@ -3127,7 +3208,7 @@ async function onCellClick(pos) {
 
   // Every attempted swap costs credits (stakes).
   if (!spendSwapCost()) {
-    endRun("bankrupt");
+    endRun();
     rerender();
     return;
   }
@@ -3372,7 +3453,7 @@ async function resolveCascades() {
 
       if (goalClearedIndex > 0) {
         // Show rewards only after the scored line fully resolves (clear → refill).
-        setLastSwapTotal(0); // reset to "-" for the new goal, per UX request
+        setLastSwapTotal(0); // reset to "-" for the new round, per UX request
         await processGoalReachedSequence(goalClearedIndex, goalClearedTarget);
       }
       break;
@@ -3383,7 +3464,7 @@ async function resolveCascades() {
   if (!goalClearedThisResolve) setLastSwapTotal(swapTotal);
 
   state.comboStep = 0;
-  // Special-case: Goal 1 big wins are too frequent; only show 75%+ tier there.
+  // Special-case: round 1 big wins are too frequent; only show 75%+ tier there.
   const showBigWinThreshold = goalIndex === 1 ? 0.75 : 0.25;
   if (!goalClearedThisResolve && gainedTotal > 0 && gainedTotal >= goalAtComboStart * showBigWinThreshold) {
     showBigWin(gainedTotal, goalAtComboStart, scoredLineCount > 1);

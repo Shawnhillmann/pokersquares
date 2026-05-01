@@ -1114,8 +1114,12 @@ main.stage {
   animation-play-state: running;
 }
 
+/* Drop the idle breath entirely during play: a paused keyframe can leave the
+   wrapper translated (up to ~2px), which skews fixed-position popups vs the
+   card face—especially noticeable on the first scored cell on mobile. */
 .board.is-busy .cardBreath {
-  animation-play-state: paused;
+  animation: none;
+  transform: translate3d(0, 0, 0);
 }
 
 @media (prefers-reduced-motion: reduce) {
