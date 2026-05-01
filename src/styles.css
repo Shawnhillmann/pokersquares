@@ -655,38 +655,60 @@ body {
   will-change: transform;
   color: rgba(245, 214, 122, 0.94);
   text-shadow: 0 0 8px rgba(247, 215, 116, 0.14);
-  /* Same period + stagger on both: motion and glow travel left → right together. */
+  /* Letter wave only; gold pulse is added only when idle (see `html.is-idle` block below). */
+  animation: brandLetterWave 5.5s ease-in-out infinite;
+  animation-play-state: paused;
+}
+
+/* After idle: wave + extremely subtle gold pulse, same stagger (left → right). */
+html.is-idle .brandWave__ch {
   animation:
     brandLetterWave 5.5s ease-in-out infinite,
     brandGoldPulse 5.5s ease-in-out infinite;
-  /* Paused until global idle (10s, same as card breath); see main.js + html.is-idle. */
-  animation-play-state: paused, paused;
-}
-
-/* Match card breath: wave only after `IDLE_BREATH_MS` quiet (see main.js). */
-html.is-idle .brandWave__ch {
   animation-play-state: running, running;
 }
 
 .brandWave__ch:nth-child(1) {
-  animation-delay: 0ms, 0ms;
+  animation-delay: 0ms;
 }
 .brandWave__ch:nth-child(2) {
-  animation-delay: 90ms, 90ms;
+  animation-delay: 90ms;
 }
 .brandWave__ch:nth-child(3) {
-  animation-delay: 180ms, 180ms;
+  animation-delay: 180ms;
 }
 .brandWave__ch:nth-child(4) {
-  animation-delay: 270ms, 270ms;
+  animation-delay: 270ms;
 }
 .brandWave__ch:nth-child(5) {
-  animation-delay: 360ms, 360ms;
+  animation-delay: 360ms;
 }
 .brandWave__ch:nth-child(6) {
-  animation-delay: 450ms, 450ms;
+  animation-delay: 450ms;
 }
 .brandWave__ch:nth-child(7) {
+  animation-delay: 540ms;
+}
+
+html.is-idle .brandWave__ch:nth-child(1) {
+  animation-delay: 0ms, 0ms;
+}
+html.is-idle .brandWave__ch:nth-child(2) {
+  animation-delay: 90ms, 90ms;
+}
+html.is-idle .brandWave__ch:nth-child(3) {
+  animation-delay: 180ms, 180ms;
+}
+html.is-idle .brandWave__ch:nth-child(4) {
+  animation-delay: 270ms, 270ms;
+}
+html.is-idle .brandWave__ch:nth-child(5) {
+  animation-delay: 360ms, 360ms;
+}
+html.is-idle .brandWave__ch:nth-child(6) {
+  animation-delay: 450ms, 450ms;
+}
+html.is-idle .brandWave__ch:nth-child(7) {
   animation-delay: 540ms, 540ms;
 }
 
@@ -703,12 +725,12 @@ html.is-idle .brandWave__ch {
 @keyframes brandGoldPulse {
   0%,
   100% {
-    color: rgba(242, 210, 118, 0.92);
-    text-shadow: 0 0 7px rgba(247, 215, 116, 0.14);
+    color: rgba(245, 214, 122, 0.93);
+    text-shadow: 0 0 7px rgba(247, 215, 116, 0.12);
   }
   50% {
-    color: rgba(248, 218, 128, 0.95);
-    text-shadow: 0 0 10px rgba(247, 215, 116, 0.2);
+    color: rgba(246, 215, 123, 0.94);
+    text-shadow: 0 0 8px rgba(247, 215, 116, 0.145);
   }
 }
 
