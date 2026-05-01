@@ -2445,7 +2445,7 @@ html.is-mobile .cardFace--jokerArt img.cardPip--faceArt {
   text-shadow: 0 0 22px rgba(247, 215, 116, 0.2), 0 18px 44px rgba(0, 0, 0, 0.62);
   font-variant-numeric: tabular-nums;
   display: inline-block;
-  width: clamp(200px, 68vw, 320px);
+  width: auto;
   max-width: 100%;
   white-space: nowrap;
   text-align: center;

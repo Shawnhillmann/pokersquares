@@ -282,12 +282,11 @@ function swapCost() {
 
 function fmtShort(n) {
   const v = Math.max(0, Math.floor(Number(n) || 0));
-  if (v < 1000) return v.toLocaleString();
+  // Abbreviations only kick in at 1B+ so mid-game numbers stay readable on mobile.
+  if (v < 1_000_000_000) return v.toLocaleString();
   const UNITS = [
     { v: 1e12, s: "t" },
-    { v: 1e9, s: "b" },
-    { v: 1e6, s: "m" },
-    { v: 1e3, s: "k" }
+    { v: 1e9, s: "b" }
   ];
   for (const u of UNITS) {
     if (v >= u.v) {
@@ -2655,11 +2654,32 @@ function showBigWin(amount, goalAtStart, hadChain = false) {
   requestAnimationFrame(() => n.classList.add("is-showing"));
 
   const valueEl = n.querySelector(".bigWinBurst__value");
+  const layoutBigWinValue = () => {
+    if (!valueEl) return;
+    // Reset before measuring.
+    valueEl.style.transform = "";
+    valueEl.style.transformOrigin = "";
+
+    const br = n.getBoundingClientRect();
+    const cs = window.getComputedStyle(n);
+    const padL = Number.parseFloat(cs.paddingLeft) || 0;
+    const padR = Number.parseFloat(cs.paddingRight) || 0;
+    const avail = Math.max(1, br.width - padL - padR - 10); // small breathing room
+
+    const w = valueEl.scrollWidth;
+    if (w <= avail) return;
+
+    const s = Math.max(0.55, Math.min(1, avail / w));
+    valueEl.style.transformOrigin = "50% 50%";
+    valueEl.style.transform = `scale(${s})`;
+  };
+
   const duration = 1900; // slower count-up
   const start = performance.now();
   const from = Math.max(0, Math.floor(to * (0.72 + Math.random() * 0.18)));
   const fmtBigWin = (n) => (n >= 1_000_000_000 ? fmtShort(n) : n.toLocaleString());
   if (valueEl) valueEl.textContent = `+${fmtBigWin(from)}`;
+  requestAnimationFrame(() => layoutBigWinValue());
 
   const tick = (t) => {
     const p = Math.min(1, (t - start) / duration);
@@ -2667,8 +2687,10 @@ function showBigWin(amount, goalAtStart, hadChain = false) {
     const e = 1 - Math.pow(1 - p, 2.35);
     const v = Math.floor(from + (to - from) * e);
     if (valueEl) valueEl.textContent = `+${fmtBigWin(v)}`;
+    layoutBigWinValue();
     if (p < 1) requestAnimationFrame(tick);
     else if (valueEl) valueEl.textContent = `+${fmtBigWin(to)}`;
+    layoutBigWinValue();
   };
   requestAnimationFrame(tick);
 
