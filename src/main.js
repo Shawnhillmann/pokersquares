@@ -119,6 +119,8 @@ const rewards = {
   luckyRiverStacks: 0,
   /** Times Gold Cards picked; chance stacks (see perfectCardChance). Player-facing: 2% per stack to spawn as gold (50× value). */
   perfectCardStacks: 0,
+  /** Times Silver Cards picked; chance stacks (see silverCardChance). Player-facing: 5% per stack to spawn as silver (10× value). */
+  silverCardStacks: 0,
   /** Times Broadway Cards picked; 10/J/Q/K/A card value ×2 per stack (compounding). */
   broadwayCardsStacks: 0,
   /** Times Low Cards picked; ranks 2–9 card value ×3 per stack (compounding). */
@@ -355,6 +357,8 @@ function fmtBonusXFromPct(pct) {
 
 /** Multiplier when a card spawns as gold (Gold Cards reward). */
 const GOLD_CARD_PERFECT_MULT = 50;
+/** Multiplier when a card spawns as silver (Silver Cards reward). */
+const SILVER_CARD_MULT = 10;
 
 function rankIsBroadway(rank) {
   const r = String(rank);
@@ -386,6 +390,7 @@ function cardScoreValue(card) {
   if (isAce) base *= aceMult;
   let v = base * broadwayMult * lowMult;
   if (card && /** @type {any} */ (card).perfect) v *= GOLD_CARD_PERFECT_MULT;
+  else if (card && /** @type {any} */ (card).silver) v *= SILVER_CARD_MULT;
   return v;
 }
 
@@ -407,7 +412,26 @@ function maybeMarkPerfectCard(card) {
   if (roll < ch) /** @type {any} */ (card).perfect = true;
 }
 
-// Gold Cards are rolled when a card *spawns onto the board* (not stored in the deck).
+function silverCardChance() {
+  const stacks = Math.max(0, Math.floor(rewards.silverCardStacks || 0));
+  if (stacks <= 0) return 0;
+  return Math.min(0.95, 0.05 * stacks);
+}
+
+function maybeMarkSilverCard(card) {
+  if (!card) return;
+  if (!rewards.silverCardStacks) return;
+  // Silver status should not persist across deck cycles.
+  delete /** @type {any} */ (card).silver;
+  // Gold wins if it procs.
+  if (/** @type {any} */ (card).perfect) return;
+  const ch = silverCardChance();
+  if (ch <= 0) return;
+  const roll = state.rng.int(1_000_000) / 1_000_000;
+  if (roll < ch) /** @type {any} */ (card).silver = true;
+}
+
+// Gold/Silver Cards are rolled when a card *spawns onto the board* (not stored in the deck).
 
 function scoringOpts() {
   const useWildEval = rewards.jokerWildcard || rewards.extraJoker;
@@ -759,6 +783,7 @@ function updateRewardsTracker() {
     "Lucky River": "Each stack adds +5% chance for scored hands to pay 10x.",
     "Risky Moves": "Each scored hand has an 80% chance to pay 2x or a 20% chance to pay 0x.",
     "Gold Cards": "Each card has a 2% chance to spawn as a gold card worth 50×.",
+    "Silver Cards": "Each card has a 5% chance to spawn as a silver card worth 10×.",
     "Broadway Cards": "10s, Jacks, Queens, Kings, and Aces are worth 2x card value per stack (compounding).",
     "Low Cards": "Twos through Nines are worth 3x card value per stack (compounding).",
     "Instant Fold": "Two Pair and Trips are disabled, enabling less frequent but higher scoring hands.",
@@ -885,6 +910,11 @@ function updateRewardsTracker() {
     const chPct = Math.round(perfectCardChance() * 100);
     addRow("Gold Cards", `${chPct}% spawn · ${GOLD_CARD_PERFECT_MULT}× · ${rewards.perfectCardStacks}×`);
   } else addRow("Gold Cards", "Off");
+
+  if (rewards.silverCardStacks > 0) {
+    const chPct = Math.round(silverCardChance() * 100);
+    addRow("Silver Cards", `${chPct}% spawn · ${SILVER_CARD_MULT}× · ${rewards.silverCardStacks}×`);
+  } else addRow("Silver Cards", "Off");
 
   if (rewards.broadwayCardsStacks > 0) {
     addRow(
@@ -1558,6 +1588,7 @@ ui.newGameBtn.addEventListener("click", () => {
   rewards.pocketRocketsStacks = 0;
   rewards.luckyRiverStacks = 0;
   rewards.perfectCardStacks = 0;
+  rewards.silverCardStacks = 0;
   rewards.broadwayCardsStacks = 0;
   rewards.lowCardsStacks = 0;
   rewards.pureBluff = false;
@@ -1617,6 +1648,7 @@ ui.restartBtn.addEventListener("click", () => {
   rewards.pocketRocketsStacks = 0;
   rewards.luckyRiverStacks = 0;
   rewards.perfectCardStacks = 0;
+  rewards.silverCardStacks = 0;
   rewards.broadwayCardsStacks = 0;
   rewards.lowCardsStacks = 0;
   rewards.pureBluff = false;
@@ -1724,11 +1756,14 @@ preloadFaceArtSvgs();
 const restoredRun = tryRestoreRun();
 // Ensure newly dealt boards get Gold Cards rolls.
 function rollPerfectCardsOnBoard() {
-  if (!rewards.perfectCardStacks) return;
+  if (!rewards.perfectCardStacks && !rewards.silverCardStacks) return;
   for (let r = 0; r < 5; r++) {
     for (let c = 0; c < 5; c++) {
       const card = state.board?.[r]?.[c];
-      if (card) maybeMarkPerfectCard(card);
+      if (card) {
+        maybeMarkPerfectCard(card);
+        maybeMarkSilverCard(card);
+      }
     }
   }
 }
@@ -2200,6 +2235,12 @@ const REWARD_DEFS = /** @type {const} */ ([
     stack: { kind: "stackable" }
   },
   {
+    id: "silverCard",
+    name: "Silver Cards",
+    desc: "Each card has a 5% chance to spawn as a silver card worth 10×.",
+    stack: { kind: "stackable" }
+  },
+  {
     id: "heatingUp",
     name: "Heating Up",
     desc: "Each consecutive scored hand in the same cascade adds +0.5x to that line’s score.",
@@ -2301,6 +2342,7 @@ function canOfferReward(id) {
   if (id === "gutterball") return !rewards.gutterball;
   if (id === "biggerNumbers") return !rewards.biggerNumbers;
   if (id === "perfectCard") return true;
+  if (id === "silverCard") return true;
   if (id === "broadwayCards") return true;
   if (id === "lowCards") return true;
   if (id === "jokerCard") return jokerCount < 2;
@@ -2315,6 +2357,19 @@ function applyReward(id) {
     enqueueRewardBurst(
       "Gold Cards",
       `Each card has a 2% chance to spawn as a gold card worth ${GOLD_CARD_PERFECT_MULT}× (${stacks} stack${stacks === 1 ? "" : "s"})`
+    );
+    rollPerfectCardsOnBoard();
+    updateRewardsTracker();
+    scheduleSaveRun();
+    return;
+  }
+  if (id === "silverCard") {
+    rewards.silverCardStacks += 1;
+    lastPickedRewardName = "Silver Cards";
+    const stacks = rewards.silverCardStacks;
+    enqueueRewardBurst(
+      "Silver Cards",
+      `Each card has a 5% chance to spawn as a silver card worth ${SILVER_CARD_MULT}× (${stacks} stack${stacks === 1 ? "" : "s"})`
     );
     rollPerfectCardsOnBoard();
     updateRewardsTracker();
@@ -3379,6 +3434,7 @@ async function resolveCascades() {
       if (card) {
         // Perfect status is only for a card's current board life.
         delete /** @type {any} */ (card).perfect;
+        delete /** @type {any} */ (card).silver;
         removed.push(card);
       }
       state.board[r][c] = null;
@@ -3414,6 +3470,7 @@ async function resolveCascades() {
         if (state.board[rr][cc]) continue;
         const card = state.deck.draw();
         maybeMarkPerfectCard(card);
+        maybeMarkSilverCard(card);
         state.board[rr][cc] = card;
         const dropRows = rr + 1 + REFILL_SPAWN_PAD;
         dropsNew.set(card.id, dropRows);
