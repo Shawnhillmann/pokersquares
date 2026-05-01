@@ -36,9 +36,28 @@ function straightSeqs() {
   return seqs;
 }
 
+/** 5-rank sets that are "6 consecutive ranks minus one" (Gutterball straight). Ace in ace-low gutters is stored as 14. */
+const GUTTER_STRAIGHT_SETS = (() => {
+  /** @type {Set<number>[]} */
+  const sets = [];
+  for (let low = 2; low <= 9; low++) {
+    const w = [low, low + 1, low + 2, low + 3, low + 4, low + 5];
+    for (let omit = 0; omit < 6; omit++) {
+      sets.push(new Set(w.filter((_, i) => i !== omit)));
+    }
+  }
+  // Logical ranks 1–6 with one omitted; Ace as rank 1 is card value 14.
+  const aceLowWindow = [1, 2, 3, 4, 5, 6];
+  for (let omit = 0; omit < 6; omit++) {
+    const vals = aceLowWindow.filter((_, i) => i !== omit).map((v) => (v === 1 ? 14 : v));
+    sets.push(new Set(vals));
+  }
+  return sets;
+})();
+
 /**
  * @param {Card[]} cards
- * @param {{ jokerWild:boolean }} opts
+ * @param {{ jokerWild:boolean, gutterball?:boolean }} opts
  */
 export function evaluateHandWild(cards, opts) {
   if (!Array.isArray(cards) || cards.length !== 5) {
@@ -46,6 +65,7 @@ export function evaluateHandWild(cards, opts) {
   }
 
   const jokerWild = !!opts.jokerWild;
+  const gutterball = !!opts.gutterball;
 
   let wild = 0;
   /** @type {Card[]} */
@@ -104,6 +124,13 @@ export function evaluateHandWild(cards, opts) {
         const missing = 5 - fixedVals.length;
         if (missing <= wild) return HAND_TYPE.STRAIGHT_FLUSH;
       }
+      if (gutterball) {
+        for (const set of GUTTER_STRAIGHT_SETS) {
+          if (fixedVals.some((v) => !set.has(v))) continue;
+          const need = [...set].filter((v) => !fixedVals.includes(v)).length;
+          if (need <= wild) return HAND_TYPE.STRAIGHT_FLUSH;
+        }
+      }
     }
 
     // 3) Quads
@@ -142,6 +169,13 @@ export function evaluateHandWild(cards, opts) {
         if (fixedVals.some((v) => !set.has(v))) continue;
         const missing = 5 - fixedVals.length;
         if (missing <= wild) return HAND_TYPE.STRAIGHT;
+      }
+      if (gutterball) {
+        for (const set of GUTTER_STRAIGHT_SETS) {
+          if (fixedVals.some((v) => !set.has(v))) continue;
+          const need = [...set].filter((v) => !fixedVals.includes(v)).length;
+          if (need <= wild) return HAND_TYPE.STRAIGHT;
+        }
       }
     }
 

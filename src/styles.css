@@ -644,6 +644,82 @@ body {
   font-size: 14px;
 }
 
+.brandWave {
+  display: inline-flex;
+  align-items: baseline;
+}
+
+.brandWave__ch {
+  display: inline-block;
+  transform: translateZ(0);
+  will-change: transform;
+  color: rgba(245, 214, 122, 0.94);
+  text-shadow: 0 0 8px rgba(247, 215, 116, 0.14);
+  /* Same period + stagger on both: motion and glow travel left → right together. */
+  animation:
+    brandLetterWave 5.5s ease-in-out infinite,
+    brandGoldPulse 5.5s ease-in-out infinite;
+  /* Paused until global idle (10s, same as card breath); see main.js + html.is-idle. */
+  animation-play-state: paused, paused;
+}
+
+/* Match card breath: wave only after `IDLE_BREATH_MS` quiet (see main.js). */
+html.is-idle .brandWave__ch {
+  animation-play-state: running, running;
+}
+
+.brandWave__ch:nth-child(1) {
+  animation-delay: 0ms, 0ms;
+}
+.brandWave__ch:nth-child(2) {
+  animation-delay: 90ms, 90ms;
+}
+.brandWave__ch:nth-child(3) {
+  animation-delay: 180ms, 180ms;
+}
+.brandWave__ch:nth-child(4) {
+  animation-delay: 270ms, 270ms;
+}
+.brandWave__ch:nth-child(5) {
+  animation-delay: 360ms, 360ms;
+}
+.brandWave__ch:nth-child(6) {
+  animation-delay: 450ms, 450ms;
+}
+.brandWave__ch:nth-child(7) {
+  animation-delay: 540ms, 540ms;
+}
+
+@keyframes brandLetterWave {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(0, -2px, 0);
+  }
+}
+
+@keyframes brandGoldPulse {
+  0%,
+  100% {
+    color: rgba(242, 210, 118, 0.92);
+    text-shadow: 0 0 7px rgba(247, 215, 116, 0.14);
+  }
+  50% {
+    color: rgba(248, 218, 128, 0.95);
+    text-shadow: 0 0 10px rgba(247, 215, 116, 0.2);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .brandWave__ch {
+    animation: none !important;
+    color: rgba(245, 214, 122, 0.94) !important;
+    text-shadow: 0 0 8px rgba(247, 215, 116, 0.16) !important;
+  }
+}
+
 .brand__subtitle {
   margin-top: 4px;
   font-size: 12px;
@@ -1976,6 +2052,12 @@ html.is-mobile .cardFace--jokerArt img.cardPip--faceArt {
   line-height: 1;
   text-shadow: none;
   pointer-events: none;
+}
+
+.handBurst--compactMult .handBurst__multTag {
+  font-size: 10px;
+  padding: 2px 6px;
+  letter-spacing: 0.04em;
 }
 
 .handBurst.is-bluff-win .handBurst__label,

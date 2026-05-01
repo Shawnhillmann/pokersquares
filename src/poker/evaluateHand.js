@@ -35,15 +35,21 @@ const RANK_TO_VALUE = /** @type {const} */ ({
 });
 
 /**
+ * @typedef {{ gutterball?: boolean }} EvaluateHandOpts
+ */
+
+/**
  * Evaluate a 5-card poker hand.
  * Detection order matches product requirements.
  * @param {Card[]} cards
+ * @param {EvaluateHandOpts} [opts]
  * @returns {HandEval}
  */
-export function evaluateHand(cards) {
+export function evaluateHand(cards, opts = {}) {
   if (!Array.isArray(cards) || cards.length !== 5) {
     throw new Error("evaluateHand expects exactly 5 cards");
   }
+  const gutterball = !!opts.gutterball;
 
   const values = cards.map((c) => {
     const v = RANK_TO_VALUE[c.rank];
@@ -60,6 +66,19 @@ export function evaluateHand(cards) {
 
   const uniqValues = Array.from(new Set(values));
   const sortedUniqAsc = uniqValues.slice().sort((a, b) => a - b);
+
+  /** Five distinct ascending values spanning 6 ranks with exactly one single-rank skip (e.g. 5-6-8-9-10). */
+  const isGutterPattern = (asc5) => {
+    if (!asc5 || asc5.length !== 5) return false;
+    if (asc5[4] - asc5[0] !== 5) return false;
+    let gapOfTwo = 0;
+    for (let i = 0; i < 4; i++) {
+      const d = asc5[i + 1] - asc5[i];
+      if (d > 2) return false;
+      if (d === 2) gapOfTwo += 1;
+    }
+    return gapOfTwo === 1;
+  };
 
   /** @type {number[]|null} */
   let straightValuesAsc = null;
@@ -81,6 +100,21 @@ export function evaluateHand(cards) {
     if (isWheel) {
       straightValuesAsc = [1, 2, 3, 4, 5];
       return true;
+    }
+
+    // Gutterball: one rank may be missing within a 6-rank window (e.g. 5-7-8-9-10 skips 6).
+    if (gutterball && isGutterPattern(sortedUniqAsc)) {
+      straightValuesAsc = sortedUniqAsc;
+      return true;
+    }
+
+    // Gutterball with Ace as 1 (e.g. A-2-4-5-6 skips 3; ace-high sort would miss this).
+    if (gutterball && uniqValues.includes(14)) {
+      const altAsc = Array.from(new Set(values.map((v) => (v === 14 ? 1 : v)))).sort((a, b) => a - b);
+      if (altAsc.length === 5 && isGutterPattern(altAsc)) {
+        straightValuesAsc = altAsc;
+        return true;
+      }
     }
 
     return false;

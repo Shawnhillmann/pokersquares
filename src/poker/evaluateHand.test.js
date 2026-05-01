@@ -36,6 +36,22 @@ test("detects straight (broadway)", () => {
   assert.deepEqual(r.meta.straightValuesAsc, [10, 11, 12, 13, 14]);
 });
 
+test("gutterball: straight may skip one rank", () => {
+  const r = evaluateHand([c("5", "H"), c("7", "D"), c("8", "S"), c("9", "C"), c("10", "H")], { gutterball: true });
+  assert.equal(r.type, HAND_TYPE.STRAIGHT);
+});
+
+test("gutterball: ace low may skip one rank (A-2-4-5-6 missing 3)", () => {
+  const r = evaluateHand([c("A", "H"), c("2", "D"), c("4", "S"), c("5", "C"), c("6", "H")], { gutterball: true });
+  assert.equal(r.type, HAND_TYPE.STRAIGHT);
+  assert.deepEqual(r.meta.straightValuesAsc, [1, 2, 4, 5, 6]);
+});
+
+test("without gutterball, skipped-rank hand is not a straight", () => {
+  const r = evaluateHand([c("5", "H"), c("7", "D"), c("8", "S"), c("9", "C"), c("10", "H")]);
+  assert.notEqual(r.type, HAND_TYPE.STRAIGHT);
+});
+
 test("duplicates cannot be a straight", () => {
   const r = evaluateHand([c("2", "H"), c("3", "D"), c("4", "S"), c("4", "C"), c("5", "H")]);
   assert.notEqual(r.type, HAND_TYPE.STRAIGHT);
@@ -113,6 +129,22 @@ test("wild eval chooses straight flush over flush with a joker", () => {
   const r = evaluateHandWild(
     [c("6", "S"), c("7", "S"), c("8", "S"), c("9", "S"), c("JOKER", "X")],
     { jokerWild: true }
+  );
+  assert.equal(r.type, HAND_TYPE.STRAIGHT_FLUSH);
+});
+
+test("wild eval gutterball: straight flush with one rank skipped", () => {
+  const r = evaluateHandWild(
+    [c("5", "S"), c("7", "S"), c("8", "S"), c("9", "S"), c("10", "S")],
+    { jokerWild: true, gutterball: true }
+  );
+  assert.equal(r.type, HAND_TYPE.STRAIGHT_FLUSH);
+});
+
+test("wild eval gutterball: ace-low straight flush with one rank skipped", () => {
+  const r = evaluateHandWild(
+    [c("A", "S"), c("2", "S"), c("4", "S"), c("5", "S"), c("6", "S")],
+    { jokerWild: true, gutterball: true }
   );
   assert.equal(r.type, HAND_TYPE.STRAIGHT_FLUSH);
 });

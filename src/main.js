@@ -97,19 +97,18 @@ function goalTargetForIndex(idx) {
 const STARTING_POINTS = 500;
 
 const rewards = {
-  randomHints: false, // selected: Random Hints
-  /** Times Combo Bonus picked; each adds +50% to cascade combo line scores. */
-  comboBonusStacks: 0,
-  /** Times Hand Multiplier picked; each adds +25% to all hand scores. */
-  handMultiplierStacks: 0,
-  /** Times Swap Coupon picked; each reduces swap cost by 15%. */
-  swapCouponStacks: 0,
-  /** Times Premium Hands picked; each adds +50% to premium hand types. */
-  premiumHandsStacks: 0,
-  /** Times Low Hands picked; each adds +50% to low-range hand types. */
-  lowRangeStacks: 0,
-  /** Times Bolder Faces picked; each adds +30 base value to face cards. */
-  boldFacesStacks: 0,
+  /** One-time: each combo step in a cascade adds +0.5x to that line score (2nd hand +0.5x, 3rd +1x, …). */
+  heatingUp: false,
+  /** Times Group Up picked: trips, quads, and five of a kind are worth 2x per stack (compounding). */
+  stickTogetherStacks: 0,
+  /** Times Straighten Up picked: straight, straight flush, and royal flush get 2x per stack (stacks with Shape Up on SF/RF). */
+  straightUpStacks: 0,
+  /** Times Shape Up picked: flush, straight flush, and royal flush get 2x per stack (stacks with Straighten Up on SF/RF). */
+  shapeUpStacks: 0,
+  /** Times Split Up picked: two pair and full house are worth 4x per stack (compounding). */
+  splitUpStacks: 0,
+  /** One-time: straights may skip exactly one rank (e.g. 5-7-8-9-10). */
+  gutterball: false,
   /** Increases all card base values by +1 per scored hand (tracked in `biggerNumbersBonus`). */
   biggerNumbers: false,
   /** Current +value applied to all cards from Bigger Numbers (increases by +1 per scored hand). */
@@ -118,7 +117,7 @@ const rewards = {
   pocketRocketsStacks: 0,
   /** Times Lucky River picked; each adds +5% proc chance to x10 a scored hand. */
   luckyRiverStacks: 0,
-  /** Times Gold Cards picked; each adds +2% chance per card to be worth 50x. */
+  /** Times Gold Cards picked; chance stacks (see perfectCardChance). Player-facing: 2% per stack to spawn as gold 50x. */
   perfectCardStacks: 0,
   /** Scored hands have an 80% chance to be worth 2x or 0x. */
   pureBluff: false,
@@ -127,21 +126,14 @@ const rewards = {
   jokerWildcard: false, // Goal 3
   diagonalsScored: false, // Goal 4
   extraJoker: false, // Goal 5
-  /** Times Double Card Values was picked; each pick doubles pip values again. */
-  doubleCardValueStacks: 0,
   /** Two pair lines do not clear (straight+ still does). */
   noClearTwoPair: false,
   /** Three of a kind lines do not clear (straight+ still does). */
   noClearTrips: false,
-  /** Kickers count toward the line score (normally off for 2-pair/trips/quads). */
-  kickersCount: false,
   /** Each hand type multiplier gains +1 per time that hand was scored this run. */
   ladderUp: false
 };
 
-let randomHintChance = 0;
-/** Times Random Hints reward was chosen (for run summary). */
-let randomHintsPickCount = 0;
 let lastPickedRewardName = "____";
 let jokerCount = 0;
 /** Per-run count of how many times each hand type scored. */
@@ -161,6 +153,50 @@ function effectiveHandMultiplier(type) {
   const base = handMultiplier(type);
   if (!rewards.ladderUp) return base;
   return base + getHandTypePlayCount(type);
+}
+
+function stickTogetherMultForType(type) {
+  const t = String(type);
+  if (
+    t !== HAND_TYPE.THREE_OF_A_KIND &&
+    t !== HAND_TYPE.FOUR_OF_A_KIND &&
+    t !== HAND_TYPE.FIVE_OF_A_KIND
+  ) {
+    return 1;
+  }
+  const stacks = Math.max(0, Math.floor(rewards.stickTogetherStacks || 0));
+  return stacks <= 0 ? 1 : Math.pow(2, stacks);
+}
+
+function straightUpMultForType(type) {
+  const t = String(type);
+  if (t !== HAND_TYPE.STRAIGHT && t !== HAND_TYPE.STRAIGHT_FLUSH && t !== HAND_TYPE.ROYAL_FLUSH) return 1;
+  const stacks = Math.max(0, Math.floor(rewards.straightUpStacks || 0));
+  return stacks <= 0 ? 1 : Math.pow(2, stacks);
+}
+
+function shapeUpMultForType(type) {
+  const t = String(type);
+  if (t !== HAND_TYPE.FLUSH && t !== HAND_TYPE.STRAIGHT_FLUSH && t !== HAND_TYPE.ROYAL_FLUSH) return 1;
+  const stacks = Math.max(0, Math.floor(rewards.shapeUpStacks || 0));
+  return stacks <= 0 ? 1 : Math.pow(2, stacks);
+}
+
+function splitUpMultForType(type) {
+  const t = String(type);
+  if (t !== HAND_TYPE.TWO_PAIR && t !== HAND_TYPE.FULL_HOUSE) return 1;
+  const stacks = Math.max(0, Math.floor(rewards.splitUpStacks || 0));
+  return stacks <= 0 ? 1 : Math.pow(4, stacks);
+}
+
+/** Product of stackable hand-type reward multipliers (Group Up, Straighten Up, Shape Up, Split Up). */
+function lineTypeRewardMult(type) {
+  return (
+    stickTogetherMultForType(type) *
+    straightUpMultForType(type) *
+    shapeUpMultForType(type) *
+    splitUpMultForType(type)
+  );
 }
 
 function clearSavedRun() {
@@ -186,8 +222,6 @@ function snapshotRun() {
     peakGoalClearedThisRun,
     pendingRewardPicks: 0,
     clearedGoalsForRewardPick: [],
-    randomHintChance,
-    randomHintsPickCount,
     lastPickedRewardName,
     jokerCount,
     handTypePlayCounts,
@@ -225,8 +259,6 @@ function tryRestoreRun() {
     goalIndex = Math.max(1, Math.floor(v.goalIndex || 1));
     goalTarget = Math.max(1, Math.floor(v.goalTarget || goalTargetForIndex(goalIndex)));
 
-    randomHintChance = Math.max(0, Math.min(0.9, Number(v.randomHintChance) || 0));
-    randomHintsPickCount = Math.max(0, Math.floor(v.randomHintsPickCount || 0));
     lastPickedRewardName = String(v.lastPickedRewardName || "____");
     jokerCount = Math.max(0, Math.floor(v.jokerCount || 0));
     if (v.handTypePlayCounts && typeof v.handTypePlayCounts === "object") {
@@ -274,10 +306,7 @@ function hintCost() {
 function swapCost() {
   // Always 7.5% of the current goal target.
   const base = Math.max(1, Math.round(goalTarget * 0.075));
-  const stacks = Math.max(0, Math.floor(rewards.swapCouponStacks || 0));
-  // Apply coupons after the per-goal cost is computed.
-  const mult = stacks <= 0 ? 1 : Math.pow(0.9, stacks);
-  return Math.max(1, Math.round(base * mult));
+  return Math.max(1, Math.round(base));
 }
 
 function fmtShort(n) {
@@ -311,19 +340,13 @@ function cardScoreValue(card) {
   if (!card) return 0;
   const isJoker = String(card.rank) === "JOKER";
   const isAce = String(card.rank) === "A";
-  const isFace = String(card.rank) === "J" || String(card.rank) === "Q" || String(card.rank) === "K";
   const aceStacks = Math.max(0, Math.floor(rewards.pocketRocketsStacks || 0));
   const aceMult = aceStacks <= 0 ? 1 : Math.pow(10, aceStacks);
-  const faceStacks = Math.max(0, Math.floor(rewards.boldFacesStacks || 0));
-  const faceBonus = faceStacks <= 0 ? 0 : 30 * faceStacks;
   const bigger = rewards.biggerNumbers ? Math.max(0, Math.floor(rewards.biggerNumbersBonus || 0)) : 0;
   const baseUnmult = (rewards.jokerWildcard && isJoker ? 10 : cardBaseValue(String(card.rank))) + bigger;
   let base = baseUnmult;
   if (isAce) base *= aceMult;
-  if (isFace) base += faceBonus;
-  const stacks = Math.max(0, Math.floor(rewards.doubleCardValueStacks || 0));
-  const mult = stacks <= 0 ? 1 : Math.pow(2, stacks);
-  let v = base * mult;
+  let v = base;
   if (card && /** @type {any} */ (card).perfect) v *= 50;
   return v;
 }
@@ -350,9 +373,10 @@ function maybeMarkPerfectCard(card) {
 
 function scoringOpts() {
   const useWildEval = rewards.jokerWildcard || rewards.extraJoker;
+  const gutterball = !!rewards.gutterball;
   const baseEval = useWildEval
-    ? (cards) => evaluateHandWild(cards, { jokerWild: true })
-    : evaluateHand;
+    ? (cards) => evaluateHandWild(cards, { jokerWild: true, gutterball })
+    : (cards) => evaluateHand(cards, { gutterball });
   return {
     ...SCORE_OPTS,
     includeDiagonals: rewards.diagonalsScored,
@@ -456,7 +480,7 @@ function upgradeEvalForCloseEnough(baseEval, cards, jokerWild) {
         best.type === HAND_TYPE.STRAIGHT ||
         best.type === HAND_TYPE.STRAIGHT_FLUSH ||
         best.type === HAND_TYPE.ROYAL_FLUSH,
-      // Close Enough: which 4 cards are the actual hand (5th is a kicker unless Good Kickers).
+      // Close Enough: which 4 cards are the actual hand (5th is a kicker).
       closeEnoughIdxs: Array.isArray(best.idxs) ? best.idxs.slice(0, 4) : null
     }
   };
@@ -567,26 +591,6 @@ function upgradeEvalForCloseEnough(baseEval, cards, jokerWild) {
     if (!straight4Possible(valsSet, wildIdxs.length)) return null;
     return pickStraight4IdxsFromFixed(valsSet, fixed);
   }
-}
-
-function handScoreMultForReward(handType) {
-  const t = String(handType);
-  const premium =
-    t === HAND_TYPE.FULL_HOUSE ||
-    t === HAND_TYPE.FOUR_OF_A_KIND ||
-    t === HAND_TYPE.STRAIGHT_FLUSH ||
-    t === HAND_TYPE.FIVE_OF_A_KIND ||
-    t === HAND_TYPE.ROYAL_FLUSH;
-  const lowHands =
-    t === HAND_TYPE.FLUSH ||
-    t === HAND_TYPE.STRAIGHT ||
-    t === HAND_TYPE.THREE_OF_A_KIND ||
-    t === HAND_TYPE.TWO_PAIR;
-  const premStacks = Math.max(0, Math.floor(rewards.premiumHandsStacks || 0));
-  const lowStacks = Math.max(0, Math.floor(rewards.lowRangeStacks || 0));
-  const premMult = premium && premStacks > 0 ? Math.pow(3, premStacks) : 1;
-  const lowMult = lowHands && lowStacks > 0 ? Math.pow(6, lowStacks) : 1;
-  return premMult * lowMult;
 }
 
 /** Options for `findScoringLines` / board regeneration (includes hand types that never clear). */
@@ -716,20 +720,17 @@ function updateRewardsTracker() {
     Diagonals: "Diagonals can be scored as poker hands.",
     "Close Enough":
       "Flushes and straights can be made with only 4 cards (includes straight flushes and royal flush).",
-    "Combo Chain": "Each consecutive scored hand in a combo receives a 0.25x bonus per stack.",
-    "Hand Multiplier": "Each stack adds +0.25x to all hand multipliers.",
-    "Premium Hands": "Each stack makes Full House+ hands worth 3x.",
-    "Low Hands": "Each stack makes Flush and lower hands worth 6x.",
-    "Bolder Faces": "Each stack adds +30 base value to face cards (J/Q/K).",
+    "Heating Up": "One-time. Each consecutive scored hand in the same cascade adds +0.5x to that line’s score.",
+    "Shape Up": "All flushes are worth 2x.",
+    "Straighten Up": "All straights are worth 2x.",
+    "Group Up": "3 of a kind, 4 of a kind, and 5 of a kind are worth 2x.",
+    "Split Up": "Full house and Two Pair are worth 4x per stack.",
+    Gutterball: "One-time. Straights may skip exactly one rank (for example 5-7-8-9-10).",
     "Bigger Numbers": "Each time you score a hand, all card values increase by +1 for the rest of the run.",
-    "2X Card Values": "Each stack doubles every card’s value again.",
     "Lucky River": "Each stack adds +5% chance for scored hands to pay 10x.",
     "Risky Moves": "Each scored hand has an 80% chance to pay 2x or a 20% chance to pay 0x.",
-    "Gold Cards": "Each stack adds +2% chance for each scoring card to be worth 50x.",
-    "Random Hints": "Grants a chance for free hints to appear.",
-    "Swap Coupons": "Each stack reduces swap cost by 10% (applied after goal scaling).",
+    "Gold Cards": "Each card has a 2% chance to spawn as a gold card worth 50x.",
     "Playing Tight": "Two Pair and Trips are disabled, enabling less frequent but higher scoring hands.",
-    "Good Kickers": "Kicker cards add to scores for hands like trips and two pair.",
     "Ladder Up": "Each time you score a hand type, its multiplier increases by +1x for the rest of the run."
   };
 
@@ -851,40 +852,34 @@ function updateRewardsTracker() {
 
   if (rewards.perfectCardStacks > 0) {
     const chPct = Math.round(perfectCardChance() * 100);
-    addRow("Gold Cards", `${chPct}% @ 50x · ${rewards.perfectCardStacks}×`);
+    addRow("Gold Cards", `${chPct}% spawn · 50× · ${rewards.perfectCardStacks}×`);
   } else addRow("Gold Cards", "Off");
 
   addRow("Close Enough", rewards.closeEnough ? "On" : "Off");
 
-  if (rewards.comboBonusStacks > 0) {
-    const per = 25 * rewards.comboBonusStacks;
-    addRow("Combo Chain", `+${fmtBonusXFromPct(per)} per chain step · ${rewards.comboBonusStacks}×`);
-  } else addRow("Combo Chain", "Off");
+  addRow("Heating Up", rewards.heatingUp ? "On" : "Off");
 
-  if (rewards.handMultiplierStacks > 0) {
-    const pct = 25 * rewards.handMultiplierStacks;
-    addRow("Hand Multiplier", `+${fmtBonusXFromPct(pct)} all hands · ${rewards.handMultiplierStacks}×`);
-  } else addRow("Hand Multiplier", "Off");
+  if (rewards.shapeUpStacks > 0) {
+    addRow("Shape Up", `${fmtShort(Math.pow(2, rewards.shapeUpStacks))}x · ${rewards.shapeUpStacks}×`);
+  } else addRow("Shape Up", "Off");
 
-  if (rewards.premiumHandsStacks > 0) {
-    addRow("Premium Hands", `${fmtShort(Math.pow(3, rewards.premiumHandsStacks))}x · ${rewards.premiumHandsStacks}×`);
-  } else addRow("Premium Hands", "Off");
+  if (rewards.straightUpStacks > 0) {
+    addRow("Straighten Up", `${fmtShort(Math.pow(2, rewards.straightUpStacks))}x · ${rewards.straightUpStacks}×`);
+  } else addRow("Straighten Up", "Off");
 
-  if (rewards.lowRangeStacks > 0) {
-    addRow("Low Hands", `${fmtShort(Math.pow(6, rewards.lowRangeStacks))}x · ${rewards.lowRangeStacks}×`);
-  } else addRow("Low Hands", "Off");
+  if (rewards.stickTogetherStacks > 0) {
+    addRow("Group Up", `${fmtShort(Math.pow(2, rewards.stickTogetherStacks))}x · ${rewards.stickTogetherStacks}×`);
+  } else addRow("Group Up", "Off");
 
-  if (rewards.boldFacesStacks > 0) {
-    addRow("Bolder Faces", `+${30 * rewards.boldFacesStacks} base · ${rewards.boldFacesStacks}×`);
-  } else addRow("Bolder Faces", "Off");
+  if (rewards.splitUpStacks > 0) {
+    addRow("Split Up", `${fmtShort(Math.pow(4, rewards.splitUpStacks))}x · ${rewards.splitUpStacks}×`);
+  } else addRow("Split Up", "Off");
+
+  addRow("Gutterball", rewards.gutterball ? "On" : "Off");
 
   if (rewards.biggerNumbers) {
     addRow("Bigger Numbers", `+${Math.max(0, Math.floor(rewards.biggerNumbersBonus || 0))} to all cards`);
   } else addRow("Bigger Numbers", "Off");
-
-  if (rewards.doubleCardValueStacks > 0) {
-    addRow("2X Card Values", `x${Math.pow(2, rewards.doubleCardValueStacks)} · ${rewards.doubleCardValueStacks}× picked`);
-  } else addRow("2X Card Values", "Off");
 
   if (rewards.luckyRiverStacks > 0) {
     addRow("Lucky River", `10x @ ${5 * rewards.luckyRiverStacks}% · ${rewards.luckyRiverStacks}×`);
@@ -892,17 +887,8 @@ function updateRewardsTracker() {
 
   addRow("Risky Moves", rewards.pureBluff ? "On" : "Off");
 
-  if (rewards.randomHints) {
-    addRow("Random Hints", `${Math.round(randomHintChance * 100)}% roll · ${randomHintsPickCount} picked`);
-  } else addRow("Random Hints", "Off");
-
-  if (rewards.swapCouponStacks > 0) {
-    addRow("Swap Coupons", `-${10 * rewards.swapCouponStacks}% · ${rewards.swapCouponStacks}×`);
-  } else addRow("Swap Coupons", "Off");
-
   addRow("Playing Tight", rewards.noClearTrips || rewards.noClearTwoPair ? "On" : "Off");
 
-  addRow("Good Kickers", rewards.kickersCount ? "On" : "Off");
   addRow("Ladder Up", rewards.ladderUp ? "On" : "Off");
 }
 
@@ -1061,9 +1047,9 @@ function bumpGoalCelebration(isWin = false) {
 function rewardNameForGoal(g) {
   switch (g) {
     case 1:
-      return "Random Hints";
+      return "Gold Cards";
     case 2:
-      return "Combo Bonus";
+      return "Heating Up";
     case 3:
       return "Joker Card";
     case 4:
@@ -1132,7 +1118,7 @@ function syncMobileViewportClass() {
   positionScoreFeed();
 }
 
-// Idle breathing: only enable after 10s of no player/game activity; disable immediately on any activity.
+// Idle breathing (cards + POKARIA logo): only after 10s quiet; `is-idle` on board and <html>; disable on any activity.
 let idleBreathTimer = /** @type {number|null} */ (null);
 let lastActivityAt = Date.now();
 const IDLE_BREATH_MS = 10_000;
@@ -1140,6 +1126,7 @@ const IDLE_BREATH_MS = 10_000;
 function markActivity() {
   lastActivityAt = Date.now();
   ui.board.classList.remove("is-idle");
+  document.documentElement.classList.remove("is-idle");
   if (idleBreathTimer != null) clearTimeout(idleBreathTimer);
   idleBreathTimer = window.setTimeout(() => {
     idleBreathTimer = null;
@@ -1148,6 +1135,7 @@ function markActivity() {
     const busy = ui.board.classList.contains("is-busy");
     if (enoughIdle && !busy && document.visibilityState === "visible") {
       ui.board.classList.add("is-idle");
+      document.documentElement.classList.add("is-idle");
     } else {
       markActivity();
     }
@@ -1157,14 +1145,55 @@ function markActivity() {
 document.addEventListener("pointerdown", markActivity, { passive: true });
 document.addEventListener("keydown", markActivity);
 document.addEventListener("visibilitychange", () => {
-  if (document.visibilityState !== "visible") ui.board.classList.remove("is-idle");
+  if (document.visibilityState !== "visible") {
+    ui.board.classList.remove("is-idle");
+    document.documentElement.classList.remove("is-idle");
+  }
   markActivity();
 });
+
+/**
+ * Multiplier display for chart + score popup: decimals under 1k; from 1k use k / m / b / t (same style as large fmtShort).
+ * @param {number} n
+ * @returns {string} numeric body only (no "x")
+ */
+function fmtMultiplierBody(n) {
+  const v = Number(n);
+  if (!Number.isFinite(v) || v <= 0) return "";
+  const abs = Math.abs(v);
+  if (abs < 1000) {
+    const rounded = Math.round(v * 100) / 100;
+    const isInt = Math.abs(rounded - Math.round(rounded)) < 1e-9;
+    return isInt ? String(Math.round(rounded)) : String(rounded);
+  }
+  if (abs < 1e6) {
+    const x = abs / 1e3;
+    const oneDec = Math.round(x * 10) / 10;
+    const s = oneDec % 1 === 0 ? String(Math.round(oneDec)) : oneDec.toFixed(1);
+    return `${s}k`;
+  }
+  if (abs < 1e9) {
+    const x = abs / 1e6;
+    const oneDec = Math.round(x * 10) / 10;
+    const s = oneDec % 1 === 0 ? String(Math.round(oneDec)) : oneDec.toFixed(1);
+    return `${s}m`;
+  }
+  if (abs < 1e12) {
+    const x = abs / 1e9;
+    const oneDec = Math.round(x * 10) / 10;
+    const s = oneDec % 1 === 0 ? String(Math.round(oneDec)) : oneDec.toFixed(1);
+    return `${s}b`;
+  }
+  const x = abs / 1e12;
+  const oneDec = Math.round(x * 10) / 10;
+  const s = oneDec % 1 === 0 ? String(Math.round(oneDec)) : oneDec.toFixed(1);
+  return `${s}t`;
+}
 
 function formatHandChartMult(n) {
   const v = Number(n);
   if (!Number.isFinite(v)) return "";
-  if (Math.abs(v) >= 1000) return fmtShort(v);
+  if (Math.abs(v) >= 1000) return fmtMultiplierBody(v);
   const rounded = Math.round(v * 10) / 10;
   if (Math.abs(rounded - Math.round(rounded)) < 1e-9) return String(Math.round(rounded));
   return String(rounded);
@@ -1172,8 +1201,6 @@ function formatHandChartMult(n) {
 
 function syncHandChartScores() {
   if (!ui.handChart) return;
-  const stacks = Math.max(0, Math.floor(rewards.handMultiplierStacks || 0));
-  const mult = 1 + 0.25 * stacks;
   ui.handChart.querySelectorAll(".handRow__tag--score").forEach((el) => {
     // @ts-ignore
     if (!el.dataset.base) {
@@ -1201,13 +1228,12 @@ function syncHandChartScores() {
     else if (nm === "Royal Flush") t = HAND_TYPE.ROYAL_FLUSH;
 
     // Show the same effective multiplier used by scoring:
-    // - Hand Multiplier reward stacks (+0.25x each) always apply
-    // - Premium Hands / Low Hands apply by hand type
     // - Ladder Up (if active) adds +1x per time that hand has been scored this run
+    // - Stackable type rewards (Group Up, Straighten Up, Shape Up, Split Up) multiply the chart when active
     let baseShown = base;
     if (t && rewards.ladderUp) baseShown = base + getHandTypePlayCount(t);
-    const rewardTypeMult = t ? handScoreMultForReward(t) : 1;
-    const shown = formatHandChartMult(baseShown * mult * rewardTypeMult);
+    const typeMult = t ? lineTypeRewardMult(t) : 1;
+    const shown = formatHandChartMult(baseShown * typeMult);
     el.textContent = `${shown}x`;
   });
 }
@@ -1228,7 +1254,11 @@ const settings = {
 function loadSettings() {
   try {
     const raw = localStorage.getItem(SETTINGS_STORAGE_KEY);
-    if (!raw) return;
+    if (!raw) {
+      // Mobile: CRT off by default (performance / readability); desktop keeps `settings.crt` default.
+      if (MOBILE_MQ.matches) settings.crt = false;
+      return;
+    }
     const v = JSON.parse(raw);
     if (v && typeof v === "object") {
       if (typeof v.sfx === "boolean") settings.sfx = v.sfx;
@@ -1238,11 +1268,12 @@ function loadSettings() {
       if (typeof v.musicTrack === "number") settings.musicTrack = Math.max(1, Math.floor(v.musicTrack));
       if (typeof v.theme === "string") settings.theme = v.theme;
       if (typeof v.crt === "boolean") settings.crt = v.crt;
+      else if (MOBILE_MQ.matches) settings.crt = false;
       if (typeof v.crtStrength === "number") settings.crtStrength = Math.max(0, Math.min(1, v.crtStrength));
       if (typeof v.fullscreen === "boolean") settings.fullscreen = v.fullscreen;
     }
   } catch {
-    // ignored
+    if (MOBILE_MQ.matches) settings.crt = false;
   }
 }
 
@@ -1462,17 +1493,14 @@ ui.newGameBtn.addEventListener("click", () => {
   newGame(state);
   goalIndex = 1;
   goalTarget = goalTargetForIndex(1);
-  rewards.randomHints = false;
-  randomHintChance = 0;
-  randomHintsPickCount = 0;
   lastPickedRewardName = "____";
   jokerCount = 0;
-  rewards.comboBonusStacks = 0;
-  rewards.handMultiplierStacks = 0;
-  rewards.swapCouponStacks = 0;
-  rewards.premiumHandsStacks = 0;
-  rewards.lowRangeStacks = 0;
-  rewards.boldFacesStacks = 0;
+  rewards.heatingUp = false;
+  rewards.stickTogetherStacks = 0;
+  rewards.straightUpStacks = 0;
+  rewards.shapeUpStacks = 0;
+  rewards.splitUpStacks = 0;
+  rewards.gutterball = false;
   rewards.biggerNumbers = false;
   rewards.biggerNumbersBonus = 0;
   rewards.pocketRocketsStacks = 0;
@@ -1483,10 +1511,8 @@ ui.newGameBtn.addEventListener("click", () => {
   rewards.jokerWildcard = false;
   rewards.diagonalsScored = false;
   rewards.extraJoker = false;
-  rewards.doubleCardValueStacks = 0;
   rewards.noClearTwoPair = false;
   rewards.noClearTrips = false;
-  rewards.kickersCount = false;
   rewards.ladderUp = false;
   handTypePlayCounts = Object.create(null);
   pendingRewardPicks = 0;
@@ -1524,17 +1550,14 @@ ui.restartBtn.addEventListener("click", () => {
   newGame(state);
   goalIndex = 1;
   goalTarget = goalTargetForIndex(1);
-  rewards.randomHints = false;
-  randomHintChance = 0;
-  randomHintsPickCount = 0;
   lastPickedRewardName = "____";
   jokerCount = 0;
-  rewards.comboBonusStacks = 0;
-  rewards.handMultiplierStacks = 0;
-  rewards.swapCouponStacks = 0;
-  rewards.premiumHandsStacks = 0;
-  rewards.lowRangeStacks = 0;
-  rewards.boldFacesStacks = 0;
+  rewards.heatingUp = false;
+  rewards.stickTogetherStacks = 0;
+  rewards.straightUpStacks = 0;
+  rewards.shapeUpStacks = 0;
+  rewards.splitUpStacks = 0;
+  rewards.gutterball = false;
   rewards.biggerNumbers = false;
   rewards.biggerNumbersBonus = 0;
   rewards.pocketRocketsStacks = 0;
@@ -1545,10 +1568,8 @@ ui.restartBtn.addEventListener("click", () => {
   rewards.jokerWildcard = false;
   rewards.diagonalsScored = false;
   rewards.extraJoker = false;
-  rewards.doubleCardValueStacks = 0;
   rewards.noClearTwoPair = false;
   rewards.noClearTrips = false;
-  rewards.kickersCount = false;
   rewards.ladderUp = false;
   handTypePlayCounts = Object.create(null);
   pendingRewardPicks = 0;
@@ -1614,8 +1635,10 @@ window.addEventListener("focus", () => sfx.unlock());
 window.addEventListener("pageshow", () => sfx.unlock());
 
 // Apply persisted settings at startup.
+const hadSavedSettings = !!localStorage.getItem(SETTINGS_STORAGE_KEY);
 loadSettings();
 applySettings();
+if (!hadSavedSettings && MOBILE_MQ.matches) saveSettings();
 syncHandChartScores();
 
 // Warm the browser cache for face-card SVGs (helps on slow mobile connections).
@@ -1685,7 +1708,7 @@ function animateSwapSuccess(a, b) {
   const bEl = ui.board.querySelector(`.cell[data-r="${b.r}"][data-c="${b.c}"]`);
   if (!aEl || !bEl) return;
 
-  // Defensive: ensure no "fail" classes ever leak into Speed Poker.
+  // Defensive: ensure no "fail" classes ever leak into Pokaria.
   aEl.classList.remove("is-invalid", "is-swap-try", "is-fail-pulse");
   bEl.classList.remove("is-invalid", "is-swap-try", "is-fail-pulse");
 
@@ -2010,27 +2033,25 @@ function showHandBurst({ label, type, credits, chainPct = 0, luckyMult = 0, pure
   const amt = Math.max(0, Math.floor(Number(credits) || 0));
   const chain =
     chainPct > 0
-      ? `<span class="handBurst__chain" aria-label="Combo Chain bonus">+${fmtBonusXFromPct(chainPct)}</span>`
+      ? `<span class="handBurst__chain" aria-label="Heating Up bonus">+${fmtBonusXFromPct(chainPct)}</span>`
       : "";
 
-  const fmtMultTag = (m) => {
-    const v = Number(m);
-    if (!Number.isFinite(v) || v <= 0) return "";
-    const rounded = Math.round(v * 100) / 100;
-    const isInt = Math.abs(rounded - Math.round(rounded)) < 1e-9;
-    const s = isInt ? fmtShort(Math.round(rounded)) : String(rounded);
-    return `${s}x`;
-  };
-  const multTag = fmtMultTag(effectiveHandMultiplier(type));
+  /** Same product as line score uses on pip sum: ladder-adjusted hand mult × stackable type rewards. */
+  const combinedHandMult = effectiveHandMultiplier(type) * lineTypeRewardMult(type);
+  const multBody = fmtMultiplierBody(combinedHandMult);
+  const multTag = multBody ? `${multBody}x` : "";
 
   const shown = fmtShort(amt);
   const len = shown.length;
   if (len >= 9) n.classList.add("handBurst--n3");
   else if (len >= 7) n.classList.add("handBurst--n2");
   else if (len >= 5) n.classList.add("handBurst--n1");
+  if (multTag.length > 5) n.classList.add("handBurst--compactMult");
 
   n.innerHTML =
-    (multTag ? `<div class="handBurst__multTag" aria-label="Hand multiplier">${multTag}</div>` : "") +
+    (multTag
+      ? `<div class="handBurst__multTag" aria-label="Hand multiplier (includes ladder and type rewards)">${multTag}</div>`
+      : "") +
     `<div class="handBurst__label"><span class="handBurst__labelText">${label}</span></div>` +
     `<div class="handBurst__credits"><div class="handBurst__amt">+${shown}</div>${chain}</div>`;
   host.append(n);
@@ -2117,44 +2138,44 @@ const REWARD_DEFS = /** @type {const} */ ([
   {
     id: "perfectCard",
     name: "Gold Cards",
-    desc: "Each stack adds +2% chance per card to be worth 50x (Stackable).",
+    desc: "Each card has a 2% chance to spawn as a gold card worth 50x.",
     stack: { kind: "stackable" }
   },
   {
-    id: "randomHints",
-    name: "Random Hints",
-    desc: "10% chance a free hint appears randomly",
+    id: "heatingUp",
+    name: "Heating Up",
+    desc: "Each consecutive scored hand in the same cascade adds +0.5x to that line’s score.",
+    stack: { kind: "unique" }
+  },
+  {
+    id: "shapeUp",
+    name: "Shape Up",
+    desc: "All flushes are worth 2x.",
     stack: { kind: "stackable" }
   },
   {
-    id: "swapCoupon",
-    name: "Swap Coupons",
-    desc: "Swaps cost 10% less (Stackable)",
+    id: "straightUp",
+    name: "Straighten Up",
+    desc: "All straights are worth 2x.",
     stack: { kind: "stackable" }
   },
   {
-    id: "comboBonus",
-    name: "Combo Chain",
-    desc: "Each consecutive scored hand in a combo receives a 0.25x bonus (Stackable)",
+    id: "stickTogether",
+    name: "Group Up",
+    desc: "3 of a kind, 4 of a kind, and 5 of a kind are worth 2x.",
     stack: { kind: "stackable" }
   },
   {
-    id: "premiumHands",
-    name: "Premium Hands",
-    desc: "Full House+ hands are worth 3x (Stackable).",
+    id: "splitUp",
+    name: "Split Up",
+    desc: "Full house and Two Pair are worth 4x.",
     stack: { kind: "stackable" }
   },
   {
-    id: "lowRange",
-    name: "Low Hands",
-    desc: "Flush and lower hands are worth 6x (Stackable).",
-    stack: { kind: "stackable" }
-  },
-  {
-    id: "boldFaces",
-    name: "Bolder Faces",
-    desc: "Face cards (J/Q/K) gain +30 base value per stack, plus themed face-card visuals (Stackable)",
-    stack: { kind: "stackable" }
+    id: "gutterball",
+    name: "Gutterball",
+    desc: "Straights may skip exactly one rank (for example 5-7-8-9-10).",
+    stack: { kind: "unique" }
   },
   {
     id: "biggerNumbers",
@@ -2169,22 +2190,10 @@ const REWARD_DEFS = /** @type {const} */ ([
     stack: { kind: "stackable" }
   },
   {
-    id: "handMultiplier",
-    name: "Hand Multiplier",
-    desc: "Increases all hand type scores by 0.25x (Stackable)",
-    stack: { kind: "stackable" }
-  },
-  {
     id: "jokerCard",
     name: "Joker Card",
     desc: "Counts as any card.",
     stack: { kind: "stackable", max: 2 }
-  },
-  {
-    id: "doubleCardValues",
-    name: "2X Card Values",
-    desc: "Doubles the value of every card for scoring (Stackable).",
-    stack: { kind: "stackable" }
   },
   {
     id: "diagonals",
@@ -2205,12 +2214,6 @@ const REWARD_DEFS = /** @type {const} */ ([
     stack: { kind: "unique" }
   },
   {
-    id: "kickersCount",
-    name: "Good Kickers",
-    desc: "Kicker cards now add to scoring for hands like trips and two pair.",
-    stack: { kind: "unique" }
-  },
-  {
     id: "ladderUp",
     name: "Ladder Up",
     desc: "Each hand type gains +1x multiplier per time it has been scored this run.",
@@ -2222,9 +2225,10 @@ function canOfferReward(id) {
   if (id === "diagonals") return !rewards.diagonalsScored;
   if (id === "closeEnough") return !rewards.closeEnough;
   if (id === "playingTight") return !(rewards.noClearTwoPair && rewards.noClearTrips);
-  if (id === "kickersCount") return !rewards.kickersCount;
   if (id === "ladderUp") return !rewards.ladderUp;
   if (id === "pureBluff") return !rewards.pureBluff;
+  if (id === "heatingUp") return !rewards.heatingUp;
+  if (id === "gutterball") return !rewards.gutterball;
   if (id === "biggerNumbers") return !rewards.biggerNumbers;
   if (id === "perfectCard") return true;
   if (id === "jokerCard") return jokerCount < 2;
@@ -2236,8 +2240,10 @@ function applyReward(id) {
     rewards.perfectCardStacks += 1;
     lastPickedRewardName = "Gold Cards";
     const stacks = rewards.perfectCardStacks;
-    const pct = Math.round(perfectCardChance() * 100);
-    enqueueRewardBurst("Gold Cards", `${pct}% chance per card to be worth 50x (${stacks} stack${stacks === 1 ? "" : "s"})`);
+    enqueueRewardBurst(
+      "Gold Cards",
+      `Each card has a 2% chance to spawn as a gold card worth 50x (${stacks} stack${stacks === 1 ? "" : "s"})`
+    );
     rollPerfectCardsOnBoard();
     updateRewardsTracker();
     scheduleSaveRun();
@@ -2251,69 +2257,68 @@ function applyReward(id) {
     scheduleSaveRun();
     return;
   }
-  if (id === "randomHints") {
-    rewards.randomHints = true;
-    // First pick sets it to 10%, then +10% per additional pick.
-    randomHintChance = Math.min(0.9, Math.max(0.1, (randomHintChance || 0) + 0.1));
-    randomHintsPickCount += 1;
-    lastPickedRewardName = "Random Hints";
-    enqueueRewardBurst("Random Hints", `Chance: ${Math.round(randomHintChance * 100)}%`);
+  if (id === "heatingUp") {
+    rewards.heatingUp = true;
+    lastPickedRewardName = "Heating Up";
+    enqueueRewardBurst("Heating Up", "Combo cascades: +0.5x per chain step on each scored line");
+    updateRewardsTracker();
+    scheduleSaveRun();
     return;
   }
-  if (id === "swapCoupon") {
-    rewards.swapCouponStacks += 1;
-    lastPickedRewardName = "Swap Coupons";
-    const pct = Math.round(10 * rewards.swapCouponStacks);
-    const stacks = rewards.swapCouponStacks;
+  if (id === "stickTogether") {
+    rewards.stickTogetherStacks += 1;
+    lastPickedRewardName = "Group Up";
+    const stacks = rewards.stickTogetherStacks;
     enqueueRewardBurst(
-      "Swap Coupons",
-      `Swaps cost -${pct}% (${stacks} stack${stacks === 1 ? "" : "s"})`
-    );
-    return;
-  }
-  if (id === "comboBonus") {
-    rewards.comboBonusStacks += 1;
-    lastPickedRewardName = "Combo Chain";
-    const pct = 25 * rewards.comboBonusStacks;
-    const stacks = rewards.comboBonusStacks;
-    enqueueRewardBurst(
-      "Combo Chain",
-      `+${fmtBonusXFromPct(pct)} per chain step (${stacks} stack${stacks === 1 ? "" : "s"})`
-    );
-    return;
-  }
-  if (id === "premiumHands") {
-    rewards.premiumHandsStacks += 1;
-    lastPickedRewardName = "Premium Hands";
-    const stacks = rewards.premiumHandsStacks;
-    enqueueRewardBurst(
-      "Premium Hands",
-      `Full House+ is now ${Math.pow(3, stacks)}x (${stacks} stack${stacks === 1 ? "" : "s"})`
+      "Group Up",
+      `Now ${Math.pow(2, stacks)}x (${stacks} stack${stacks === 1 ? "" : "s"})`
     );
     syncHandChartScores();
     scheduleSaveRun();
     return;
   }
-  if (id === "lowRange") {
-    rewards.lowRangeStacks += 1;
-    lastPickedRewardName = "Low Hands";
-    const stacks = rewards.lowRangeStacks;
+  if (id === "straightUp") {
+    rewards.straightUpStacks += 1;
+    lastPickedRewardName = "Straighten Up";
+    const stacks = rewards.straightUpStacks;
     enqueueRewardBurst(
-      "Low Hands",
-      `Flush and lower is now ${Math.pow(6, stacks)}x (${stacks} stack${stacks === 1 ? "" : "s"})`
+      "Straighten Up",
+      `Now ${Math.pow(2, stacks)}x (${stacks} stack${stacks === 1 ? "" : "s"})`
     );
     syncHandChartScores();
     scheduleSaveRun();
     return;
   }
-  if (id === "boldFaces") {
-    rewards.boldFacesStacks += 1;
-    lastPickedRewardName = "Bolder Faces";
-    const stacks = rewards.boldFacesStacks;
+  if (id === "shapeUp") {
+    rewards.shapeUpStacks += 1;
+    lastPickedRewardName = "Shape Up";
+    const stacks = rewards.shapeUpStacks;
     enqueueRewardBurst(
-      "Bolder Faces",
-      `Face cards are now +${30 * stacks} base value (${stacks} stack${stacks === 1 ? "" : "s"})`
+      "Shape Up",
+      `Now ${Math.pow(2, stacks)}x (${stacks} stack${stacks === 1 ? "" : "s"})`
     );
+    syncHandChartScores();
+    scheduleSaveRun();
+    return;
+  }
+  if (id === "splitUp") {
+    rewards.splitUpStacks += 1;
+    lastPickedRewardName = "Split Up";
+    const stacks = rewards.splitUpStacks;
+    enqueueRewardBurst(
+      "Split Up",
+      `Now ${Math.pow(4, stacks)}x (${stacks} stack${stacks === 1 ? "" : "s"})`
+    );
+    syncHandChartScores();
+    scheduleSaveRun();
+    return;
+  }
+  if (id === "gutterball") {
+    rewards.gutterball = true;
+    lastPickedRewardName = "Gutterball";
+    enqueueRewardBurst("Gutterball", "Straights can skip one rank");
+    updateRewardsTracker();
+    scheduleSaveRun();
     return;
   }
   if (id === "biggerNumbers") {
@@ -2334,14 +2339,6 @@ function applyReward(id) {
       "Pocket Rockets",
       `Aces are now ${Math.pow(10, stacks)}x value (${stacks} stack${stacks === 1 ? "" : "s"})`
     );
-    return;
-  }
-  if (id === "handMultiplier") {
-    rewards.handMultiplierStacks += 1;
-    lastPickedRewardName = "Hand Multiplier";
-    const pct = 25 * rewards.handMultiplierStacks;
-    enqueueRewardBurst("Hand Multiplier", `+${fmtBonusXFromPct(pct)} to all hand scores`);
-    syncHandChartScores();
     return;
   }
   if (id === "ladderUp") {
@@ -2377,13 +2374,6 @@ function applyReward(id) {
     enqueueRewardBurst("Close Enough", "Straights and flushes now need only 4 cards");
     return;
   }
-  if (id === "doubleCardValues") {
-    rewards.doubleCardValueStacks += 1;
-    lastPickedRewardName = "2X Card Values";
-    const mult = Math.pow(2, rewards.doubleCardValueStacks);
-    enqueueRewardBurst("2X Card Values", `Card values are now x${mult}`);
-    return;
-  }
   if (id === "luckyRiver") {
     rewards.luckyRiverStacks += 1;
     lastPickedRewardName = "Lucky River";
@@ -2405,12 +2395,6 @@ function applyReward(id) {
     rewards.noClearTrips = true;
     lastPickedRewardName = "Playing Tight";
     enqueueRewardBurst("Playing Tight", "Two Pair and Trips are now disabled");
-    return;
-  }
-  if (id === "kickersCount") {
-    rewards.kickersCount = true;
-    lastPickedRewardName = "Good Kickers";
-    enqueueRewardBurst("Good Kickers", "Kickers now add to scores");
     return;
   }
 }
@@ -2620,22 +2604,6 @@ function showHintHighlightForMove(move) {
   rerender();
 }
 
-function maybeTriggerRandomHint() {
-  if (!rewards.randomHints) return;
-  if (state.busy) return;
-  // Disable during cascades/combos.
-  if (state.comboStep > 0) return;
-  // While a reward picker is pending, don't fire random hints.
-  if (pendingRewardPicks > 0) return;
-  if (viewFx.hint) return;
-  if (Math.random() >= randomHintChance) return;
-
-  const move = findBestScoringSwap(state.board);
-  if (!move) return;
-  enqueueRewardBurst("Free Hint!", `${Math.round(randomHintChance * 100)}% random hint chance`);
-  showHintHighlightForMove(move);
-}
-
 function showBigWin(amount, goalAtStart, hadChain = false) {
   const host = ui.board.parentElement;
   if (!host) return;
@@ -2756,9 +2724,8 @@ function getContributionMaskForBoard(board, line) {
     contribCells.push(p);
   };
 
-  // Close Enough: if we upgraded a straight/flush via 4 cards, treat the 5th as a kicker
-  // unless the player has "Good Kickers".
-  if (!rewards.kickersCount && evald?.meta?.closeEnoughIdxs && Array.isArray(evald.meta.closeEnoughIdxs)) {
+  // Close Enough: if we upgraded a straight/flush via 4 cards, treat the 5th as a kicker.
+  if (evald?.meta?.closeEnoughIdxs && Array.isArray(evald.meta.closeEnoughIdxs)) {
     const pick = new Set(evald.meta.closeEnoughIdxs.map((i) => Number(i)).filter((i) => i >= 0 && i < 5));
     if (pick.size > 0) {
       for (let i = 0; i < line.cells.length; i++) {
@@ -2777,9 +2744,9 @@ function getContributionMaskForBoard(board, line) {
     }
   }
 
-  // Wildcards: keep kickers excluded unless the player has "Kickers Count".
+  // Wildcards: keep kickers excluded (Good Kickers reward removed).
   // We always include Joker cards as contributors, then fill contributing ranks up to the target size.
-  if ((rewards.jokerWildcard || rewards.extraJoker) && !rewards.kickersCount) {
+  if (rewards.jokerWildcard || rewards.extraJoker) {
     const target =
       evald.type === HAND_TYPE.TWO_PAIR
         ? 4
@@ -2869,7 +2836,7 @@ function getContributionMaskForBoard(board, line) {
     const k = `${p.r},${p.c}`;
     if (!card) continue;
     const v = rankToValue14(card.rank);
-    const isContrib = rewards.kickersCount ? true : values == null ? true : values.has(v);
+    const isContrib = values == null ? true : values.has(v);
     if (isContrib) {
       contrib.add(k);
       contribCells.push(p);
@@ -2896,8 +2863,7 @@ function computeImmediateLineScoreForBoard(board, line) {
     pipSum += cardScoreValue(card);
   }
   const hm = effectiveHandMultiplier(line.type);
-  const rewardMult = 1 + 0.25 * Math.max(0, Math.floor(rewards.handMultiplierStacks || 0));
-  return pipSum * hm * rewardMult * handScoreMultForReward(line.type);
+  return pipSum * hm * lineTypeRewardMult(line.type);
 }
 
 /**
@@ -3173,7 +3139,6 @@ async function onCellClick(pos) {
   if (checkCantAffordSwapAndEnd()) return;
   state.busy = false;
   rerender();
-  maybeTriggerRandomHint();
 }
 
 async function resolveCascades() {
@@ -3231,12 +3196,10 @@ async function resolveCascades() {
         if (!card) continue;
         pipSum += cardScoreValue(card);
       }
-      const lineScore = pipSum * hm;
-      const rewardMult = 1 + 0.25 * Math.max(0, Math.floor(rewards.handMultiplierStacks || 0));
-      const chainStacks = Math.max(0, Math.floor(rewards.comboBonusStacks || 0));
+      const lineScore = pipSum * hm * lineTypeRewardMult(line.type);
       const chainStep = Math.max(0, (state.comboStep || 1) - 1);
-      const comboMult = chainStacks > 0 && chainStep > 0 ? 1 + 0.25 * chainStacks * chainStep : 1;
-      let gained = Math.floor(lineScore * comboMult * rewardMult * handScoreMultForReward(line.type));
+      const comboMult = rewards.heatingUp && chainStep > 0 ? 1 + 0.5 * chainStep : 1;
+      let gained = Math.floor(lineScore * comboMult);
 
       /** @type {""|"win"|"lose"} */
       let bluff = "";
@@ -3256,7 +3219,7 @@ async function resolveCascades() {
         gained *= 10;
         sfx.luckyRiver?.();
       }
-      const chainPct = chainStacks > 0 ? 25 * chainStacks * chainStep : 0;
+      const chainPct = rewards.heatingUp && chainStep > 0 ? 50 * chainStep : 0;
       const handBurstEl = showHandBurst({
         label: line.label,
         type: line.type,
