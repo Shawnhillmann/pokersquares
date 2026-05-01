@@ -1116,12 +1116,11 @@ main.stage {
   animation-play-state: running;
 }
 
-/* Drop the idle breath entirely during play: a paused keyframe can leave the
-   wrapper translated (up to ~2px), which skews fixed-position popups vs the
-   card face—especially noticeable on the first scored cell on mobile. */
+/* During play, freeze the breath where it is (no global "nudge" when a swap
+   begins). Per-card score popups anchor to the face rect, so this no longer
+   causes visible drift. */
 .board.is-busy .cardBreath {
-  animation: none;
-  transform: translate3d(0, 0, 0);
+  animation-play-state: paused;
 }
 
 @media (prefers-reduced-motion: reduce) {
