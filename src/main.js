@@ -21,7 +21,7 @@ const ui = {
   toast: /** @type {HTMLElement} */ (document.getElementById("toast")),
   newGameBtn: /** @type {HTMLButtonElement} */ (document.getElementById("newGameBtn")),
   hintBtn: /** @type {HTMLButtonElement} */ (document.getElementById("hintBtn")),
-  helpBtn: /** @type {HTMLButtonElement} */ (document.getElementById("helpBtn")),
+  shareBtn: /** @type {HTMLButtonElement|null} */ (document.getElementById("shareBtn")),
   settingsBtn: /** @type {HTMLButtonElement|null} */ (document.getElementById("settingsBtn")),
   handChart: /** @type {HTMLElement} */ (document.getElementById("handChart")),
   rulesPanel: /** @type {HTMLElement} */ (document.getElementById("rulesPanel")),
@@ -1708,10 +1708,24 @@ ui.hintBtn.addEventListener("click", async () => {
   showHintHighlightForMove(move);
 });
 
-ui.helpBtn.addEventListener("click", () => {
-  const isHidden = ui.rulesPanel.hasAttribute("hidden");
-  if (isHidden) ui.rulesPanel.removeAttribute("hidden");
-  else ui.rulesPanel.setAttribute("hidden", "");
+ui.shareBtn?.addEventListener("click", async () => {
+  const url = window.location.href;
+  try {
+    if (navigator.share) {
+      await navigator.share({ title: "POKARIA", text: "Endless Poker Chaos", url });
+      return;
+    }
+  } catch {
+    // If share is canceled or fails, fall back to copying.
+  }
+  try {
+    await navigator.clipboard?.writeText?.(url);
+    showToast(ui.toast, "Link copied");
+  } catch {
+    // Final fallback: prompt lets user copy.
+    // eslint-disable-next-line no-alert
+    window.prompt("Copy link:", url);
+  }
 });
 
 // Mobile browsers (especially iOS) may suspend audio when backgrounded.

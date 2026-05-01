@@ -1190,10 +1190,10 @@ main.stage {
 .cell.is-silver .cardFace {
   border-color: rgba(170, 182, 198, 0.45);
   /* Matte silver: cooler mid-tones (avoid a white cap that reads like a normal card). */
-  background: linear-gradient(180deg, rgba(188, 196, 210, 0.96), rgba(128, 138, 155, 0.88)),
-    linear-gradient(180deg, rgba(155, 165, 182, 0.82), rgba(105, 115, 132, 0.78));
+  background: linear-gradient(180deg, rgba(222, 228, 238, 0.96), rgba(156, 166, 184, 0.9)),
+    linear-gradient(180deg, rgba(190, 198, 214, 0.84), rgba(132, 142, 160, 0.82));
   background-blend-mode: multiply;
-  box-shadow: 0 0 0 2px rgba(160, 175, 195, 0.28), 0 0 22px rgba(150, 168, 190, 0.22);
+  box-shadow: 0 0 0 2px rgba(185, 198, 218, 0.26), 0 0 22px rgba(170, 186, 210, 0.22);
   animation: silverGlow 3400ms ease-in-out infinite;
 }
 
@@ -1201,11 +1201,11 @@ main.stage {
   0%,
   100% {
     filter: brightness(1);
-    box-shadow: 0 0 0 2px rgba(160, 175, 195, 0.26), 0 0 18px rgba(140, 158, 182, 0.18);
+    box-shadow: 0 0 0 2px rgba(185, 198, 218, 0.24), 0 0 18px rgba(160, 178, 205, 0.18);
   }
   50% {
-    filter: brightness(1.04);
-    box-shadow: 0 0 0 2px rgba(185, 200, 220, 0.32), 0 0 28px rgba(165, 185, 210, 0.24);
+    filter: brightness(1.045);
+    box-shadow: 0 0 0 2px rgba(210, 220, 236, 0.3), 0 0 28px rgba(185, 202, 226, 0.24);
   }
 }
 
@@ -3036,11 +3036,14 @@ html.is-mobile .hud__right {
   flex-wrap: wrap;
   justify-content: center;
   gap: 8px;
-  width: 100%;
+  width: var(--game-stack-w);
+  max-width: 100%;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 html.is-mobile .hud__right .btn {
-  flex: 1 1 calc(33.333% - 8px);
+  flex: 1 1 0;
   min-width: 0;
   min-height: 44px;
   padding: 10px 8px;
