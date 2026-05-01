@@ -631,11 +631,21 @@ body {
 
 .hud {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr auto 1fr;
   gap: 18px;
   padding: 14px 18px;
   border-bottom: 1px solid var(--line);
   background: rgba(10, 12, 18, 0.82);
+}
+
+.hud__left {
+  grid-column: 2;
+  display: flex;
+  justify-content: center;
+}
+
+.hud__right {
+  grid-column: 3;
 }
 
 .brand__title {
@@ -656,15 +666,15 @@ body {
   color: rgba(245, 214, 122, 0.94);
   text-shadow: 0 0 8px rgba(247, 215, 116, 0.14);
   /* Letter wave only; gold pulse is added only when idle (see `html.is-idle` block below). */
-  animation: brandLetterWave 5.5s ease-in-out infinite;
+  animation: brandLetterWave 5.75s cubic-bezier(0.42, 0.02, 0.58, 1) infinite;
   animation-play-state: paused;
 }
 
 /* After idle: wave + extremely subtle gold pulse, same stagger (left → right). */
 html.is-idle .brandWave__ch {
   animation:
-    brandLetterWave 5.5s ease-in-out infinite,
-    brandGoldPulse 5.5s ease-in-out infinite;
+    brandLetterWave 5.75s cubic-bezier(0.42, 0.02, 0.58, 1) infinite,
+    brandGoldPulse 5.75s cubic-bezier(0.42, 0.02, 0.58, 1) infinite;
   animation-play-state: running, running;
 }
 
@@ -712,13 +722,37 @@ html.is-idle .brandWave__ch:nth-child(7) {
   animation-delay: 540ms, 540ms;
 }
 
+/* Softer than a two-stop bounce: eases through the peak so letters don’t “snap”. */
 @keyframes brandLetterWave {
   0%,
   100% {
     transform: translate3d(0, 0, 0);
   }
+  32% {
+    transform: translate3d(0, -1.05px, 0);
+  }
   50% {
-    transform: translate3d(0, -2px, 0);
+    transform: translate3d(0, -1.75px, 0);
+  }
+  68% {
+    transform: translate3d(0, -1.05px, 0);
+  }
+}
+
+/* Narrow viewports: smaller, slower wave (matches `html.is-mobile` breakpoint). */
+@keyframes brandLetterWaveMobile {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  34% {
+    transform: translate3d(0, -0.45px, 0);
+  }
+  50% {
+    transform: translate3d(0, -0.85px, 0);
+  }
+  66% {
+    transform: translate3d(0, -0.45px, 0);
   }
 }
 
@@ -731,6 +765,65 @@ html.is-idle .brandWave__ch:nth-child(7) {
   50% {
     color: rgba(246, 215, 123, 0.94);
     text-shadow: 0 0 8px rgba(247, 215, 116, 0.145);
+  }
+}
+
+/* Mobile HUD: gentler wave (smaller travel, slower, softer easing, wider stagger). */
+@media (max-width: 720px) {
+  .brandWave__ch {
+    animation: brandLetterWaveMobile 7.25s cubic-bezier(0.38, 0.02, 0.24, 1) infinite;
+    animation-play-state: paused;
+  }
+
+  .brandWave__ch:nth-child(1) {
+    animation-delay: 0ms;
+  }
+  .brandWave__ch:nth-child(2) {
+    animation-delay: 110ms;
+  }
+  .brandWave__ch:nth-child(3) {
+    animation-delay: 220ms;
+  }
+  .brandWave__ch:nth-child(4) {
+    animation-delay: 330ms;
+  }
+  .brandWave__ch:nth-child(5) {
+    animation-delay: 440ms;
+  }
+  .brandWave__ch:nth-child(6) {
+    animation-delay: 550ms;
+  }
+  .brandWave__ch:nth-child(7) {
+    animation-delay: 660ms;
+  }
+
+  html.is-idle .brandWave__ch {
+    animation:
+      brandLetterWaveMobile 7.25s cubic-bezier(0.38, 0.02, 0.24, 1) infinite,
+      brandGoldPulse 7.25s cubic-bezier(0.38, 0.02, 0.24, 1) infinite;
+    animation-play-state: running, running;
+  }
+
+  html.is-idle .brandWave__ch:nth-child(1) {
+    animation-delay: 0ms, 0ms;
+  }
+  html.is-idle .brandWave__ch:nth-child(2) {
+    animation-delay: 110ms, 110ms;
+  }
+  html.is-idle .brandWave__ch:nth-child(3) {
+    animation-delay: 220ms, 220ms;
+  }
+  html.is-idle .brandWave__ch:nth-child(4) {
+    animation-delay: 330ms, 330ms;
+  }
+  html.is-idle .brandWave__ch:nth-child(5) {
+    animation-delay: 440ms, 440ms;
+  }
+  html.is-idle .brandWave__ch:nth-child(6) {
+    animation-delay: 550ms, 550ms;
+  }
+  html.is-idle .brandWave__ch:nth-child(7) {
+    animation-delay: 660ms, 660ms;
   }
 }
 
@@ -2893,6 +2986,11 @@ html.is-mobile .hud {
 
 html.is-mobile .brand__subtitle {
   display: none;
+}
+
+html.is-mobile .hud__left {
+  display: flex;
+  justify-content: center;
 }
 
 html.is-mobile .hud__left {

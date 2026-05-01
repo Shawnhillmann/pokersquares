@@ -170,16 +170,20 @@ function stickTogetherMultForType(type) {
 
 function straightUpMultForType(type) {
   const t = String(type);
-  if (t !== HAND_TYPE.STRAIGHT && t !== HAND_TYPE.STRAIGHT_FLUSH && t !== HAND_TYPE.ROYAL_FLUSH) return 1;
   const stacks = Math.max(0, Math.floor(rewards.straightUpStacks || 0));
-  return stacks <= 0 ? 1 : Math.pow(2, stacks);
+  if (stacks <= 0) return 1;
+  if (t === HAND_TYPE.STRAIGHT) return Math.pow(2, stacks);
+  if (t === HAND_TYPE.STRAIGHT_FLUSH || t === HAND_TYPE.ROYAL_FLUSH) return 1 + 0.25 * stacks;
+  return 1;
 }
 
 function shapeUpMultForType(type) {
   const t = String(type);
-  if (t !== HAND_TYPE.FLUSH && t !== HAND_TYPE.STRAIGHT_FLUSH && t !== HAND_TYPE.ROYAL_FLUSH) return 1;
   const stacks = Math.max(0, Math.floor(rewards.shapeUpStacks || 0));
-  return stacks <= 0 ? 1 : Math.pow(2, stacks);
+  if (stacks <= 0) return 1;
+  if (t === HAND_TYPE.FLUSH) return Math.pow(2, stacks);
+  if (t === HAND_TYPE.STRAIGHT_FLUSH || t === HAND_TYPE.ROYAL_FLUSH) return 1 + 0.25 * stacks;
+  return 1;
 }
 
 function splitUpMultForType(type) {
@@ -721,11 +725,11 @@ function updateRewardsTracker() {
     "Close Enough":
       "Flushes and straights can be made with only 4 cards (includes straight flushes and royal flush).",
     "Heating Up": "One-time. Each consecutive scored hand in the same cascade adds +0.5x to that line’s score.",
-    "Shape Up": "All flushes are worth 2x.",
-    "Straighten Up": "All straights are worth 2x.",
+    "Shape Up": "Flushes are worth 2x more, straight and royal flush are worth .25x more.",
+    "Straighten Up": "Straights are worth 2x more, straight and royal flush are worth .25x more.",
     "Group Up": "3 of a kind, 4 of a kind, and 5 of a kind are worth 2x.",
     "Split Up": "Full house and Two Pair are worth 4x per stack.",
-    Gutterball: "One-time. Straights may skip exactly one rank (for example 5-7-8-9-10).",
+    "Gap Filler": "One-time. Straights may skip exactly one rank (for example 5-7-8-9-10).",
     "Bigger Numbers": "Each time you score a hand, all card values increase by +1 for the rest of the run.",
     "Lucky River": "Each stack adds +5% chance for scored hands to pay 10x.",
     "Risky Moves": "Each scored hand has an 80% chance to pay 2x or a 20% chance to pay 0x.",
@@ -860,11 +864,15 @@ function updateRewardsTracker() {
   addRow("Heating Up", rewards.heatingUp ? "On" : "Off");
 
   if (rewards.shapeUpStacks > 0) {
-    addRow("Shape Up", `${fmtShort(Math.pow(2, rewards.shapeUpStacks))}x · ${rewards.shapeUpStacks}×`);
+    const stacks = rewards.shapeUpStacks;
+    const sf = 0.25 * stacks;
+    addRow("Shape Up", `${fmtShort(Math.pow(2, stacks))}x flush · +${sf}x SF/RF · ${stacks}×`);
   } else addRow("Shape Up", "Off");
 
   if (rewards.straightUpStacks > 0) {
-    addRow("Straighten Up", `${fmtShort(Math.pow(2, rewards.straightUpStacks))}x · ${rewards.straightUpStacks}×`);
+    const stacks = rewards.straightUpStacks;
+    const sf = 0.25 * stacks;
+    addRow("Straighten Up", `${fmtShort(Math.pow(2, stacks))}x straight · +${sf}x SF/RF · ${stacks}×`);
   } else addRow("Straighten Up", "Off");
 
   if (rewards.stickTogetherStacks > 0) {
@@ -875,7 +883,7 @@ function updateRewardsTracker() {
     addRow("Split Up", `${fmtShort(Math.pow(4, rewards.splitUpStacks))}x · ${rewards.splitUpStacks}×`);
   } else addRow("Split Up", "Off");
 
-  addRow("Gutterball", rewards.gutterball ? "On" : "Off");
+  addRow("Gap Filler", rewards.gutterball ? "On" : "Off");
 
   if (rewards.biggerNumbers) {
     addRow("Bigger Numbers", `+${Math.max(0, Math.floor(rewards.biggerNumbersBonus || 0))} to all cards`);
@@ -2150,13 +2158,13 @@ const REWARD_DEFS = /** @type {const} */ ([
   {
     id: "shapeUp",
     name: "Shape Up",
-    desc: "All flushes are worth 2x.",
+    desc: "Flushes are worth 2x more, straight and royal flush are worth .25x more.",
     stack: { kind: "stackable" }
   },
   {
     id: "straightUp",
     name: "Straighten Up",
-    desc: "All straights are worth 2x.",
+    desc: "Straights are worth 2x more, straight and royal flush are worth .25x more.",
     stack: { kind: "stackable" }
   },
   {
@@ -2173,7 +2181,7 @@ const REWARD_DEFS = /** @type {const} */ ([
   },
   {
     id: "gutterball",
-    name: "Gutterball",
+    name: "Gap Filler",
     desc: "Straights may skip exactly one rank (for example 5-7-8-9-10).",
     stack: { kind: "unique" }
   },
@@ -2315,8 +2323,8 @@ function applyReward(id) {
   }
   if (id === "gutterball") {
     rewards.gutterball = true;
-    lastPickedRewardName = "Gutterball";
-    enqueueRewardBurst("Gutterball", "Straights can skip one rank");
+    lastPickedRewardName = "Gap Filler";
+    enqueueRewardBurst("Gap Filler", "Straights can skip one rank");
     updateRewardsTracker();
     scheduleSaveRun();
     return;
