@@ -24,6 +24,14 @@
   --radius: 14px;
   --font: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
   --crt-strength: 0.72;
+  /* Board width on phones: 100vw can exceed the paint box on iOS; 100svw tracks the stable layout width. */
+  --layout-vw: 100vw;
+}
+
+@supports (width: 1svw) {
+  :root {
+    --layout-vw: 100svw;
+  }
 }
 
 html[data-theme="slate"] {
@@ -2760,10 +2768,16 @@ html.is-mobile .cardFace--jokerArt img.cardPip--faceArt {
   }
 }
 
+/* 0%/100% match .cell.is-seq-grown .cardFace so popups measured on the grown pose are not
+   thrown off when this animation starts (was: 0% at scale(1), which snapped the face smaller). */
 @keyframes seqGrow {
   0% {
-    transform: translateY(0px) scale(1);
+    transform: translateY(-1px) scale(1.06);
     filter: brightness(1);
+  }
+  55% {
+    transform: translateY(-2px) scale(1.085);
+    filter: brightness(1.1);
   }
   100% {
     transform: translateY(-1px) scale(1.06);
@@ -3025,19 +3039,25 @@ html.is-mobile .cardFace--jokerArt img.cardPip--faceArt {
   }
 }
 
-/* —— Mobile: board + dock must fit in viewport (see html.is-mobile for --cell) —— */
+/* —— Narrow viewports: same cell math as html.is-mobile (JS adds class at same 720px breakpoint). —— */
 @media (max-width: 720px) {
   :root {
     --gap: 5px;
-    --cell: min(70px, calc((100vw - 28px - 4 * var(--gap)) / 5));
+    --mobile-board-pad-x: 28px;
+    --cell-board-w: calc((var(--layout-vw) - var(--mobile-board-pad-x) - 4 * var(--gap)) / 5));
+    --cell: min(84px, var(--cell-board-w));
+    --board-inner-w: calc(5 * var(--cell) + 4 * var(--gap));
+    --table-pad-x: 8px;
+    --game-stack-w: calc(var(--board-inner-w) + 2 * var(--table-pad-x));
   }
 }
 
 html.is-mobile {
   -webkit-text-size-adjust: 100%;
   /* Board scales to width; scroll the page for credits / hint (nothing overlays the grid) */
-  --gap: 4px;
-  --cell-board-w: calc((100vw - 28px - 4 * var(--gap)) / 5);
+  --gap: 5px;
+  --mobile-board-pad-x: 28px;
+  --cell-board-w: calc((var(--layout-vw) - var(--mobile-board-pad-x) - 4 * var(--gap)) / 5));
   --cell: min(84px, var(--cell-board-w));
   --board-inner-w: calc(5 * var(--cell) + 4 * var(--gap));
   --table-pad-x: 8px;
@@ -3148,7 +3168,7 @@ html.is-mobile .panel.handChart:not(.is-collapsed) {
   right: auto;
   top: auto;
   /* Match board stack width so the chart can't widen the page vs the grid (iOS pinch “recenter”). */
-  width: min(var(--game-stack-w), calc(100vw - 20px));
+  width: min(var(--game-stack-w), calc(var(--layout-vw) - 20px));
   max-width: 100%;
   margin: 10px auto 0;
   padding-left: 8px;
