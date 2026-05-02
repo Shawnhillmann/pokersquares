@@ -3044,15 +3044,15 @@ html.is-mobile .cardFace--jokerArt img.cardPip--faceArt {
 @media (max-width: 720px) {
   :root {
     --gap: 5px;
-    /* Never use plain % here: % inside inherited custom props can resolve per descendant and collapse --cell. */
+    /* 100vw is often a few px wider than the paint viewport on iOS; 100svw matches layout width. */
     --cell: min(70px, calc((100vw - 28px - 4 * var(--gap)) / 5));
   }
 }
 
-@supports (width: 1dvw) {
+@supports (width: 1svw) {
   @media (max-width: 720px) {
     :root {
-      --cell: min(70px, calc((100dvw - 28px - 4 * var(--gap)) / 5));
+      --cell: min(70px, calc((100svw - 28px - 4 * var(--gap)) / 5));
     }
   }
 }
@@ -3061,7 +3061,6 @@ html.is-mobile {
   -webkit-text-size-adjust: 100%;
   /* Board scales to width; scroll the page for credits / hint (nothing overlays the grid) */
   --gap: 4px;
-  /* vw for support; dvw tracks iOS dynamic layout width better than % inside var() (which can resolve wrong). */
   --cell-board-w: calc((100vw - 28px - 4 * var(--gap)) / 5);
   --cell: min(84px, var(--cell-board-w));
   --board-inner-w: calc(5 * var(--cell) + 4 * var(--gap));
@@ -3069,9 +3068,9 @@ html.is-mobile {
   --game-stack-w: calc(var(--board-inner-w) + 2 * var(--table-pad-x));
 }
 
-@supports (width: 1dvw) {
+@supports (width: 1svw) {
   html.is-mobile {
-    --cell-board-w: calc((100dvw - 28px - 4 * var(--gap)) / 5);
+    --cell-board-w: calc((100svw - 28px - 4 * var(--gap)) / 5);
   }
 }
 
