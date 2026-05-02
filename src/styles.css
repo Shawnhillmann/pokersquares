@@ -3044,16 +3044,8 @@ html.is-mobile .cardFace--jokerArt img.cardPip--faceArt {
 @media (max-width: 720px) {
   :root {
     --gap: 5px;
-    /* 100vw is often a few px wider than the paint viewport on iOS; 100svw matches layout width. */
-    --cell: min(70px, calc((100vw - 28px - 4 * var(--gap)) / 5));
-  }
-}
-
-@supports (width: 1svw) {
-  @media (max-width: 720px) {
-    :root {
-      --cell: min(70px, calc((100svw - 28px - 4 * var(--gap)) / 5));
-    }
+    /* % of root width matches layout box; vw/svw can disagree with margin:auto centering on iOS. */
+    --cell: min(70px, calc((100% - 28px - 4 * var(--gap)) / 5));
   }
 }
 
@@ -3061,17 +3053,11 @@ html.is-mobile {
   -webkit-text-size-adjust: 100%;
   /* Board scales to width; scroll the page for credits / hint (nothing overlays the grid) */
   --gap: 4px;
-  --cell-board-w: calc((100vw - 28px - 4 * var(--gap)) / 5);
+  --cell-board-w: calc((100% - 28px - 4 * var(--gap)) / 5);
   --cell: min(84px, var(--cell-board-w));
   --board-inner-w: calc(5 * var(--cell) + 4 * var(--gap));
   --table-pad-x: 6px;
   --game-stack-w: calc(var(--board-inner-w) + 2 * var(--table-pad-x));
-}
-
-@supports (width: 1svw) {
-  html.is-mobile {
-    --cell-board-w: calc((100svw - 28px - 4 * var(--gap)) / 5);
-  }
 }
 
 html.is-mobile body {
@@ -3080,6 +3066,8 @@ html.is-mobile body {
   overflow-x: hidden;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+  padding-inline-start: env(safe-area-inset-left, 0px);
+  padding-inline-end: env(safe-area-inset-right, 0px);
 }
 
 html.is-mobile .app {
@@ -3148,7 +3136,7 @@ html.is-mobile .stage {
   max-width: 100%;
   padding: 2px 4px 10px;
   gap: 0;
-  align-items: stretch;
+  align-items: center;
   justify-content: flex-start;
   overflow: visible;
 }
