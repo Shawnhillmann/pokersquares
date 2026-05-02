@@ -142,8 +142,8 @@ const rewards = {
   noClearTwoPair: false,
   /** Three of a kind lines do not clear (straight+ still does). */
   noClearTrips: false,
-  /** Each hand type multiplier gains +1 per time that hand was scored this run. */
-  ladderUp: false
+  /** Times Ladder Up picked; each stack adds +1x per time a hand type was scored this run. */
+  ladderUpStacks: 0
 };
 
 let lastPickedRewardName = "____";
@@ -163,8 +163,9 @@ function incHandTypePlayCount(type) {
 
 function effectiveHandMultiplier(type) {
   const base = handMultiplier(type);
-  if (!rewards.ladderUp) return base;
-  return base + getHandTypePlayCount(type);
+  const stacks = Math.max(0, Math.floor(rewards.ladderUpStacks || 0));
+  if (stacks <= 0) return base;
+  return base + getHandTypePlayCount(type) * stacks;
 }
 
 function stickTogetherMultForType(type) {
@@ -313,6 +314,10 @@ function tryRestoreRun() {
     // Legacy: Heating Up (one-time) became Bigger Combos (stackable).
     if (typeof vr.heatingUp === "boolean" && vr.heatingUp) {
       rewards.biggerCombosStacks = Math.max(rewards.biggerCombosStacks || 0, 1);
+    }
+    // Legacy: Ladder Up (one-time) became stackable.
+    if (typeof vr.ladderUp === "boolean" && vr.ladderUp) {
+      rewards.ladderUpStacks = Math.max(rewards.ladderUpStacks || 0, 1);
     }
     }
 
@@ -1107,7 +1112,8 @@ function updateRewardsTracker() {
 
   addRow("Risky Moves", rewards.pureBluff ? "On" : "Off");
   addRow("Instant Folds", rewards.noClearTrips || rewards.noClearTwoPair ? "On" : "Off");
-  addRow("Ladder Up", rewards.ladderUp ? "On" : "Off");
+  if (rewards.ladderUpStacks > 0) addRow("Ladder Up", `${rewards.ladderUpStacks}×`);
+  else addRow("Ladder Up", "Off");
 }
 
 let creditsDisplayValue = Math.max(0, Math.floor(state.credits));
@@ -1453,7 +1459,8 @@ function syncHandChartScores() {
     // - Ladder Up (if active) adds +1x per time that hand has been scored this run
     // - Stackable type rewards (Group Up, Straighten Up, Shape Up, Split Up) multiply the chart when active
     let baseShown = base;
-    if (t && rewards.ladderUp) baseShown = base + getHandTypePlayCount(t);
+    const luStacks = Math.max(0, Math.floor(rewards.ladderUpStacks || 0));
+    if (t && luStacks > 0) baseShown = base + getHandTypePlayCount(t) * luStacks;
     const typeMult = t ? lineTypeRewardMult(t) : 1;
     const shown = formatHandChartMult(baseShown * typeMult);
     el.textContent = `${shown}x`;
@@ -1742,7 +1749,7 @@ ui.newGameBtn.addEventListener("click", () => {
   rewards.extraJoker = false;
   rewards.noClearTwoPair = false;
   rewards.noClearTrips = false;
-  rewards.ladderUp = false;
+  rewards.ladderUpStacks = 0;
   handTypePlayCounts = Object.create(null);
   pendingRewardPicks = 0;
   peakGoalClearedThisRun = 0;
@@ -1806,7 +1813,7 @@ ui.restartBtn.addEventListener("click", () => {
   rewards.extraJoker = false;
   rewards.noClearTwoPair = false;
   rewards.noClearTrips = false;
-  rewards.ladderUp = false;
+  rewards.ladderUpStacks = 0;
   handTypePlayCounts = Object.create(null);
   pendingRewardPicks = 0;
   peakGoalClearedThisRun = 0;
@@ -2540,7 +2547,7 @@ const REWARD_DEFS = /** @type {const} */ ([
     id: "ladderUp",
     name: "Ladder Up",
     desc: "Hand types now gain +1x each time they are scored this run.",
-    stack: { kind: "unique" }
+    stack: { kind: "stackable" }
   }
 ]);
 
@@ -2548,7 +2555,6 @@ function canOfferReward(id) {
   if (id === "diagonals") return !rewards.diagonalsScored;
   if (id === "closeEnough") return !rewards.closeEnough;
   if (id === "playingTight") return !(rewards.noClearTwoPair && rewards.noClearTrips);
-  if (id === "ladderUp") return !rewards.ladderUp;
   if (id === "pureBluff") return !rewards.pureBluff;
   if (id === "gutterball") return !rewards.gutterball;
   // stackable
@@ -2723,11 +2729,12 @@ function applyReward(id) {
     return;
   }
   if (id === "ladderUp") {
-    rewards.ladderUp = true;
+    rewards.ladderUpStacks = Math.max(0, Math.floor(rewards.ladderUpStacks || 0)) + 1;
     // Ladder Up should start counting from the moment it is picked.
     handTypePlayCounts = Object.create(null);
     lastPickedRewardName = "Ladder Up";
-    enqueueRewardBurst("Ladder Up", "Hand multipliers now grow as you repeat them");
+    const stacks = rewards.ladderUpStacks;
+    enqueueRewardBurst("Ladder Up", `Hand types now gain +${stacks}x each time they are scored this run`);
     syncHandChartScores();
     scheduleSaveRun();
     return;
@@ -3681,7 +3688,7 @@ async function resolveCascades() {
         }
       }
       // Ladder Up only counts plays after being picked.
-      if (rewards.ladderUp) {
+      if (Math.max(0, Math.floor(rewards.ladderUpStacks || 0)) > 0) {
         incHandTypePlayCount(line.type);
         syncHandChartScores();
       }
