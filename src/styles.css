@@ -58,7 +58,12 @@ html[data-theme="purple"] {
 }
 
 html {
+  margin: 0;
+  padding: 0;
   min-height: 100%;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 .modal {
@@ -81,7 +86,7 @@ html {
 
 .modal__card {
   position: relative;
-  width: min(520px, calc(100vw - 40px));
+  width: min(520px, calc(100% - 40px));
   padding: 18px 18px 16px;
   border-radius: 18px;
   border: 1px solid rgba(247, 215, 116, 0.45);
@@ -225,7 +230,7 @@ html {
 }
 
 .modal__card--settings {
-  width: min(520px, calc(100vw - 40px));
+  width: min(520px, calc(100% - 40px));
 }
 
 .settingsGrid {
@@ -360,15 +365,23 @@ html[data-crt="1"]::after {
 
 body {
   margin: 0;
+  position: relative;
   font-family: var(--font);
   color: var(--text);
   background: var(--bg0);
   min-height: 100%;
   min-height: 100dvh;
+  width: 100%;
+  max-width: 100%;
   overflow-x: hidden;
   overflow-y: auto;
-  /* Prevent tiny layout shifts when scrollbars appear/disappear during swap effects. */
-  scrollbar-gutter: stable;
+}
+
+/* Avoid iOS width quirks; desktop still avoids scrollbar layout jump during swaps. */
+@media (min-width: 721px) {
+  body {
+    scrollbar-gutter: stable;
+  }
 }
 
 .orientationBlock[hidden] {
@@ -414,6 +427,8 @@ body {
 .app {
   min-height: 100%;
   min-height: 100dvh;
+  width: 100%;
+  max-width: 100%;
   display: grid;
   grid-template-rows: auto 1fr;
 }
@@ -3018,7 +3033,7 @@ html.is-mobile .cardFace--jokerArt img.cardPip--faceArt {
     order: 4;
   }
   .panel {
-    width: min(720px, calc(100vw - 40px));
+    width: min(720px, calc(100% - 40px));
   }
   .handChart {
     max-height: none;
@@ -3029,7 +3044,16 @@ html.is-mobile .cardFace--jokerArt img.cardPip--faceArt {
 @media (max-width: 720px) {
   :root {
     --gap: 5px;
+    /* 100vw is often a few px wider than the paint viewport on iOS; 100svw matches layout width. */
     --cell: min(70px, calc((100vw - 28px - 4 * var(--gap)) / 5));
+  }
+}
+
+@supports (width: 1svw) {
+  @media (max-width: 720px) {
+    :root {
+      --cell: min(70px, calc((100svw - 28px - 4 * var(--gap)) / 5));
+    }
   }
 }
 
@@ -3040,8 +3064,14 @@ html.is-mobile {
   --cell-board-w: calc((100vw - 28px - 4 * var(--gap)) / 5);
   --cell: min(84px, var(--cell-board-w));
   --board-inner-w: calc(5 * var(--cell) + 4 * var(--gap));
-  --table-pad-x: 8px;
+  --table-pad-x: 6px;
   --game-stack-w: calc(var(--board-inner-w) + 2 * var(--table-pad-x));
+}
+
+@supports (width: 1svw) {
+  html.is-mobile {
+    --cell-board-w: calc((100svw - 28px - 4 * var(--gap)) / 5);
+  }
 }
 
 html.is-mobile body {
@@ -3114,6 +3144,8 @@ html.is-mobile .stage {
   height: auto;
   max-height: none;
   min-height: 0;
+  width: 100%;
+  max-width: 100%;
   padding: 2px 4px 10px;
   gap: 0;
   align-items: stretch;
@@ -3148,7 +3180,7 @@ html.is-mobile .panel.handChart:not(.is-collapsed) {
   right: auto;
   top: auto;
   /* Match board stack width so the chart can't widen the page vs the grid (iOS pinch “recenter”). */
-  width: min(var(--game-stack-w), calc(100vw - 20px));
+  width: min(var(--game-stack-w), 100%);
   max-width: 100%;
   margin: 10px auto 0;
   padding-left: 8px;
@@ -3169,10 +3201,12 @@ html.is-mobile .gameColumn {
   flex-direction: column;
   align-items: stretch;
   width: 100%;
+  max-width: 100%;
   flex: 0 0 auto;
+  min-width: 0;
   overflow: visible;
-  padding-left: 10px;
-  padding-right: 10px;
+  padding-left: 8px;
+  padding-right: 8px;
 }
 
 html.is-mobile .playArea {
@@ -3191,7 +3225,7 @@ html.is-mobile .playArea {
 
 html.is-mobile .table {
   flex: 0 0 auto;
-  padding: 10px 10px 10px;
+  padding: 10px 8px 10px;
   display: flex;
   align-items: center;
   justify-content: center;
