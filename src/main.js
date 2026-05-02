@@ -97,13 +97,13 @@ function goalTargetForIndex(idx) {
 const STARTING_POINTS = 500;
 
 const rewards = {
-  /** One-time: each combo step in a cascade adds +0.5x to that line score (2nd hand +0.5x, 3rd +1x, …). */
-  heatingUp: false,
+  /** Times Bigger Combos picked; each stack adds +0.5x per chain step in a cascade. */
+  biggerCombosStacks: 0,
   /** Times Group Up picked: trips, quads, and five of a kind are worth 3x per stack (compounding). */
   stickTogetherStacks: 0,
-  /** Times Straighten Up picked: straight, straight flush, and royal flush get 2x per stack (stacks with Shape Up on SF/RF). */
+  /** Times Straight Up picked: straight, straight flush, and royal flush get 2x per stack (stacks with Shape Up on SF/RF). */
   straightUpStacks: 0,
-  /** Times Shape Up picked: flush, straight flush, and royal flush get 2x per stack (stacks with Straighten Up on SF/RF). */
+  /** Times Shape Up picked: flush, straight flush, and royal flush get 2x per stack (stacks with Straight Up on SF/RF). */
   shapeUpStacks: 0,
   /** Times Split Up picked: two pair and full house are worth 4x per stack (compounding). */
   splitUpStacks: 0,
@@ -113,18 +113,18 @@ const rewards = {
   biggerNumbersStacks: 0,
   /** Times Pocket Rockets picked; each makes Aces worth 10x card value (stackable multiplier). */
   pocketRocketsStacks: 0,
-  /** Times Progressive Jackpot picked; each stack adds +1% chance per scored hand (resets on hit). */
+  /** Times Progressive Jackpots picked; each stack adds +0.25% chance per scored hand (resets on hit). */
   progressiveJackpotStacks: 0,
   /** Current jackpot chance in percent (0–95). Increments by +1 per scored hand while active; resets on trigger. */
   progressiveJackpotPct: 0,
-  /** Times Free Swap picked; increases how fast the free-swap chance ramps up (see `freeSwapChancePct`). */
+  /** Times Free Swaps picked; increases how fast the free-swap chance ramps up (see `freeSwapChancePct`). */
   freeSwapStacks: 0,
   /** Current free-swap chance in percent (0–95). Increments per scored hand while active; resets on activation. */
   freeSwapChancePct: 0,
   /** When true, the next swap costs 0 credits. */
   nextSwapFree: false,
-  /** Times Dueces Double picked; any scored hand containing a 2 pays 2x per stack (compounding). */
-  deucesDoubleStacks: 0,
+  /** Times Two Hundreds picked; each stack adds +200 card value to 2s. */
+  twoBigStacks: 0,
   /** Times Gold Cards picked; chance stacks (see perfectCardChance). Player-facing: 2% per stack to spawn as gold (50× value). */
   perfectCardStacks: 0,
   /** Times Broadway Cards picked; 10/J/Q/K/A card value ×2 per stack (compounding). */
@@ -306,6 +306,14 @@ function tryRestoreRun() {
           Math.floor(vr.faceCardsStacks)
         );
       }
+    // Legacy: Dueces Double renamed to Two Big.
+    if (typeof vr.deucesDoubleStacks === "number") {
+      rewards.twoBigStacks = Math.max(rewards.twoBigStacks || 0, Math.floor(vr.deucesDoubleStacks));
+    }
+    // Legacy: Heating Up (one-time) became Bigger Combos (stackable).
+    if (typeof vr.heatingUp === "boolean" && vr.heatingUp) {
+      rewards.biggerCombosStacks = Math.max(rewards.biggerCombosStacks || 0, 1);
+    }
     }
 
     // Restore the remaining draw pool so cascades continue naturally.
@@ -393,7 +401,10 @@ function cardScoreValue(card) {
     card && typeof /** @type {any} */ (card).bigger === "number"
       ? Math.max(0, Math.floor(/** @type {any} */ (card).bigger))
       : 0;
-  const baseUnmult = (rewards.jokerWildcard && isJoker ? 10 : cardBaseValue(rank)) + perCard;
+  const twoBigStacks = Math.max(0, Math.floor(rewards.twoBigStacks || 0));
+  const twoBigBonus = rank === "2" && twoBigStacks > 0 ? 200 * twoBigStacks : 0;
+  const baseUnmult =
+    (rewards.jokerWildcard && isJoker ? 10 : cardBaseValue(rank)) + perCard + twoBigBonus;
   let base = baseUnmult;
   if (isAce) base *= aceMult;
   let v = base * broadwayMult * lowMult;
@@ -888,30 +899,28 @@ function updateRewardsTracker() {
   b.replaceChildren();
   /** @type {Record<string, string>} */
   const descByLabel = {
-    "Pocket Rockets": "Aces are worth 10x more card value per stack.",
-    Jokers: "Adds Joker cards to your deck (max 2). Jokers count as any rank for hand evaluation.",
-    Diagonals: "Diagonals can be scored as poker hands.",
-    "Close Enough":
-      "Flushes and straights can be made with only 4 cards (includes straight flushes and royal flush).",
-    "Heating Up": "One-time. Each consecutive scored hand in the same cascade adds +0.5x to that line’s score.",
-    "Shape Up": "Flushes are worth 2x more, straight and royal flush are worth .25x more.",
-    "Straighten Up": "Straights are worth 2x more, straight and royal flush are worth .25x more.",
-    "Group Up": "3 of a kind, 4 of a kind, and 5 of a kind are worth 3x.",
-    "Split Up": "Full house and Two Pair are worth 4x per stack.",
-    "Gap Filler": "One-time. Straights may skip exactly one rank (for example 5-7-8-9-10).",
-    "Bigger Numbers":
-      "Each scored hand, each contributing card gains +1 card value per stack for the rest of the run.",
-    "Progressive Jackpot":
-      "Each scored hand adds +0.25% chance per stack for that hand to be worth 100x. The percentage chance resets when it occurs.",
-    "Free Swap":
-      "Each scored hand adds a 0.25% chance (per stack) for your next swap to cost 0. Resets when it activates.",
-    "Dueces Double": "Any scored hand with a 2 in it is worth 2x per stack.",
-    "Risky Moves": "Each scored hand has an 80% chance to pay 2x or a 20% chance to pay 0x.",
-    "Gold Cards": "Each card has a 2% chance to spawn as a gold card worth 50×.",
-    "Broadway Cards": "10s, Jacks, Queens, Kings, and Aces are worth 2x card value per stack (compounding).",
-    "Low Cards": "Twos through Nines are worth 3x card value per stack (compounding).",
-    "Instant Fold": "Two Pair and Trips are disabled, enabling less frequent but higher scoring hands.",
-    "Ladder Up": "Each time you score a hand type, its multiplier increases by +1x for the rest of the run."
+    "Progressive Jackpots":
+      "Scored hands now have  +0.25% jackpot chance per stack. Jackpot pays 100x and resets on hit.",
+    "Pocket Rockets": "Aces are worth 10x card value per stack.",
+    "Joker Cards": "Add a Joker card to your deck. Max 2.",
+    "Diagonal Hands": "5 Card diagonal hands can now be scored as well.",
+    "Close Enough": "Flushes and straights now only require 4 cards.",
+    "Gap Fillers": "Straights may now skip 1 rank (Such as 5-7-8-9-10)",
+    "Gold Cards": "Each card has a +2% chance to appear as a Gold Card worth 50x.",
+    "Broadway Cards": "10/J/Q/K/A are now worth 2x card value per stack.",
+    "Low Cards": "2–9 are now worth 3x card value per stack.",
+    "Two Hundreds": "2’s gain +200 card value per stack.",
+    "Bigger Combos": "Consecutive scored hands in the same cascade gain +0.5x per stack.",
+    "Bigger Numbers": "Scored cards permanently gain +1 card value per stack.",
+    "Free Swaps": "Scored hands now add +0.25% chance for your next swap to be free.",
+    "Group Up": "Trips, Quads, and Five of a Kind are now worth 3x per stack.",
+    "Split Up": "Two Pair and Full House are now worth 4x per stack.",
+    "Shape Up": "Flushes are now worth 2x per stack. Straight Flushes and Royal Flushes gain +0.25x.",
+    "Straight Up": "Straights are now worth 2x per stack. Straight Flushes and Royal Flushes gain +0.25x.",
+    "Risky Moves": "Scored hands have an 80% chance to pay 2x, or a 20% chance to pay 0x.",
+    "Instant Folds":
+      "Two Pair and Trips are disabled, enabling less frequent but higher scoring hands.",
+    "Ladder Up": "Hand types now gain +1x each time they are scored this run."
   };
 
   const showTooltip = (label, ev) => {
@@ -1020,15 +1029,27 @@ function updateRewardsTracker() {
     window.addEventListener("scroll", hideTooltip, { passive: true });
     window.addEventListener("resize", hideTooltip, { passive: true });
   }
-  // Order matches requested "build" readability.
+  // Ordered to match the run rewards chart.
+  if (rewards.progressiveJackpotStacks > 0) {
+    addRow(
+      "Progressive Jackpots",
+      `${Math.max(0, Math.round(Number(rewards.progressiveJackpotPct || 0) * 100) / 100)}% · 100x · ${rewards.progressiveJackpotStacks}×`
+    );
+  } else addRow("Progressive Jackpots", "Off");
+
   if (rewards.pocketRocketsStacks > 0) {
-    addRow("Pocket Rockets", `Aces ${fmtShort(Math.pow(10, rewards.pocketRocketsStacks))}x · ${rewards.pocketRocketsStacks}×`);
+    addRow(
+      "Pocket Rockets",
+      `Aces ${fmtShort(Math.pow(10, rewards.pocketRocketsStacks))}x · ${rewards.pocketRocketsStacks}×`
+    );
   } else addRow("Pocket Rockets", "Off");
 
-  if (rewards.jokerWildcard || jokerCount > 0) addRow("Jokers", `${jokerCount} / 2 in deck`);
-  else addRow("Jokers", "Off");
+  if (rewards.jokerWildcard || jokerCount > 0) addRow("Joker Cards", `${jokerCount} / 2 in deck`);
+  else addRow("Joker Cards", "Off");
 
-  addRow("Diagonals", rewards.diagonalsScored ? "On" : "Off");
+  addRow("Diagonal Hands", rewards.diagonalsScored ? "On" : "Off");
+  addRow("Close Enough", rewards.closeEnough ? "On" : "Off");
+  addRow("Gap Fillers", rewards.gutterball ? "On" : "Off");
 
   if (rewards.perfectCardStacks > 0) {
     const chPct = Math.round(perfectCardChance() * 100);
@@ -1036,22 +1057,41 @@ function updateRewardsTracker() {
   } else addRow("Gold Cards", "Off");
 
   if (rewards.broadwayCardsStacks > 0) {
-    addRow(
-      "Broadway Cards",
-      `10–A ${fmtShort(Math.pow(2, rewards.broadwayCardsStacks))}x · ${rewards.broadwayCardsStacks}×`
-    );
+    addRow("Broadway Cards", `10–A ${fmtShort(Math.pow(2, rewards.broadwayCardsStacks))}x · ${rewards.broadwayCardsStacks}×`);
   } else addRow("Broadway Cards", "Off");
 
   if (rewards.lowCardsStacks > 0) {
-    addRow(
-      "Low Cards",
-      `2–9 ${fmtShort(Math.pow(3, rewards.lowCardsStacks))}x · ${rewards.lowCardsStacks}×`
-    );
+    addRow("Low Cards", `2–9 ${fmtShort(Math.pow(3, rewards.lowCardsStacks))}x · ${rewards.lowCardsStacks}×`);
   } else addRow("Low Cards", "Off");
 
-  addRow("Close Enough", rewards.closeEnough ? "On" : "Off");
+  if (rewards.twoBigStacks > 0) {
+    const stacks = Math.max(0, Math.floor(rewards.twoBigStacks || 0));
+    addRow("Two Hundreds", `2's +${200 * stacks} · ${stacks}×`);
+  } else addRow("Two Hundreds", "Off");
 
-  addRow("Heating Up", rewards.heatingUp ? "On" : "Off");
+  if (rewards.biggerCombosStacks > 0) {
+    const stacks = Math.max(0, Math.floor(rewards.biggerCombosStacks || 0));
+    addRow("Bigger Combos", `+${0.5 * stacks}x per chain step · ${stacks}×`);
+  } else addRow("Bigger Combos", "Off");
+
+  if (rewards.biggerNumbersStacks > 0) {
+    const stacks = Math.max(0, Math.floor(rewards.biggerNumbersStacks || 0));
+    addRow("Bigger Numbers", `+${stacks} per scored card · ${stacks}×`);
+  } else addRow("Bigger Numbers", "Off");
+
+  if (rewards.freeSwapStacks > 0) {
+    const stacks = Math.max(0, Math.floor(rewards.freeSwapStacks || 0));
+    const pct = Math.max(0, Math.round(Number(rewards.freeSwapChancePct || 0) * 100) / 100);
+    addRow("Free Swaps", rewards.nextSwapFree ? `Ready · ${stacks}×` : `${pct}% · ${stacks}×`);
+  } else addRow("Free Swaps", "Off");
+
+  if (rewards.stickTogetherStacks > 0) {
+    addRow("Group Up", `${fmtShort(Math.pow(3, rewards.stickTogetherStacks))}x · ${rewards.stickTogetherStacks}×`);
+  } else addRow("Group Up", "Off");
+
+  if (rewards.splitUpStacks > 0) {
+    addRow("Split Up", `${fmtShort(Math.pow(4, rewards.splitUpStacks))}x · ${rewards.splitUpStacks}×`);
+  } else addRow("Split Up", "Off");
 
   if (rewards.shapeUpStacks > 0) {
     const stacks = rewards.shapeUpStacks;
@@ -1062,49 +1102,11 @@ function updateRewardsTracker() {
   if (rewards.straightUpStacks > 0) {
     const stacks = rewards.straightUpStacks;
     const sf = 0.25 * stacks;
-    addRow("Straighten Up", `${fmtShort(Math.pow(2, stacks))}x straight · +${sf}x SF/RF · ${stacks}×`);
-  } else addRow("Straighten Up", "Off");
-
-  if (rewards.stickTogetherStacks > 0) {
-    addRow("Group Up", `${fmtShort(Math.pow(3, rewards.stickTogetherStacks))}x · ${rewards.stickTogetherStacks}×`);
-  } else addRow("Group Up", "Off");
-
-  if (rewards.splitUpStacks > 0) {
-    addRow("Split Up", `${fmtShort(Math.pow(4, rewards.splitUpStacks))}x · ${rewards.splitUpStacks}×`);
-  } else addRow("Split Up", "Off");
-
-  addRow("Gap Filler", rewards.gutterball ? "On" : "Off");
-
-  if (rewards.biggerNumbersStacks > 0) {
-    const stacks = Math.max(0, Math.floor(rewards.biggerNumbersStacks || 0));
-    addRow("Bigger Numbers", `+${stacks} per played card · ${stacks}×`);
-  } else addRow("Bigger Numbers", "Off");
-
-  if (rewards.progressiveJackpotStacks > 0) {
-    addRow(
-      "Progressive Jackpot",
-      `${Math.max(0, Math.round(Number(rewards.progressiveJackpotPct || 0) * 100) / 100)}% · 100x · ${rewards.progressiveJackpotStacks}×`
-    );
-  } else addRow("Progressive Jackpot", "Off");
-
-  if (rewards.freeSwapStacks > 0) {
-    const stacks = Math.max(0, Math.floor(rewards.freeSwapStacks || 0));
-    const pct = Math.max(0, Math.round(Number(rewards.freeSwapChancePct || 0) * 100) / 100);
-    addRow(
-      "Free Swap",
-      rewards.nextSwapFree ? `Ready · ${stacks}×` : `${pct}% · ${stacks}×`
-    );
-  } else addRow("Free Swap", "Off");
-
-  if (rewards.deucesDoubleStacks > 0) {
-    const stacks = Math.max(0, Math.floor(rewards.deucesDoubleStacks || 0));
-    addRow("Dueces Double", `${fmtShort(Math.pow(2, stacks))}x · ${stacks}×`);
-  } else addRow("Dueces Double", "Off");
+    addRow("Straight Up", `${fmtShort(Math.pow(2, stacks))}x straight · +${sf}x SF/RF · ${stacks}×`);
+  } else addRow("Straight Up", "Off");
 
   addRow("Risky Moves", rewards.pureBluff ? "On" : "Off");
-
-  addRow("Instant Fold", rewards.noClearTrips || rewards.noClearTwoPair ? "On" : "Off");
-
+  addRow("Instant Folds", rewards.noClearTrips || rewards.noClearTwoPair ? "On" : "Off");
   addRow("Ladder Up", rewards.ladderUp ? "On" : "Off");
 }
 
@@ -1715,7 +1717,7 @@ ui.newGameBtn.addEventListener("click", () => {
   goalTarget = goalTargetForIndex(1);
   lastPickedRewardName = "____";
   jokerCount = 0;
-  rewards.heatingUp = false;
+  rewards.biggerCombosStacks = 0;
   rewards.stickTogetherStacks = 0;
   rewards.straightUpStacks = 0;
   rewards.shapeUpStacks = 0;
@@ -1725,10 +1727,11 @@ ui.newGameBtn.addEventListener("click", () => {
   rewards.pocketRocketsStacks = 0;
   rewards.progressiveJackpotStacks = 0;
   rewards.progressiveJackpotPct = 0;
+  rewards.biggerCombosStacks = 0;
   rewards.freeSwapStacks = 0;
   rewards.freeSwapChancePct = 0;
   rewards.nextSwapFree = false;
-  rewards.deucesDoubleStacks = 0;
+  rewards.twoBigStacks = 0;
   rewards.perfectCardStacks = 0;
   rewards.broadwayCardsStacks = 0;
   rewards.lowCardsStacks = 0;
@@ -1778,7 +1781,7 @@ ui.restartBtn.addEventListener("click", () => {
   goalTarget = goalTargetForIndex(1);
   lastPickedRewardName = "____";
   jokerCount = 0;
-  rewards.heatingUp = false;
+  rewards.biggerCombosStacks = 0;
   rewards.stickTogetherStacks = 0;
   rewards.straightUpStacks = 0;
   rewards.shapeUpStacks = 0;
@@ -1788,10 +1791,11 @@ ui.restartBtn.addEventListener("click", () => {
   rewards.pocketRocketsStacks = 0;
   rewards.progressiveJackpotStacks = 0;
   rewards.progressiveJackpotPct = 0;
+  rewards.biggerCombosStacks = 0;
   rewards.freeSwapStacks = 0;
   rewards.freeSwapChancePct = 0;
   rewards.nextSwapFree = false;
-  rewards.deucesDoubleStacks = 0;
+  rewards.twoBigStacks = 0;
   rewards.perfectCardStacks = 0;
   rewards.broadwayCardsStacks = 0;
   rewards.lowCardsStacks = 0;
@@ -2305,7 +2309,7 @@ function showHandBurst({ label, type, credits, chainPct = 0, luckyMult = 0, jack
   const amt = Math.max(0, Math.floor(Number(credits) || 0));
   const chain =
     chainPct > 0
-      ? `<span class="handBurst__chain" aria-label="Heating Up bonus">+${fmtBonusXFromPct(chainPct)}</span>`
+      ? `<span class="handBurst__chain" aria-label="Bigger Combos bonus">+${fmtBonusXFromPct(chainPct)}</span>`
       : "";
 
   /** Same product as line score uses on pip sum: ladder-adjusted hand mult × stackable type rewards. */
@@ -2420,20 +2424,20 @@ let rewardBurstShowing = false;
 const REWARD_DEFS = /** @type {const} */ ([
   {
     id: "progressiveJackpot",
-    name: "Progressive Jackpot",
-    desc: "Each scored hand adds +0.25% chance per stack to pay 100x. Chance resets when it triggers.",
+    name: "Progressive Jackpots",
+    desc: "Scored hands now have  +0.25% jackpot chance per stack. Jackpot pays 100x and resets on hit.",
     stack: { kind: "stackable" }
   },
   {
     id: "freeSwap",
-    name: "Free Swap",
-    desc: "Each scored hand adds a 0.25% chance per stack for your next swap to cost 0. Resets when it activates.",
+    name: "Free Swaps",
+    desc: "Scored hands now add +0.25% chance for your next swap to be free.",
     stack: { kind: "stackable" }
   },
   {
-    id: "deucesDouble",
-    name: "Dueces Double",
-    desc: "Any scored hand with a 2 in it is worth 2x (stackable).",
+    id: "twoBig",
+    name: "Two Hundreds",
+    desc: "2’s gain +200 card value per stack.",
     stack: { kind: "stackable" }
   },
   {
@@ -2445,97 +2449,97 @@ const REWARD_DEFS = /** @type {const} */ ([
   {
     id: "perfectCard",
     name: "Gold Cards",
-    desc: "Each card has a 2% chance to spawn as a gold card worth 50×.",
+    desc: "Each card has a +2% chance to appear as a Gold Card worth 50x.",
     stack: { kind: "stackable" }
   },
   {
-    id: "heatingUp",
-    name: "Heating Up",
-    desc: "Each consecutive scored hand in the same cascade adds +0.5x to that line’s score.",
-    stack: { kind: "unique" }
+    id: "biggerCombos",
+    name: "Bigger Combos",
+    desc: "Consecutive scored hands in the same cascade gain +0.5x per stack.",
+    stack: { kind: "stackable" }
   },
   {
     id: "shapeUp",
     name: "Shape Up",
-    desc: "Flushes are worth 2x more, straight and royal flush are worth .25x more.",
+    desc: "Flushes are now worth 2x per stack. Straight Flushes and Royal Flushes gain +0.25x.",
     stack: { kind: "stackable" }
   },
   {
     id: "straightUp",
-    name: "Straighten Up",
-    desc: "Straights are worth 2x more, straight and royal flush are worth .25x more.",
+    name: "Straight Up",
+    desc: "Straights are now worth 2x per stack. Straight Flushes and Royal Flushes gain +0.25x.",
     stack: { kind: "stackable" }
   },
   {
     id: "stickTogether",
     name: "Group Up",
-    desc: "3 of a kind, 4 of a kind, and 5 of a kind are worth 3x.",
+    desc: "Trips, Quads, and Five of a Kind are now worth 3x per stack.",
     stack: { kind: "stackable" }
   },
   {
     id: "splitUp",
     name: "Split Up",
-    desc: "Full house and Two Pair are worth 4x.",
+    desc: "Two Pair and Full House are now worth 4x per stack.",
     stack: { kind: "stackable" }
   },
   {
     id: "gutterball",
-    name: "Gap Filler",
-    desc: "Straights may skip exactly one rank (for example 5-7-8-9-10).",
+    name: "Gap Fillers",
+    desc: "Straights may now skip 1 rank (Such as 5-7-8-9-10)",
     stack: { kind: "unique" }
   },
   {
     id: "biggerNumbers",
     name: "Bigger Numbers",
-    desc: "Each scored hand: contributing cards gain +1 card value per stack (permanently).",
+    desc: "Scored cards permanently gain +1 card value per stack.",
     stack: { kind: "stackable" }
   },
   {
     id: "pocketRockets",
     name: "Pocket Rockets",
-    desc: "Aces are worth 10x card value (Stackable)",
+    desc: "Aces are worth 10x card value per stack.",
     stack: { kind: "stackable" }
   },
   {
     id: "broadwayCards",
     name: "Broadway Cards",
-    desc: "10s, Jacks, Queens, Kings, and Aces are worth 2x (stackable).",
+    desc: "10/J/Q/K/A are now worth 2x card value per stack.",
     stack: { kind: "stackable" }
   },
   {
     id: "lowCards",
     name: "Low Cards",
-    desc: "Twos through Nines are worth 3x (stackable).",
+    desc: "2–9 are now worth 3x card value per stack.",
     stack: { kind: "stackable" }
   },
   {
     id: "jokerCard",
-    name: "Joker Card",
-    desc: "Counts as any card.",
+    name: "Joker Cards",
+    desc: "Add a Joker card to your deck. Max 2.",
     stack: { kind: "stackable", max: 2 }
   },
   {
     id: "diagonals",
-    name: "Diagonals",
-    desc: "Diagonals can now be scored as well.",
+    name: "Diagonal Hands",
+    desc: "5 Card diagonal hands can now be scored as well.",
     stack: { kind: "unique" }
   },
   {
     id: "closeEnough",
     name: "Close Enough",
-    desc: "Flushes and straights can be made with only 4 cards (includes straight flushes and royal flush).",
+    desc: "Flushes and straights now only require 4 cards.",
     stack: { kind: "unique" }
   },
   {
     id: "playingTight",
-    name: "Instant Fold",
+    name: "Instant Folds",
     desc: "Two Pair and Trips are disabled, enabling less frequent but higher scoring hands.",
     stack: { kind: "unique" }
   },
   {
     id: "ladderUp",
     name: "Ladder Up",
-    desc: "Each hand type gains +1x multiplier per time it has been scored this run.",
+    desc: "Hand types now gain +1x each time they are scored this run.",
     stack: { kind: "unique" }
   }
 ]);
@@ -2546,7 +2550,6 @@ function canOfferReward(id) {
   if (id === "playingTight") return !(rewards.noClearTwoPair && rewards.noClearTrips);
   if (id === "ladderUp") return !rewards.ladderUp;
   if (id === "pureBluff") return !rewards.pureBluff;
-  if (id === "heatingUp") return !rewards.heatingUp;
   if (id === "gutterball") return !rewards.gutterball;
   // stackable
   if (id === "perfectCard") return true;
@@ -2559,23 +2562,23 @@ function canOfferReward(id) {
 function applyReward(id) {
   if (id === "freeSwap") {
     rewards.freeSwapStacks += 1;
-    lastPickedRewardName = "Free Swap";
+    lastPickedRewardName = "Free Swaps";
     const stacks = Math.max(0, Math.floor(rewards.freeSwapStacks || 0));
     enqueueRewardBurst(
-      "Free Swap",
+      "Free Swaps",
       `+${0.25 * stacks}% per scored hand (now ${stacks} stack${stacks === 1 ? "" : "s"})`
     );
     updateRewardsTracker();
     scheduleSaveRun();
     return;
   }
-  if (id === "deucesDouble") {
-    rewards.deucesDoubleStacks += 1;
-    lastPickedRewardName = "Dueces Double";
-    const stacks = Math.max(0, Math.floor(rewards.deucesDoubleStacks || 0));
+  if (id === "twoBig") {
+    rewards.twoBigStacks += 1;
+    lastPickedRewardName = "Two Hundreds";
+    const stacks = Math.max(0, Math.floor(rewards.twoBigStacks || 0));
     enqueueRewardBurst(
-      "Dueces Double",
-      `Hands with a 2 now pay ${Math.pow(2, stacks)}x (${stacks} stack${stacks === 1 ? "" : "s"})`
+      "Two Hundreds",
+      `2's are now +${200 * stacks} value (${stacks} stack${stacks === 1 ? "" : "s"})`
     );
     updateRewardsTracker();
     scheduleSaveRun();
@@ -2583,9 +2586,9 @@ function applyReward(id) {
   }
   if (id === "progressiveJackpot") {
     rewards.progressiveJackpotStacks = Math.max(0, Math.floor(rewards.progressiveJackpotStacks || 0)) + 1;
-    lastPickedRewardName = "Progressive Jackpot";
+    lastPickedRewardName = "Progressive Jackpots";
     const stacks = rewards.progressiveJackpotStacks;
-    enqueueRewardBurst("Progressive Jackpot", `Jackpot ramps +${0.25 * stacks}% per scored hand (resets on hit)`);
+    enqueueRewardBurst("Progressive Jackpots", `Jackpot ramps +${0.25 * stacks}% per scored hand (resets on hit)`);
     updateRewardsTracker();
     scheduleSaveRun();
     return;
@@ -2611,10 +2614,11 @@ function applyReward(id) {
     scheduleSaveRun();
     return;
   }
-  if (id === "heatingUp") {
-    rewards.heatingUp = true;
-    lastPickedRewardName = "Heating Up";
-    enqueueRewardBurst("Heating Up", "Combo cascades: +0.5x per chain step on each scored line");
+  if (id === "biggerCombos") {
+    rewards.biggerCombosStacks += 1;
+    lastPickedRewardName = "Bigger Combos";
+    const stacks = Math.max(0, Math.floor(rewards.biggerCombosStacks || 0));
+    enqueueRewardBurst("Bigger Combos", `Cascades now add +${0.5 * stacks}x per chain step (${stacks} stack${stacks === 1 ? "" : "s"})`);
     updateRewardsTracker();
     scheduleSaveRun();
     return;
@@ -2633,10 +2637,10 @@ function applyReward(id) {
   }
   if (id === "straightUp") {
     rewards.straightUpStacks += 1;
-    lastPickedRewardName = "Straighten Up";
+    lastPickedRewardName = "Straight Up";
     const stacks = rewards.straightUpStacks;
     enqueueRewardBurst(
-      "Straighten Up",
+      "Straight Up",
       `Now ${Math.pow(2, stacks)}x (${stacks} stack${stacks === 1 ? "" : "s"})`
     );
     syncHandChartScores();
@@ -2669,8 +2673,8 @@ function applyReward(id) {
   }
   if (id === "gutterball") {
     rewards.gutterball = true;
-    lastPickedRewardName = "Gap Filler";
-    enqueueRewardBurst("Gap Filler", "Straights can skip one rank");
+    lastPickedRewardName = "Gap Fillers";
+    enqueueRewardBurst("Gap Fillers", "Straights can skip one rank");
     updateRewardsTracker();
     scheduleSaveRun();
     return;
@@ -2735,14 +2739,14 @@ function applyReward(id) {
       state.deck?.addJoker?.();
       jokerCount += 1;
     }
-    lastPickedRewardName = "Joker Card";
-    enqueueRewardBurst("Joker Card", `${jokerCount}/2 Jokers in the deck`);
+    lastPickedRewardName = "Joker Cards";
+    enqueueRewardBurst("Joker Cards", `${jokerCount}/2 Jokers in the deck`);
     return;
   }
   if (id === "diagonals") {
     rewards.diagonalsScored = true;
-    lastPickedRewardName = "Diagonals";
-    enqueueRewardBurst("Diagonals", "Diagonals can now be scored as well.");
+    lastPickedRewardName = "Diagonal Hands";
+    enqueueRewardBurst("Diagonal Hands", "Diagonal hands can now be scored as well.");
     return;
   }
   if (id === "closeEnough") {
@@ -2754,16 +2758,16 @@ function applyReward(id) {
   if (id === "playingTight") {
     rewards.noClearTwoPair = true;
     rewards.noClearTrips = true;
-    lastPickedRewardName = "Instant Fold";
-    enqueueRewardBurst("Instant Fold", "Two Pair and Trips are now disabled");
+    lastPickedRewardName = "Instant Folds";
+    enqueueRewardBurst("Instant Folds", "Two Pair and Trips are now disabled");
     return;
   }
   // Backward compat: legacy split rewards now map to Playing Tight.
   if (id === "noClearTwoPair" || id === "noClearTrips") {
     rewards.noClearTwoPair = true;
     rewards.noClearTrips = true;
-    lastPickedRewardName = "Instant Fold";
-    enqueueRewardBurst("Instant Fold", "Two Pair and Trips are now disabled");
+    lastPickedRewardName = "Instant Folds";
+    enqueueRewardBurst("Instant Folds", "Two Pair and Trips are now disabled");
     return;
   }
 }
@@ -3578,23 +3582,9 @@ async function resolveCascades() {
       }
       const lineScore = pipSum * hm * lineTypeRewardMult(line.type);
       const chainStep = Math.max(0, (state.comboStep || 1) - 1);
-      const comboMult = rewards.heatingUp && chainStep > 0 ? 1 + 0.5 * chainStep : 1;
+      const comboStacks = Math.max(0, Math.floor(rewards.biggerCombosStacks || 0));
+      const comboMult = comboStacks > 0 && chainStep > 0 ? 1 + 0.5 * comboStacks * chainStep : 1;
       let gained = Math.floor(lineScore * comboMult);
-
-      // Dueces Double: any scored hand containing a 2 pays 2x per stack (compounding).
-      const ddStacks = Math.max(0, Math.floor(rewards.deucesDoubleStacks || 0));
-      if (ddStacks > 0) {
-        let hasTwo = false;
-        for (const p of contribCells) {
-          const card = state.board[p.r][p.c];
-          if (!card) continue;
-          if (String(card.rank) === "2") {
-            hasTwo = true;
-            break;
-          }
-        }
-        if (hasTwo) gained *= Math.pow(2, ddStacks);
-      }
 
       /** @type {""|"win"|"lose"} */
       let bluff = "";
@@ -3647,7 +3637,7 @@ async function resolveCascades() {
           updateRewardsTracker();
         }
       }
-      const chainPct = rewards.heatingUp && chainStep > 0 ? 50 * chainStep : 0;
+      const chainPct = comboStacks > 0 && chainStep > 0 ? 50 * comboStacks * chainStep : 0;
       const handBurstEl = showHandBurst({
         label: line.label,
         type: line.type,

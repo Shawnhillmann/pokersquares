@@ -657,6 +657,29 @@ body {
   grid-column: 3;
 }
 
+/* Desktop: brand left of nav, left-aligned. */
+@media (min-width: 721px) {
+  .hud {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .hud__left {
+    grid-column: auto;
+    justify-content: flex-start;
+  }
+
+  .brand {
+    text-align: left;
+    align-items: flex-start;
+  }
+
+  .hud__right {
+    grid-column: auto;
+  }
+}
+
 .brand__title {
   font-weight: 800;
   letter-spacing: 0.14em;
@@ -3248,6 +3271,17 @@ html.is-mobile .creditDock {
   gap: 12px;
   align-items: stretch;
   z-index: auto;
+}
+
+/* Mobile: below swap total -> Run rewards, then How to play, then Support. */
+html.is-mobile .creditDock .rewardsTrackerPanel {
+  order: 1;
+}
+html.is-mobile .creditDock .howToPlayPanel {
+  order: 2;
+}
+html.is-mobile .creditDock .supportPanel {
+  order: 3;
 }
 
 html.is-mobile .howToPlayPanel {
