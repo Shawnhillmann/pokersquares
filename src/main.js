@@ -123,8 +123,8 @@ const rewards = {
   freeSwapChancePct: 0,
   /** When true, the next swap costs 0 credits. */
   nextSwapFree: false,
-  /** Times Pocket Dueces picked; each stack multiplies twos' card value by 10 (stackable). */
-  pocketDuecesStacks: 0,
+  /** Times Pocket Deuces picked; each stack multiplies twos' card value by 10 (stackable). */
+  pocketDeucesStacks: 0,
   /** Times Gold Cards picked; chance stacks (see perfectCardChance). Player-facing: 2% per stack to spawn as gold (50× value). */
   perfectCardStacks: 0,
   /** Times Broadway Cards picked; 10/J/Q/K/A card value ×2 per stack (compounding). */
@@ -307,17 +307,24 @@ function tryRestoreRun() {
           Math.floor(vr.faceCardsStacks)
         );
       }
-    // Legacy: Dueces Double / Two Hundreds → Pocket Dueces (save keys evolved).
+    // Legacy: Deuces Double / Two Hundreds → Pocket Deuces (save keys evolved).
     if (typeof vr.deucesDoubleStacks === "number") {
-      rewards.pocketDuecesStacks = Math.max(
-        rewards.pocketDuecesStacks || 0,
+      rewards.pocketDeucesStacks = Math.max(
+        rewards.pocketDeucesStacks || 0,
         Math.floor(vr.deucesDoubleStacks)
       );
     }
     if (typeof vr.twoBigStacks === "number") {
-      rewards.pocketDuecesStacks = Math.max(
-        rewards.pocketDuecesStacks || 0,
+      rewards.pocketDeucesStacks = Math.max(
+        rewards.pocketDeucesStacks || 0,
         Math.floor(vr.twoBigStacks)
+      );
+    }
+    // Typo key from a short-lived release (`pocketDuecesStacks`).
+    if (typeof vr.pocketDuecesStacks === "number") {
+      rewards.pocketDeucesStacks = Math.max(
+        rewards.pocketDeucesStacks || 0,
+        Math.floor(vr.pocketDuecesStacks)
       );
     }
     // Legacy: Heating Up (one-time) became Bigger Combos (stackable).
@@ -415,13 +422,13 @@ function cardScoreValue(card) {
     card && typeof /** @type {any} */ (card).bigger === "number"
       ? Math.max(0, Math.floor(/** @type {any} */ (card).bigger))
       : 0;
-  const pocketDuecesStacks = Math.max(0, Math.floor(rewards.pocketDuecesStacks || 0));
-  const pocketDuecesMult =
-    rank === "2" && pocketDuecesStacks > 0 ? Math.pow(10, pocketDuecesStacks) : 1;
+  const pocketDeucesStacks = Math.max(0, Math.floor(rewards.pocketDeucesStacks || 0));
+  const pocketDeucesMult =
+    rank === "2" && pocketDeucesStacks > 0 ? Math.pow(10, pocketDeucesStacks) : 1;
   const baseUnmult = (rewards.jokerWildcard && isJoker ? 10 : cardBaseValue(rank)) + perCard;
   let base = baseUnmult;
   if (isAce) base *= aceMult;
-  if (rank === "2") base *= pocketDuecesMult;
+  if (rank === "2") base *= pocketDeucesMult;
   let v = base * broadwayMult * lowMult;
   if (card && /** @type {any} */ (card).perfect) v *= GOLD_CARD_PERFECT_MULT;
   return v;
@@ -924,7 +931,7 @@ function updateRewardsTracker() {
     "Gold Cards": "Each card has a +2% chance to appear as a Gold Card worth 50x.",
     "Broadway Cards": "10/J/Q/K/A are now worth 2x card value per stack.",
     "Low Cards": "2–9 are now worth 3x card value per stack.",
-    "Pocket Dueces": "2's are worth 10× card value per stack; each pick stacks another 10× on twos.",
+    "Pocket Deuces": "2's are worth 10× card value per stack; each pick stacks another 10× on twos.",
     "Bigger Combos": "Consecutive scored hands in the same cascade gain +0.5x per stack.",
     "Bigger Numbers": "Scored cards permanently gain +1 card value per stack.",
     "Free Swaps": "Scored hands now add +0.25% chance for your next swap to be free.",
@@ -1079,10 +1086,10 @@ function updateRewardsTracker() {
     addRow("Low Cards", `2–9 ${fmtShort(Math.pow(3, rewards.lowCardsStacks))}x · ${rewards.lowCardsStacks}×`);
   } else addRow("Low Cards", "Off");
 
-  if (rewards.pocketDuecesStacks > 0) {
-    const stacks = Math.max(0, Math.floor(rewards.pocketDuecesStacks || 0));
-    addRow("Pocket Dueces", `2's ${fmtShort(Math.pow(10, stacks))}x · ${stacks}×`);
-  } else addRow("Pocket Dueces", "Off");
+  if (rewards.pocketDeucesStacks > 0) {
+    const stacks = Math.max(0, Math.floor(rewards.pocketDeucesStacks || 0));
+    addRow("Pocket Deuces", `2's ${fmtShort(Math.pow(10, stacks))}x · ${stacks}×`);
+  } else addRow("Pocket Deuces", "Off");
 
   if (rewards.biggerCombosStacks > 0) {
     const stacks = Math.max(0, Math.floor(rewards.biggerCombosStacks || 0));
@@ -1748,7 +1755,7 @@ ui.newGameBtn.addEventListener("click", () => {
   rewards.freeSwapStacks = 0;
   rewards.freeSwapChancePct = 0;
   rewards.nextSwapFree = false;
-  rewards.pocketDuecesStacks = 0;
+  rewards.pocketDeucesStacks = 0;
   rewards.perfectCardStacks = 0;
   rewards.broadwayCardsStacks = 0;
   rewards.lowCardsStacks = 0;
@@ -1812,7 +1819,7 @@ ui.restartBtn.addEventListener("click", () => {
   rewards.freeSwapStacks = 0;
   rewards.freeSwapChancePct = 0;
   rewards.nextSwapFree = false;
-  rewards.pocketDuecesStacks = 0;
+  rewards.pocketDeucesStacks = 0;
   rewards.perfectCardStacks = 0;
   rewards.broadwayCardsStacks = 0;
   rewards.lowCardsStacks = 0;
@@ -2452,8 +2459,8 @@ const REWARD_DEFS = /** @type {const} */ ([
     stack: { kind: "stackable" }
   },
   {
-    id: "pocketDueces",
-    name: "Pocket Dueces",
+    id: "pocketDeuces",
+    name: "Pocket Deuces",
     desc: "2's are worth 10× card value per stack (stackable).",
     stack: { kind: "stackable" }
   },
@@ -2588,12 +2595,12 @@ function applyReward(id) {
     scheduleSaveRun();
     return;
   }
-  if (id === "pocketDueces") {
-    rewards.pocketDuecesStacks += 1;
-    lastPickedRewardName = "Pocket Dueces";
-    const stacks = Math.max(0, Math.floor(rewards.pocketDuecesStacks || 0));
+  if (id === "pocketDeuces") {
+    rewards.pocketDeucesStacks += 1;
+    lastPickedRewardName = "Pocket Deuces";
+    const stacks = Math.max(0, Math.floor(rewards.pocketDeucesStacks || 0));
     enqueueRewardBurst(
-      "Pocket Dueces",
+      "Pocket Deuces",
       `2's are now ${fmtShort(Math.pow(10, stacks))}× value (${stacks} stack${stacks === 1 ? "" : "s"})`
     );
     updateRewardsTracker();
