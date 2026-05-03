@@ -2169,6 +2169,18 @@ function scoreFeedPosition(boardRect) {
 }
 
 /**
+ * Center of `rect` (viewport) as left/top inside `host` (positioned ancestor), for absolute pips.
+ * @param {HTMLElement} host
+ * @param {DOMRect} rect
+ */
+function scorePipOffsetInHost(host, rect) {
+  const hr = host.getBoundingClientRect();
+  const x = Math.round(rect.left + rect.width / 2 - hr.left);
+  const y = Math.round(rect.top + rect.height / 2 - hr.top);
+  return { x, y };
+}
+
+/**
  * Small per-card value popup (green) during sequential grow.
  * @param {{r:number,c:number}} p
  * @param {number} value
@@ -2184,8 +2196,7 @@ function showCardValuePopup(p, value, opts = {}) {
   const rect = faceRect && faceRect.width > 0 ? faceRect : cell.getBoundingClientRect();
 
   const pop = document.createElement("div");
-  // Score-chain only: higher z-index than .lineLayer so teal line stays under pips
-  // (see .boardWrap stacking in styles.css). Fixed + face rect keeps prior centering.
+  // Score-chain: absolute on .boardWrap + host-relative coords (see scorePipOffsetInHost).
   pop.className = "pipPopup pipPopup--scoreChain";
   if (opts.variant === "zero") pop.classList.add("pipPopup--zero");
   const abs = Math.max(0, Math.floor(Number(value) || 0));
@@ -2194,8 +2205,7 @@ function showCardValuePopup(p, value, opts = {}) {
   if (abs >= 100) pop.classList.add("pipPopup--3d");
   if (abs >= 1000) pop.classList.add("pipPopup--k");
 
-  const x = Math.round(rect.x + rect.width / 2);
-  const y = Math.round(rect.y + rect.height / 2);
+  const { x, y } = scorePipOffsetInHost(host, rect);
   pop.style.left = `${x}px`;
   pop.style.top = `${y}px`;
 
@@ -2204,14 +2214,15 @@ function showCardValuePopup(p, value, opts = {}) {
   return pop;
 }
 
-/** Re-read .cardFace center for fixed score pips (first scored card often lags compositor). */
+/** Re-read .cardFace center after layout (first card); uses host-relative coords. */
 function syncScorePipToFace(pop, cell) {
   if (!pop || !cell) return;
+  const host = ui.board.parentElement;
+  if (!host) return;
   const faceEl = cell.querySelector(".cardFace");
   const fr = faceEl?.getBoundingClientRect?.();
   if (!fr || fr.width <= 0) return;
-  const x = Math.round(fr.x + fr.width / 2);
-  const y = Math.round(fr.y + fr.height / 2);
+  const { x, y } = scorePipOffsetInHost(host, fr);
   pop.style.left = `${x}px`;
   pop.style.top = `${y}px`;
 }

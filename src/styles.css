@@ -2068,15 +2068,18 @@ html.is-mobile .cardFace--jokerArt img.cardPip--faceArt {
   font-weight: 900;
   letter-spacing: 0.04em;
   font-size: 17px;
-  transform: translate3d(-50%, -50%, 0) translateY(6px);
+  transform: translate(-50%, -50%) translateY(6px);
+  transform-origin: 50% 50%;
   opacity: 0;
   pointer-events: none;
   box-shadow: 0 14px 40px rgba(0, 0, 0, 0.5);
   transition: opacity 140ms ease, transform 140ms ease;
 }
 
-/* Above .lineLayer (z-index 2), below hand burst / modals (higher z-index). */
+/* Score-chain: absolute inside .boardWrap; JS uses face rect minus host rect so
+   viewport getBoundingClientRect matches coordinate space (not fixed + raw x/y). */
 .pipPopup.pipPopup--scoreChain {
+  position: absolute;
   z-index: 4;
 }
 
