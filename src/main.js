@@ -1917,7 +1917,6 @@ const hadSavedSettings = !!localStorage.getItem(SETTINGS_STORAGE_KEY);
 loadSettings();
 applySettings();
 if (!hadSavedSettings && MOBILE_MQ.matches) saveSettings();
-syncHandChartScores();
 
 // Warm the browser cache for face-card SVGs (helps on slow mobile connections).
 /** @type {HTMLImageElement[]} */
@@ -1944,6 +1943,8 @@ preloadFaceArtSvgs();
 
 // Restore saved run state (board/credits/goals/rewards) after deck exists.
 const restoredRun = tryRestoreRun();
+// Chart pills must reflect restored ladder counts / rewards (sync was intentionally not run earlier).
+syncHandChartScores();
 // Ensure newly dealt boards get Gold Cards rolls.
 function rollPerfectCardsOnBoard() {
   if (!rewards.perfectCardStacks) return;
@@ -2781,9 +2782,11 @@ function applyReward(id) {
     return;
   }
   if (id === "ladderUp") {
-    rewards.ladderUpStacks = Math.max(0, Math.floor(rewards.ladderUpStacks || 0)) + 1;
-    // Ladder Up should start counting from the moment it is picked.
-    handTypePlayCounts = Object.create(null);
+    const prevStacks = Math.max(0, Math.floor(rewards.ladderUpStacks || 0));
+    rewards.ladderUpStacks = prevStacks + 1;
+    // Only reset run counts when Ladder Up is first unlocked (0→1). Extra Ladder stacks must not
+    // wipe plays already earned — that incorrectly collapsed multipliers (e.g. 62x → base tier).
+    if (prevStacks === 0) handTypePlayCounts = Object.create(null);
     lastPickedRewardName = "Ladder Up";
     const stacks = rewards.ladderUpStacks;
     enqueueRewardBurst("Ladder Up", `Hand types now gain +${stacks}x each time they are scored this run`);
