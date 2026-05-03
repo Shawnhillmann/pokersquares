@@ -2176,15 +2176,17 @@ function scoreFeedPosition(boardRect) {
 function showCardValuePopup(p, value, opts = {}) {
   const cell = ui.board.querySelector(`.cell[data-r="${p.r}"][data-c="${p.c}"]`);
   if (!cell) return;
-  const faceEl = /** @type {HTMLElement|null} */ (cell.querySelector(".cardFace"));
-  if (!faceEl) return;
-  const wrap = /** @type {HTMLElement|null} */ (ui.board?.parentElement);
-  if (!wrap) return;
+  const host = ui.board.parentElement;
+  if (!host) return;
+
+  const faceEl = cell.querySelector(".cardFace");
+  const faceRect = faceEl?.getBoundingClientRect();
+  const rect = faceRect && faceRect.width > 0 ? faceRect : cell.getBoundingClientRect();
 
   const pop = document.createElement("div");
-  // Absolute inside .boardWrap (after .lineLayer in DOM) so z-index stacks pips above
-  // the teal score line. Center = faceRect − wrapRect (same frame cancels shared offset).
-  pop.className = "pipPopup pipPopup--boardWrap";
+  // Score-chain only: higher z-index than .lineLayer so teal line stays under pips
+  // (see .boardWrap stacking in styles.css). Fixed + face rect keeps prior centering.
+  pop.className = "pipPopup pipPopup--scoreChain";
   if (opts.variant === "zero") pop.classList.add("pipPopup--zero");
   const abs = Math.max(0, Math.floor(Number(value) || 0));
   const shown = opts.variant === "zero" ? "0" : `+${fmtShort(abs)}`;
@@ -2192,14 +2194,12 @@ function showCardValuePopup(p, value, opts = {}) {
   if (abs >= 100) pop.classList.add("pipPopup--3d");
   if (abs >= 1000) pop.classList.add("pipPopup--k");
 
-  const fr = faceEl.getBoundingClientRect();
-  const wr = wrap.getBoundingClientRect();
-  const x = Math.round(fr.left + fr.width / 2 - wr.left);
-  const y = Math.round(fr.top + fr.height / 2 - wr.top);
+  const x = Math.round(rect.x + rect.width / 2);
+  const y = Math.round(rect.y + rect.height / 2);
   pop.style.left = `${x}px`;
   pop.style.top = `${y}px`;
 
-  wrap.append(pop);
+  host.append(pop);
   requestAnimationFrame(() => pop.classList.add("is-showing"));
   return pop;
 }

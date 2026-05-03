@@ -987,6 +987,8 @@ main.stage {
   width: fit-content;
   height: fit-content;
   overflow: visible;
+  /* Stacking: grid < score lines < score pips < hand burst (see z-indexs below). */
+  isolation: isolate;
 }
 
 .playArea {
@@ -1059,14 +1061,14 @@ main.stage {
   grid-template-rows: repeat(var(--board-size), var(--cell));
   gap: var(--gap);
   position: relative;
-  z-index: 0;
+  z-index: 1;
 }
 
 .lineLayer {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  z-index: 1;
+  z-index: 2;
 }
 
 .scoreLine {
@@ -2073,15 +2075,9 @@ html.is-mobile .cardFace--jokerArt img.cardPip--faceArt {
   transition: opacity 140ms ease, transform 140ms ease;
 }
 
-/* Score-chain pips: absolutely positioned in .boardWrap (appended after .lineLayer) so
-   they paint above the teal score line; center from faceRect − wrapRect in JS. */
-.pipPopup.pipPopup--boardWrap {
-  position: absolute;
-  right: auto;
-  bottom: auto;
+/* Above .lineLayer (z-index 2), below hand burst / modals (higher z-index). */
+.pipPopup.pipPopup--scoreChain {
   z-index: 4;
-  margin: 0;
-  transform: translate3d(-50%, -50%, 0) translateY(6px);
 }
 
 .pipPopup.pipPopup--3d {
@@ -2097,18 +2093,10 @@ html.is-mobile .cardFace--jokerArt img.cardPip--faceArt {
   transform: translate(-50%, -50%) translateY(0px);
 }
 
-.pipPopup.pipPopup--boardWrap.is-showing {
-  transform: translate(-50%, -50%) translateY(0px);
-}
-
 .pipPopup.is-fading {
   opacity: 0;
   transform: translate(-50%, -50%) translateY(-10px);
   transition: opacity 220ms ease, transform 220ms ease;
-}
-
-.pipPopup.pipPopup--boardWrap.is-fading {
-  transform: translate(-50%, -50%) translateY(-10px);
 }
 
 .pipPopup--zero {
