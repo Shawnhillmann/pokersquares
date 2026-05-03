@@ -987,8 +987,8 @@ main.stage {
   width: fit-content;
   height: fit-content;
   overflow: visible;
-  /* Stacking: grid < score lines < score pips < hand burst (see z-indexs below). */
-  isolation: isolate;
+  /* Stacking: .board (1) < .lineLayer (2) < .pipPopup--scoreChain (4) — no isolation
+   so we don’t add an extra compositing root that can interact oddly with fixed pips. */
 }
 
 .playArea {
