@@ -87,6 +87,21 @@ export function createDeck(rng) {
         queue.push({ id: String(c.id), rank: c.rank, suit: c.suit, bigger });
       }
     },
+    /**
+     * Re-apply Bigger Numbers (and any other) `bigger` totals keyed by stable card `id` after a full
+     * board regen replaces queue entries with fresh objects.
+     * @param {Map<string, number>} map
+     */
+    applyBiggerByIdMap(map) {
+      if (!map || map.size === 0) return;
+      for (const c of queue) {
+        const b = map.get(String(c.id));
+        if (typeof b === "number" && b > 0) {
+          const cur = typeof c.bigger === "number" ? Math.max(0, Math.floor(c.bigger)) : 0;
+          c.bigger = Math.max(cur, b);
+        }
+      }
+    },
     size() {
       return queue.length;
     }

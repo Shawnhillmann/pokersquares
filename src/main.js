@@ -2535,6 +2535,63 @@ function ensureJokersInDeckAfterRegenerate() {
   for (let i = 0; i < want; i++) state.deck.addJoker();
 }
 
+/**
+ * Collect per-card `bigger` keyed by stable deck `id` (e.g. `AH`, `10S`) so Bigger Numbers survives
+ * `regenerateBoardForFairness`, which otherwise replaces the whole board + queue.
+ * @param {any[][]} board
+ * @param {any[]} deckQueueSnap from `deck.snapshot()`
+ * @returns {Map<string, number>}
+ */
+function collectBiggerByCardId(board, deckQueueSnap) {
+  /** @type {Map<string, number>} */
+  const m = new Map();
+  const add = (card) => {
+    if (!card || typeof /** @type {any} */ (card).bigger !== "number") return;
+    const v = Math.max(0, Math.floor(/** @type {any} */ (card).bigger));
+    if (v <= 0) return;
+    const id = String(/** @type {any} */ (card).id || "");
+    if (!id) return;
+    m.set(id, Math.max(m.get(id) ?? 0, v));
+  };
+  for (const row of board) {
+    for (const cell of row) add(cell);
+  }
+  for (const c of deckQueueSnap || []) add(c);
+  return m;
+}
+
+function applyBiggerByIdMapToBoard(board, map) {
+  if (!map || map.size === 0) return;
+  for (let r = 0; r < board.length; r++) {
+    const row = board[r];
+    if (!row) continue;
+    for (let c = 0; c < row.length; c++) {
+      const card = row[c];
+      if (!card) continue;
+      const b = map.get(String(/** @type {any} */ (card).id));
+      if (typeof b === "number" && b > 0) /** @type {any} */ (card).bigger = b;
+    }
+  }
+}
+
+/**
+ * Same as `regenerateBoardForFairness` but restores `card.bigger` on the new board + draw queue.
+ * @param {{ maxAttempts?: number, lineClearOpts?: object }} opts
+ */
+function regenerateBoardPreservingCardBigger(opts) {
+  const deckSnap =
+    state.deck && typeof /** @type {any} */ (state.deck).snapshot === "function"
+      ? /** @type {any} */ (state.deck).snapshot()
+      : [];
+  const biggerMap = collectBiggerByCardId(state.board, deckSnap);
+  const ok = regenerateBoardForFairness(state, opts);
+  applyBiggerByIdMapToBoard(state.board, biggerMap);
+  if (state.deck && typeof /** @type {any} */ (state.deck).applyBiggerByIdMap === "function") {
+    /** @type {any} */ (state.deck).applyBiggerByIdMap(biggerMap);
+  }
+  return ok;
+}
+
 /** @type {{ title:string, desc:string }[]} */
 const rewardBurstQueue = [];
 let rewardBurstShowing = false;
@@ -3739,8 +3796,9 @@ async function resolveCascades() {
     if (lines.length === 0) break;
     if (state.comboStep >= MAX_COMBO - 1) {
       // Extremely unlikely, but prevents runaway auto-resolve.
-      regenerateBoardForFairness(state, { maxAttempts: 2500, lineClearOpts: boardLineOpts() });
+      regenerateBoardPreservingCardBigger({ maxAttempts: 2500, lineClearOpts: boardLineOpts() });
       ensureJokersInDeckAfterRegenerate();
+      rollPerfectCardsOnBoard();
       showToast(ui.toast, "Fresh deal (runaway cascade)");
       break;
     }
@@ -3983,8 +4041,9 @@ async function resolveCascades() {
       // Important: stopping cascades for clarity should not leave a scoring line on the board,
       // otherwise it looks like a bug (e.g., visible two pair that "doesn't clear").
       // Re-deal a fair stable board and keep the run stats/rewards/credits.
-      regenerateBoardForFairness(state, { maxAttempts: 2500, lineClearOpts: boardLineOpts() });
+      regenerateBoardPreservingCardBigger({ maxAttempts: 2500, lineClearOpts: boardLineOpts() });
       ensureJokersInDeckAfterRegenerate();
+      rollPerfectCardsOnBoard();
       state.selected = null;
       viewFx.scoring = null;
       viewFx.scoredLines = null;
