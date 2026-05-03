@@ -3628,13 +3628,20 @@ async function pulseScoredLine(line, combo, contribCells, dimCells, onTotal, han
   const ordered = orderCellsForLine(line, contribCells); // only scoring cards
   const orderedDim = orderCellsForLine(line, dimCells);
 
-  // Card-value pips must not show until swap motion is fully done and faces have settled
-  // (FLIP / wind-up can outlast transitionend vs compositor; rects must be stable).
-  await waitForBoardSwapMotionIdle();
+  // Pips align to .cardFace rects. After a *swap*, FLIP / wind-up can outlast transitionend;
+  // wait until swap motion is idle and faces stop drifting (first hand of this resolve only).
+  // Cascade chains already waited on gravity/refill in `resolveCascades`; long rect polling
+  // there only slows combo scoring without fixing a real issue.
+  const firstHandAfterSwap = Math.max(1, Math.floor(combo || 1)) <= 1;
+  if (firstHandAfterSwap) await waitForBoardSwapMotionIdle();
   const lineCells = [...orderedDim, ...ordered]
     .map((p) => ui.board.querySelector(`.cell[data-r="${p.r}"][data-c="${p.c}"]`))
     .filter((el) => el instanceof HTMLElement);
-  await waitForFaceRectsStable(lineCells, { maxFrames: 48 });
+  if (firstHandAfterSwap) await waitForFaceRectsStable(lineCells, { maxFrames: 48 });
+  else {
+    await nextFrame();
+    await nextFrame();
+  }
   /** @type {HTMLElement[]} */
   const valuePops = [];
   let running = 0;
