@@ -3409,6 +3409,8 @@ async function pulseScoredLine(line, combo, contribCells, dimCells, onTotal, han
     el.classList.remove("is-border-pop");
     // eslint-disable-next-line no-unused-expressions
     el.offsetHeight;
+    // One frame so compositor applies grown transform before we measure (mobile Safari).
+    await nextFrame();
     // Per-card value popup once layout matches the pulse pose.
     const card = state.board[p.r]?.[p.c];
     if (card) {

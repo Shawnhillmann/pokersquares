@@ -1228,12 +1228,17 @@ main.stage {
   animation: scoreBorder 160ms ease-out both;
 }
 
+/* No transform transition here: JS measures .cardFace for pip popups; easing would
+   leave the rect between scale(1) and 1.06 and the following seqGrow 0% must match
+   this pose so adding .is-seq-grow does not snap the face smaller. */
 .cell.is-seq-grown .cardFace {
   transform: translateY(-1px) scale(1.06);
+  transition: none;
 }
 
 .cell.is-seq-grow .cardFace {
   animation: seqGrow calc(85ms / var(--combo-speed, 1)) ease-out forwards;
+  transition: none;
 }
 
 .cell.is-swap-success {
@@ -2760,10 +2765,16 @@ html.is-mobile .cardFace--jokerArt img.cardPip--faceArt {
   }
 }
 
+/* 0%/100% match .cell.is-seq-grown .cardFace so popups measured on the grown pose
+   are not thrown off when this animation starts (was: 0% at scale(1), snap). */
 @keyframes seqGrow {
   0% {
-    transform: translateY(0px) scale(1);
+    transform: translateY(-1px) scale(1.06);
     filter: brightness(1);
+  }
+  55% {
+    transform: translateY(-2px) scale(1.085);
+    filter: brightness(1.1);
   }
   100% {
     transform: translateY(-1px) scale(1.06);
