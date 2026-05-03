@@ -1241,6 +1241,14 @@ main.stage {
   transition: none;
 }
 
+/* Score pips sit above the face; don’t clip them on face-art / joker faces. */
+.cell.is-seq-grown .cardFace.cardFace--faceArt,
+.cell.is-seq-grow .cardFace.cardFace--faceArt,
+.cell.is-seq-grown .cardFace.cardFace--jokerArt,
+.cell.is-seq-grow .cardFace.cardFace--jokerArt {
+  overflow: visible;
+}
+
 .cell.is-swap-success {
   z-index: 3;
   animation: swapSuccess var(--swap-ms, 220ms) cubic-bezier(0.2, 0.9, 0.2, 1) forwards;
@@ -2070,6 +2078,19 @@ html.is-mobile .cardFace--jokerArt img.cardPip--faceArt {
   transition: opacity 140ms ease, transform 140ms ease;
 }
 
+/* Score-chain pips: centered in .cardFace (not viewport-fixed) so they track transforms
+   and avoid iOS layout vs visual viewport mismatch with getBoundingClientRect. */
+.pipPopup.pipPopup--anchored {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  right: auto;
+  bottom: auto;
+  z-index: 25;
+  margin: 0;
+  transform: translate3d(-50%, -50%, 0) translateY(6px);
+}
+
 .pipPopup.pipPopup--3d {
   font-size: 15px;
 }
@@ -2083,10 +2104,18 @@ html.is-mobile .cardFace--jokerArt img.cardPip--faceArt {
   transform: translate(-50%, -50%) translateY(0px);
 }
 
+.pipPopup.pipPopup--anchored.is-showing {
+  transform: translate(-50%, -50%) translateY(0px);
+}
+
 .pipPopup.is-fading {
   opacity: 0;
   transform: translate(-50%, -50%) translateY(-10px);
   transition: opacity 220ms ease, transform 220ms ease;
+}
+
+.pipPopup.pipPopup--anchored.is-fading {
+  transform: translate(-50%, -50%) translateY(-10px);
 }
 
 .pipPopup--zero {

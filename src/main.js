@@ -2176,14 +2176,14 @@ function scoreFeedPosition(boardRect) {
 function showCardValuePopup(p, value, opts = {}) {
   const cell = ui.board.querySelector(`.cell[data-r="${p.r}"][data-c="${p.c}"]`);
   if (!cell) return;
-  const host = ui.board.parentElement;
-  if (!host) return;
+  const faceEl = /** @type {HTMLElement|null} */ (cell.querySelector(".cardFace"));
+  if (!faceEl) return;
 
-  const faceEl = cell.querySelector(".cardFace");
-  const faceRect = faceEl?.getBoundingClientRect();
-  const rect = faceRect && faceRect.width > 0 ? faceRect : cell.getBoundingClientRect();
   const pop = document.createElement("div");
-  pop.className = "pipPopup";
+  // Anchored inside .cardFace so centering is in the card’s local box (co-moves with
+  // transforms). Viewport `fixed` + getBoundingClientRect can drift on mobile Safari
+  // vs the painted card even when motion is only translateY/scale.
+  pop.className = "pipPopup pipPopup--anchored";
   if (opts.variant === "zero") pop.classList.add("pipPopup--zero");
   const abs = Math.max(0, Math.floor(Number(value) || 0));
   const shown = opts.variant === "zero" ? "0" : `+${fmtShort(abs)}`;
@@ -2191,13 +2191,7 @@ function showCardValuePopup(p, value, opts = {}) {
   if (abs >= 100) pop.classList.add("pipPopup--3d");
   if (abs >= 1000) pop.classList.add("pipPopup--k");
 
-  // Use integer pixel centers to avoid occasional sub-pixel drift on some devices/zooms.
-  const x = Math.round(rect.x + rect.width / 2);
-  const y = Math.round(rect.y + rect.height / 2);
-  pop.style.left = `${x}px`;
-  pop.style.top = `${y}px`;
-
-  host.append(pop);
+  faceEl.append(pop);
   requestAnimationFrame(() => pop.classList.add("is-showing"));
   return pop;
 }
