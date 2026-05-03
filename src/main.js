@@ -725,11 +725,13 @@ function boardLineOpts() {
 
 function comboSpeed(comboStep) {
   const step = Math.max(1, Math.floor(comboStep || 1));
-  // First hand in a cascade ~10% faster than before; each further combo step +5% speed.
-  const speed = 1.1 + (step - 1) * 0.05;
+  // Compound pace: each further scoring hand in the chain multiplies speed by ~5% (vs additive +0.05).
+  const base = 1.1;
+  const perHand = 1.05;
+  const speed = base * Math.pow(perHand, step - 1);
   // Mobile: tiny boost so it does not feel sluggish vs desktop; keep modest so it does not read as rushed.
   const mobileBoost = typeof MOBILE_MQ !== "undefined" && MOBILE_MQ.matches ? 1.1 : 1;
-  return Math.min(2.65, speed * mobileBoost); // cap so it doesn't get silly late-game
+  return Math.min(3.0, speed * mobileBoost); // cap so it doesn't get silly late-game
 }
 
 function comboDelayMs(baseMs, comboStep) {
@@ -3823,7 +3825,7 @@ async function resolveCascades() {
   let goalClearedTarget = 0;
   // The single “breather” between a cascade landing and the next scoring check.
   // Tweak this number to change how fast scoring starts after a fill.
-  const CASCADE_EVAL_DELAY_MS = 26;
+  const CASCADE_EVAL_DELAY_MS = 8;
 
   const MAX_COMBO = 80;
   while (state.comboStep < MAX_COMBO) {
@@ -4024,7 +4026,7 @@ async function resolveCascades() {
     viewFx.clearing = null;
     rerender();
 
-    await sleep(comboDelayMs(70, state.comboStep));
+    await sleep(comboDelayMs(40, state.comboStep));
 
     // Fall + refill (two phase): existing cards fall first, then new cards deal in a column at a time.
     viewFx.dropMode = "gravity";
