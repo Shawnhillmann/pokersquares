@@ -64,8 +64,9 @@ const ui = {
   settingsCrtStrengthRow: /** @type {HTMLElement|null} */ (document.getElementById("settingsCrtStrengthRow")),
   settingsFullscreen: /** @type {HTMLInputElement|null} */ (document.getElementById("settingsFullscreen")),
   settingsNextTrackBtn: /** @type {HTMLButtonElement|null} */ (document.getElementById("settingsNextTrackBtn")),
-  settingsTrackLabel: /** @type {HTMLElement|null} */ (document.getElementById("settingsTrackLabel"))
-  ,orientationBlock: /** @type {HTMLElement|null} */ (document.getElementById("orientationBlock"))
+  settingsTrackLabel: /** @type {HTMLElement|null} */ (document.getElementById("settingsTrackLabel")),
+  settingsHaptics: /** @type {HTMLInputElement|null} */ (document.getElementById("settingsHaptics")),
+  orientationBlock: /** @type {HTMLElement|null} */ (document.getElementById("orientationBlock"))
 };
 
 const RUN_STORAGE_KEY = "speed_poker_run_v1";
@@ -1498,7 +1499,9 @@ const settings = {
   theme: "purple",
   crt: true,
   crtStrength: 0.72,
-  fullscreen: false
+  fullscreen: false,
+  /** Mobile-only: short vibration patterns via `navigator.vibrate` (off by default). */
+  haptics: false
 };
 
 function loadSettings() {
@@ -1521,6 +1524,7 @@ function loadSettings() {
       else if (MOBILE_MQ.matches) settings.crt = false;
       if (typeof v.crtStrength === "number") settings.crtStrength = Math.max(0, Math.min(1, v.crtStrength));
       if (typeof v.fullscreen === "boolean") settings.fullscreen = v.fullscreen;
+      if (typeof v.haptics === "boolean") settings.haptics = v.haptics;
     }
   } catch {
     if (MOBILE_MQ.matches) settings.crt = false;
@@ -1549,6 +1553,7 @@ function syncSettingsUi() {
   if (ui.settingsCrtStrengthRow) ui.settingsCrtStrengthRow.style.display = settings.crt ? "" : "none";
   if (ui.settingsFullscreen) ui.settingsFullscreen.checked = document.fullscreenElement != null;
   if (ui.settingsTrackLabel) ui.settingsTrackLabel.textContent = `Track ${settings.musicTrack}`;
+  if (ui.settingsHaptics) ui.settingsHaptics.checked = !!settings.haptics;
 }
 
 function applySettings() {
@@ -1686,6 +1691,13 @@ for (const [el, key] of [
     void music.unlock();
   });
 }
+
+ui.settingsHaptics?.addEventListener("change", () => {
+  if (!ui.settingsHaptics) return;
+  settings.haptics = !!ui.settingsHaptics.checked;
+  saveSettings();
+  if (settings.haptics) triggerNavVibrate(16);
+});
 
 /**
  * Pick a random screen position that avoids the board rect.
@@ -1879,9 +1891,11 @@ ui.hintBtn.addEventListener("click", async () => {
   const move = findBestScoringSwap(state.board);
   if (!move) {
     showToast(ui.toast, "No scoring hint found");
+    playHaptic("light");
     return;
   }
   showHintHighlightForMove(move);
+  playHaptic("hint");
 });
 
 ui.shareBtn?.addEventListener("click", async () => {
@@ -1959,6 +1973,49 @@ rollPerfectCardsOnBoard();
 
 function isMobileLayout() {
   return document.documentElement.classList.contains("is-mobile");
+}
+
+/** Low-level vibrate (mobile layout only); ignores `settings.haptics` — use for “test buzz” on enable. */
+function triggerNavVibrate(pattern) {
+  if (!isMobileLayout()) return;
+  try {
+    if (typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
+      navigator.vibrate(pattern);
+    }
+  } catch {
+    // ignored
+  }
+}
+
+/**
+ * @param {"swap"|"score"|"scoreChain"|"goal"|"reward"|"hint"|"light"} kind
+ */
+function playHaptic(kind) {
+  if (!settings.haptics || !isMobileLayout()) return;
+  switch (kind) {
+    case "swap":
+      triggerNavVibrate(14);
+      break;
+    case "score":
+      triggerNavVibrate(22);
+      break;
+    case "scoreChain":
+      triggerNavVibrate(10);
+      break;
+    case "goal":
+      triggerNavVibrate([24, 55, 28, 55, 32]);
+      break;
+    case "reward":
+      triggerNavVibrate([18, 45, 22]);
+      break;
+    case "hint":
+      triggerNavVibrate(16);
+      break;
+    case "light":
+    default:
+      triggerNavVibrate(12);
+      break;
+  }
 }
 
 let orientationBlocked = false;
@@ -2911,10 +2968,12 @@ function showRewardPickModal(clearedGoal) {
     `;
     document.body.append(overlay);
 
+    playHaptic("goal");
     // Sound: same as a goal clear when the reward picker appears.
     sfx.goalReached(clearedGoal);
 
     const onPick = (id) => {
+      playHaptic("reward");
       // Sound: same as goal clear when selecting a reward.
       sfx.goalReached(clearedGoal);
       overlay.remove();
@@ -3644,6 +3703,7 @@ async function onCellClick(pos) {
   // which avoids the post-animation snap/jitter.
   await swapWithFlipAnimation(a, b);
   sfx.swapSuccess();
+  playHaptic("swap");
   successfulMoves += 1;
   await resolveCascades();
   // Show combined total for the swap (including combo/cascade lines).
@@ -3794,7 +3854,12 @@ async function resolveCascades() {
       state.credits += applied;
       gainedTotal += applied;
       swapTotal += applied;
-      if (applied > 0) scoredLineCount += 1;
+      if (applied > 0) {
+        scoredLineCount += 1;
+        if (jackpotTriggered) playHaptic("goal");
+        else if (state.comboStep <= 1) playHaptic("score");
+        else playHaptic("scoreChain");
+      }
 
       sfx.scoreHand(line.type, state.comboStep);
       // Bigger Numbers: each contributing card gains +1 value per stack (persists with the card).

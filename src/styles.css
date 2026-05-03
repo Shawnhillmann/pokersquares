@@ -254,6 +254,11 @@ html {
   cursor: default;
 }
 
+/* Haptics toggle: only shown in mobile layout (`html.is-mobile`). */
+html:not(.is-mobile) #settingsHapticsRow {
+  display: none;
+}
+
 .settingsRow__select {
   margin-left: auto;
   padding: 10px 36px 10px 12px;
