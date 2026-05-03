@@ -3053,7 +3053,8 @@ html.is-mobile .cardFace--jokerArt img.cardPip--faceArt {
 @media (max-width: 720px) {
   :root {
     --gap: 5px;
-    --cell: min(70px, calc((100vw - 28px - 4 * var(--gap)) / 5));
+    /* Slightly tighter than full vw so Safari’s default zoom leaves swap cost above the toolbar */
+    --cell: min(70px, calc((100vw - 36px - 4 * var(--gap)) / 5));
   }
 }
 
@@ -3061,8 +3062,9 @@ html.is-mobile {
   -webkit-text-size-adjust: 100%;
   /* Board scales to width; scroll the page for credits / hint (nothing overlays the grid) */
   --gap: 4px;
-  --cell-board-w: calc((100vw - 28px - 4 * var(--gap)) / 5);
-  --cell: min(84px, var(--cell-board-w));
+  /* +8px horizontal reserve vs old 28px + lower cap = tiny shrink so first paint fits without pinch */
+  --cell-board-w: calc((100vw - 36px - 4 * var(--gap)) / 5);
+  --cell: min(80px, var(--cell-board-w));
   --board-inner-w: calc(5 * var(--cell) + 4 * var(--gap));
   --table-pad-x: 8px;
   --game-stack-w: calc(var(--board-inner-w) + 2 * var(--table-pad-x));
@@ -3089,9 +3091,9 @@ html.is-mobile .hud {
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: 10px;
-  padding: 8px 10px;
-  padding-top: max(8px, env(safe-area-inset-top, 0px));
+  gap: 8px;
+  padding: 7px 10px;
+  padding-top: max(7px, env(safe-area-inset-top, 0px));
 }
 
 html.is-mobile .brand__subtitle {
@@ -3138,7 +3140,7 @@ html.is-mobile .stage {
   height: auto;
   max-height: none;
   min-height: 0;
-  padding: 2px 4px 10px;
+  padding: 2px 4px 8px;
   gap: 0;
   align-items: stretch;
   justify-content: flex-start;
@@ -3195,8 +3197,8 @@ html.is-mobile .gameColumn {
   width: 100%;
   flex: 0 0 auto;
   overflow: visible;
-  padding-left: 10px;
-  padding-right: 10px;
+  padding-left: 8px;
+  padding-right: 8px;
 }
 
 html.is-mobile .playArea {
@@ -3210,12 +3212,12 @@ html.is-mobile .playArea {
   margin-right: auto;
   flex: 0 0 auto;
   overflow: visible;
-  padding-top: 6px;
+  padding-top: 4px;
 }
 
 html.is-mobile .table {
   flex: 0 0 auto;
-  padding: 10px 10px 10px;
+  padding: 8px 8px 8px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -3227,7 +3229,7 @@ html.is-mobile .boardWrap {
 }
 
 html.is-mobile .totalCreditsBar {
-  padding: 4px 10px 4px;
+  padding: 3px 8px 3px;
 }
 
 html.is-mobile .totalCreditsBar .totalScoreBlock__label {
@@ -3243,22 +3245,22 @@ html.is-mobile .totalScoreBlock--solo {
 }
 
 html.is-mobile .totalCreditsBar .totalScoreBlock__value {
-  font-size: 20px;
+  font-size: 19px;
 }
 
 html.is-mobile .belowGameArea {
   display: flex;
   justify-content: center;
   align-items: stretch;
-  gap: 10px;
+  gap: 8px;
   flex-wrap: wrap;
   width: var(--game-stack-w);
   max-width: 100%;
   margin-left: auto;
   margin-right: auto;
-  margin-top: 10px;
+  margin-top: 8px;
   padding-top: 0;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
   padding-left: 0;
   padding-right: 0;
   flex-shrink: 0;
@@ -3266,13 +3268,22 @@ html.is-mobile .belowGameArea {
 
 html.is-mobile .belowGameArea .btn {
   width: 100%;
-  min-height: 46px;
+  min-height: 44px;
 }
 
 html.is-mobile .belowGameArea .btn.btn--hint {
-  font-size: 15px;
-  padding: 13px 16px;
+  font-size: 14px;
+  padding: 11px 14px;
   border-radius: 14px;
+}
+
+html.is-mobile .lastSwapOuter {
+  margin: 4px auto;
+}
+
+html.is-mobile .lastSwapLine,
+html.is-mobile .swapCostLine {
+  font-size: 11px;
 }
 
 html.is-mobile .creditDock {
@@ -3285,14 +3296,14 @@ html.is-mobile .creditDock {
   max-height: none;
   margin-left: auto;
   margin-right: auto;
-  margin-top: 12px;
-  padding: 0 0 calc(12px + env(safe-area-inset-bottom, 0px));
+  margin-top: 10px;
+  padding: 0 0 calc(10px + env(safe-area-inset-bottom, 0px));
   overflow: visible;
   pointer-events: auto;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
   align-items: stretch;
   z-index: auto;
 }

@@ -14,6 +14,9 @@ import { evaluateHandWild } from "./poker/evaluateHandWild.js";
 import { cardBaseValue, handMultiplier } from "./game/scoring.js";
 import { sfx } from "./audio/sfx.js";
 import { music } from "./audio/music.js";
+import { inject } from "@vercel/analytics";
+
+inject();
 
 const ui = {
   board: /** @type {HTMLElement} */ (document.getElementById("board")),
