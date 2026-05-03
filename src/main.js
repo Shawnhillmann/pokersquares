@@ -2178,12 +2178,13 @@ function showCardValuePopup(p, value, opts = {}) {
   if (!cell) return;
   const faceEl = /** @type {HTMLElement|null} */ (cell.querySelector(".cardFace"));
   if (!faceEl) return;
+  const wrap = /** @type {HTMLElement|null} */ (ui.board?.parentElement);
+  if (!wrap) return;
 
   const pop = document.createElement("div");
-  // Anchored inside .cardFace so centering is in the card’s local box (co-moves with
-  // transforms). Viewport `fixed` + getBoundingClientRect can drift on mobile Safari
-  // vs the painted card even when motion is only translateY/scale.
-  pop.className = "pipPopup pipPopup--anchored";
+  // Absolute inside .boardWrap (after .lineLayer in DOM) so z-index stacks pips above
+  // the teal score line. Center = faceRect − wrapRect (same frame cancels shared offset).
+  pop.className = "pipPopup pipPopup--boardWrap";
   if (opts.variant === "zero") pop.classList.add("pipPopup--zero");
   const abs = Math.max(0, Math.floor(Number(value) || 0));
   const shown = opts.variant === "zero" ? "0" : `+${fmtShort(abs)}`;
@@ -2191,7 +2192,14 @@ function showCardValuePopup(p, value, opts = {}) {
   if (abs >= 100) pop.classList.add("pipPopup--3d");
   if (abs >= 1000) pop.classList.add("pipPopup--k");
 
-  faceEl.append(pop);
+  const fr = faceEl.getBoundingClientRect();
+  const wr = wrap.getBoundingClientRect();
+  const x = Math.round(fr.left + fr.width / 2 - wr.left);
+  const y = Math.round(fr.top + fr.height / 2 - wr.top);
+  pop.style.left = `${x}px`;
+  pop.style.top = `${y}px`;
+
+  wrap.append(pop);
   requestAnimationFrame(() => pop.classList.add("is-showing"));
   return pop;
 }
