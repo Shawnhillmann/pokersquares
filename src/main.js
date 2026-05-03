@@ -2204,6 +2204,18 @@ function showCardValuePopup(p, value, opts = {}) {
   return pop;
 }
 
+/** Re-read .cardFace center for fixed score pips (first scored card often lags compositor). */
+function syncScorePipToFace(pop, cell) {
+  if (!pop || !cell) return;
+  const faceEl = cell.querySelector(".cardFace");
+  const fr = faceEl?.getBoundingClientRect?.();
+  if (!fr || fr.width <= 0) return;
+  const x = Math.round(fr.x + fr.width / 2);
+  const y = Math.round(fr.y + fr.height / 2);
+  pop.style.left = `${x}px`;
+  pop.style.top = `${y}px`;
+}
+
 /**
  * Localized combo particles near the scored cards.
  * Only used for combo cascades (x2+).
@@ -3417,16 +3429,21 @@ async function pulseScoredLine(line, combo, contribCells, dimCells, onTotal, han
     await nextFrame();
     // Per-card value popup once layout matches the pulse pose.
     const card = state.board[p.r]?.[p.c];
+    /** @type {HTMLElement|null} */
+    let scorePop = null;
     if (card) {
       const v = cardScoreValue(card);
       running += v;
       onTotal(running);
-      const pop = showCardValuePopup(p, v);
-      if (pop) valuePops.push(pop);
+      scorePop = showCardValuePopup(p, v);
+      if (scorePop) valuePops.push(scorePop);
     }
     el.classList.add("is-seq-grow");
     // Ensure the browser starts the CSS animation, then play the tick.
     await nextFrame();
+    // First contributing card only: dim “0” pips + teal line + hand burst in the same
+    // pass can leave the first getBoundingClientRect ahead of the painted frame; nudge once.
+    if (scorePop && i === 0) syncScorePipToFace(scorePop, el);
     // Keep the animation beat unchanged, but don't tick for dimmed kickers.
     if (!dimKeySet.has(`${p.r},${p.c}`)) {
       const c = state.board[p.r]?.[p.c];
