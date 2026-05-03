@@ -1542,7 +1542,7 @@ function syncSettingsUi() {
   if (ui.settingsMusicVol) ui.settingsMusicVol.value = String(Math.round(settings.musicVol * 100));
   if (ui.settingsSfxVolValue) ui.settingsSfxVolValue.textContent = `${Math.round(settings.sfxVol * 100)}%`;
   if (ui.settingsMusicVolValue) ui.settingsMusicVolValue.textContent = `${Math.round(settings.musicVol * 100)}%`;
-  if (ui.settingsTheme) ui.settingsTheme.value = settings.theme || "green";
+  if (ui.settingsTheme) ui.settingsTheme.value = settings.theme || "purple";
   if (ui.settingsCrt) ui.settingsCrt.checked = !!settings.crt;
   if (ui.settingsCrtStrength) ui.settingsCrtStrength.value = String(Math.round((settings.crtStrength ?? 0.72) * 100));
   if (ui.settingsCrtStrengthValue) ui.settingsCrtStrengthValue.textContent = `${Math.round((settings.crtStrength ?? 0.72) * 100)}%`;
@@ -1616,7 +1616,7 @@ ui.settingsMusicVol?.addEventListener("change", onSettingsMusicVolChange);
 
 ui.settingsTheme?.addEventListener("change", () => {
   if (!ui.settingsTheme) return;
-  settings.theme = String(ui.settingsTheme.value || "green");
+  settings.theme = String(ui.settingsTheme.value || "purple");
   applySettings();
   saveSettings();
 });

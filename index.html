@@ -1,9 +1,25 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="purple">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>POKARIA</title>
+    <!-- Apply saved theme before CSS paints (avoids one green :root frame). Must stay in sync with SETTINGS_STORAGE_KEY / theme ids in main.js. -->
+    <script>
+      (function () {
+        var key = "speed_poker_settings_v1";
+        var allowed = { green: 1, slate: 1, blue: 1, purple: 1 };
+        var theme = "purple";
+        try {
+          var raw = localStorage.getItem(key);
+          if (raw) {
+            var v = JSON.parse(raw);
+            if (v && typeof v.theme === "string" && allowed[v.theme]) theme = v.theme;
+          }
+        } catch (e) {}
+        document.documentElement.setAttribute("data-theme", theme);
+      })();
+    </script>
     <link rel="icon" href="/images/POKARIA-FAVICON.svg?v=3" type="image/svg+xml" />
     <link rel="stylesheet" href="/src/styles.css" />
   </head>
