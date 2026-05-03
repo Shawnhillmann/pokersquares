@@ -103,13 +103,13 @@ const STARTING_POINTS = 500;
 const rewards = {
   /** Times Bigger Combos picked; each stack adds +0.5x per chain step in a cascade. */
   biggerCombosStacks: 0,
-  /** Times Group Up picked: trips, quads, and five of a kind are worth 3x per stack (compounding). */
+  /** Times Group Up picked: trips, quads, and five of a kind are worth 5x per stack (compounding). */
   stickTogetherStacks: 0,
-  /** Times Straight Up picked: straight, straight flush, and royal flush get 2x per stack (stacks with Shape Up on SF/RF). */
+  /** Times Straight Up picked: straight, straight flush, and royal flush get 2x per stack (compounding). */
   straightUpStacks: 0,
-  /** Times Shape Up picked: flush, straight flush, and royal flush get 2x per stack (stacks with Straight Up on SF/RF). */
+  /** Times Shape Up picked: flush, straight flush, and royal flush get 2x per stack (compounding). */
   shapeUpStacks: 0,
-  /** Times Split Up picked: two pair and full house are worth 4x per stack (compounding). */
+  /** Times Split Up picked: two pair and full house are worth 10x per stack (compounding). */
   splitUpStacks: 0,
   /** One-time: straights may skip exactly one rank (e.g. 5-7-8-9-10). */
   gutterball: false,
@@ -182,15 +182,14 @@ function stickTogetherMultForType(type) {
     return 1;
   }
   const stacks = Math.max(0, Math.floor(rewards.stickTogetherStacks || 0));
-  return stacks <= 0 ? 1 : Math.pow(3, stacks);
+  return stacks <= 0 ? 1 : Math.pow(5, stacks);
 }
 
 function straightUpMultForType(type) {
   const t = String(type);
   const stacks = Math.max(0, Math.floor(rewards.straightUpStacks || 0));
   if (stacks <= 0) return 1;
-  if (t === HAND_TYPE.STRAIGHT) return Math.pow(2, stacks);
-  if (t === HAND_TYPE.STRAIGHT_FLUSH || t === HAND_TYPE.ROYAL_FLUSH) return 1 + 0.25 * stacks;
+  if (t === HAND_TYPE.STRAIGHT || t === HAND_TYPE.STRAIGHT_FLUSH || t === HAND_TYPE.ROYAL_FLUSH) return Math.pow(2, stacks);
   return 1;
 }
 
@@ -198,8 +197,7 @@ function shapeUpMultForType(type) {
   const t = String(type);
   const stacks = Math.max(0, Math.floor(rewards.shapeUpStacks || 0));
   if (stacks <= 0) return 1;
-  if (t === HAND_TYPE.FLUSH) return Math.pow(2, stacks);
-  if (t === HAND_TYPE.STRAIGHT_FLUSH || t === HAND_TYPE.ROYAL_FLUSH) return 1 + 0.25 * stacks;
+  if (t === HAND_TYPE.FLUSH || t === HAND_TYPE.STRAIGHT_FLUSH || t === HAND_TYPE.ROYAL_FLUSH) return Math.pow(2, stacks);
   return 1;
 }
 
@@ -207,7 +205,7 @@ function splitUpMultForType(type) {
   const t = String(type);
   if (t !== HAND_TYPE.TWO_PAIR && t !== HAND_TYPE.FULL_HOUSE) return 1;
   const stacks = Math.max(0, Math.floor(rewards.splitUpStacks || 0));
-  return stacks <= 0 ? 1 : Math.pow(4, stacks);
+  return stacks <= 0 ? 1 : Math.pow(10, stacks);
 }
 
 /** Product of stackable hand-type reward multipliers (Group Up, Straighten Up, Shape Up, Split Up). */
@@ -387,6 +385,33 @@ function fmtShort(n) {
   return v.toLocaleString();
 }
 
+/**
+ * Compact number for *card value* popups.
+ * Abbreviates starting at 1k (e.g. 999 -> "999", 1000 -> "1k", 1500 -> "1.5k").
+ * Keeps at most ~3 significant digits before the suffix (k/m/b).
+ */
+function fmtCardValue(n) {
+  const v = Math.max(0, Math.floor(Number(n) || 0));
+  if (v < 1000) return String(v);
+  const UNITS = [
+    { v: 1e9, s: "b" },
+    { v: 1e6, s: "m" },
+    { v: 1e3, s: "k" }
+  ];
+  for (const u of UNITS) {
+    if (v < u.v) continue;
+    const x = v / u.v;
+    let rounded;
+    if (x >= 100) rounded = Math.round(x); // 123k
+    else if (x >= 10) rounded = Math.round(x * 10) / 10; // 12.3k
+    else rounded = Math.round(x * 100) / 100; // 1.23k
+    let s = String(rounded);
+    if (s.includes(".")) s = s.replace(/\.0+$/, "").replace(/(\.\d*[1-9])0+$/, "$1");
+    return `${s}${u.s}`;
+  }
+  return String(v);
+}
+
 function fmtBonusXFromPct(pct) {
   const p = Number(pct);
   if (!Number.isFinite(p) || p === 0) return "0x";
@@ -469,7 +494,7 @@ function scoringOpts() {
     evaluateHand: (cards) => {
       const base = baseEval(cards);
       if (!rewards.closeEnough) return base;
-      const upgraded = upgradeEvalForCloseEnough(base, cards, useWildEval);
+      const upgraded = upgradeEvalForCloseEnough(base, cards, useWildEval, gutterball);
       return upgraded;
     }
   };
@@ -481,8 +506,9 @@ function scoringOpts() {
  * @param {any} baseEval
  * @param {{rank:any,suit:any}[]} cards
  * @param {boolean} jokerWild
+ * @param {boolean} gutterball
  */
-function upgradeEvalForCloseEnough(baseEval, cards, jokerWild) {
+function upgradeEvalForCloseEnough(baseEval, cards, jokerWild, gutterball) {
   const baseType = String(baseEval?.type || "");
   // If we're already at/above straight, Close Enough can't improve except for SF/Royal via 4-card logic,
   // but those will also be >= straight anyway. We'll still compute the best and compare priority.
@@ -576,12 +602,16 @@ function upgradeEvalForCloseEnough(baseEval, cards, jokerWild) {
    * @param {number} wilds
    */
   function straight4Possible(vals, wilds) {
-    // 4-card sequences: hi..hi-3, plus A234 special.
+    // Close Enough wants "4 of N in sequence".
+    // If Gap Fillers is also on, allow 4 of 5 consecutive ranks (i.e. one skipped rank).
     /** @type {number[][]} */
     const seqs = [];
-    seqs.push([14, 2, 3, 4]); // A234
-    for (let hi = 14; hi >= 5; hi--) {
-      seqs.push([hi, hi - 1, hi - 2, hi - 3]);
+    if (gutterball) {
+      seqs.push([14, 2, 3, 4, 5]); // A2345 window
+      for (let hi = 14; hi >= 6; hi--) seqs.push([hi, hi - 1, hi - 2, hi - 3, hi - 4]);
+    } else {
+      seqs.push([14, 2, 3, 4]); // A234
+      for (let hi = 14; hi >= 5; hi--) seqs.push([hi, hi - 1, hi - 2, hi - 3]);
     }
     for (const seq of seqs) {
       let have = 0;
@@ -633,11 +663,16 @@ function upgradeEvalForCloseEnough(baseEval, cards, jokerWild) {
   }
 
   function pickStraight4IdxsFromFixed(valsSet, fixedCandidates) {
-    // 4-card sequences: hi..hi-3, plus A234 special.
+    // 4 of N in sequence (N=4, or N=5 if Gap Fillers is active).
     /** @type {number[][]} */
     const seqs = [];
-    seqs.push([14, 2, 3, 4]); // A234
-    for (let hi = 14; hi >= 5; hi--) seqs.push([hi, hi - 1, hi - 2, hi - 3]);
+    if (gutterball) {
+      seqs.push([14, 2, 3, 4, 5]); // A2345 window
+      for (let hi = 14; hi >= 6; hi--) seqs.push([hi, hi - 1, hi - 2, hi - 3, hi - 4]);
+    } else {
+      seqs.push([14, 2, 3, 4]); // A234
+      for (let hi = 14; hi >= 5; hi--) seqs.push([hi, hi - 1, hi - 2, hi - 3]);
+    }
 
     const byV = new Map();
     for (const c of fixedCandidates) {
@@ -692,7 +727,10 @@ function comboSpeed(comboStep) {
   const step = Math.max(1, Math.floor(comboStep || 1));
   // First hand in a cascade ~10% faster than before; each further combo step +5% speed.
   const speed = 1.1 + (step - 1) * 0.05;
-  return Math.min(2.45, speed); // cap so it doesn't get silly late-game
+  // Mobile browsers tend to feel a bit "laggier" due to input + audio scheduling latency,
+  // so we slightly bump the pace to match desktop perception.
+  const mobileBoost = typeof MOBILE_MQ !== "undefined" && MOBILE_MQ.matches ? 1.25 : 1;
+  return Math.min(2.8, speed * mobileBoost); // cap so it doesn't get silly late-game
 }
 
 function comboDelayMs(baseMs, comboStep) {
@@ -866,7 +904,7 @@ function ensureBoardHoverPipsWired() {
 
         const value = cardScoreValue(cur);
         const abs = Math.max(0, Math.floor(Number(value) || 0));
-        const shown = fmtShort(abs);
+        const shown = fmtCardValue(abs);
 
         if (!el) {
           el = document.createElement("div");
@@ -893,7 +931,7 @@ function ensureBoardHoverPipsWired() {
     if (el) {
       const value = cardScoreValue(card);
       const abs = Math.max(0, Math.floor(Number(value) || 0));
-      el.textContent = fmtShort(abs);
+      el.textContent = fmtCardValue(abs);
       const faceEl = cell.querySelector(".cardFace");
       const rect = faceEl?.getBoundingClientRect?.() ?? cell.getBoundingClientRect();
       const x = Math.round(rect.x + rect.width / 2);
@@ -940,10 +978,10 @@ function updateRewardsTracker() {
     "Bigger Combos": "Consecutive scored hands in the same cascade gain +0.5x per stack.",
     "Bigger Numbers": "Scored cards permanently gain +1 card value per stack.",
     "Free Swaps": "Scored hands now add +0.25% chance for your next swap to be free.",
-    "Group Up": "Trips, Quads, and Five of a Kind are now worth 3x per stack.",
-    "Split Up": "Two Pair and Full House are now worth 4x per stack.",
-    "Shape Up": "Flushes are now worth 2x per stack. Straight Flushes and Royal Flushes gain +0.25x.",
-    "Straight Up": "Straights are now worth 2x per stack. Straight Flushes and Royal Flushes gain +0.25x.",
+    "Group Up": "Trips, Quads, and Five of a Kind are now worth 5x per stack.",
+    "Split Up": "Two Pair and Full House are now worth 10x per stack.",
+    "Shape Up": "All flushes are now worth 2x per stack.",
+    "Straight Up": "All straights are now worth 2x per stack.",
     "Risky Moves": "Scored hands have an 80% chance to pay 2x, or a 20% chance to pay 0x.",
     "Instant Folds":
       "Two Pair and Trips are disabled, enabling less frequent but higher scoring hands.",
@@ -1113,23 +1151,21 @@ function updateRewardsTracker() {
   } else addRow("Free Swaps", "Off");
 
   if (rewards.stickTogetherStacks > 0) {
-    addRow("Group Up", `${fmtShort(Math.pow(3, rewards.stickTogetherStacks))}x · ${rewards.stickTogetherStacks}×`);
+    addRow("Group Up", `${fmtShort(Math.pow(5, rewards.stickTogetherStacks))}x · ${rewards.stickTogetherStacks}×`);
   } else addRow("Group Up", "Off");
 
   if (rewards.splitUpStacks > 0) {
-    addRow("Split Up", `${fmtShort(Math.pow(4, rewards.splitUpStacks))}x · ${rewards.splitUpStacks}×`);
+    addRow("Split Up", `${fmtShort(Math.pow(10, rewards.splitUpStacks))}x · ${rewards.splitUpStacks}×`);
   } else addRow("Split Up", "Off");
 
   if (rewards.shapeUpStacks > 0) {
     const stacks = rewards.shapeUpStacks;
-    const sf = 0.25 * stacks;
-    addRow("Shape Up", `${fmtShort(Math.pow(2, stacks))}x flush · +${sf}x SF/RF · ${stacks}×`);
+    addRow("Shape Up", `${fmtShort(Math.pow(2, stacks))}x · ${stacks}×`);
   } else addRow("Shape Up", "Off");
 
   if (rewards.straightUpStacks > 0) {
     const stacks = rewards.straightUpStacks;
-    const sf = 0.25 * stacks;
-    addRow("Straight Up", `${fmtShort(Math.pow(2, stacks))}x straight · +${sf}x SF/RF · ${stacks}×`);
+    addRow("Straight Up", `${fmtShort(Math.pow(2, stacks))}x · ${stacks}×`);
   } else addRow("Straight Up", "Off");
 
   addRow("Risky Moves", rewards.pureBluff ? "On" : "Off");
@@ -1492,7 +1528,7 @@ function syncHandChartScores() {
 const SETTINGS_STORAGE_KEY = "speed_poker_settings_v1";
 const settings = {
   sfx: true,
-  music: false,
+  music: true,
   sfxVol: 1,
   musicVol: 0.22,
   musicTrack: 1,
@@ -2269,7 +2305,7 @@ function showCardValuePopup(p, value, opts = {}) {
   pop.className = "pipPopup pipPopup--scoreChain";
   if (opts.variant === "zero") pop.classList.add("pipPopup--zero");
   const abs = Math.max(0, Math.floor(Number(value) || 0));
-  const shown = opts.variant === "zero" ? "0" : `+${fmtShort(abs)}`;
+  const shown = opts.variant === "zero" ? "0" : `+${fmtCardValue(abs)}`;
   pop.textContent = shown;
   if (abs >= 100) pop.classList.add("pipPopup--3d");
   if (abs >= 1000) pop.classList.add("pipPopup--k");
@@ -2636,25 +2672,25 @@ const REWARD_DEFS = /** @type {const} */ ([
   {
     id: "shapeUp",
     name: "Shape Up",
-    desc: "Flushes are now worth 2x per stack. Straight Flushes and Royal Flushes gain +0.25x.",
+    desc: "All flushes are now worth 2x per stack.",
     stack: { kind: "stackable" }
   },
   {
     id: "straightUp",
     name: "Straight Up",
-    desc: "Straights are now worth 2x per stack. Straight Flushes and Royal Flushes gain +0.25x.",
+    desc: "All straights are now worth 2x per stack.",
     stack: { kind: "stackable" }
   },
   {
     id: "stickTogether",
     name: "Group Up",
-    desc: "Trips, Quads, and Five of a Kind are now worth 3x per stack.",
+    desc: "Trips, Quads, and Five of a Kind are now worth 5x per stack.",
     stack: { kind: "stackable" }
   },
   {
     id: "splitUp",
     name: "Split Up",
-    desc: "Two Pair and Full House are now worth 4x per stack.",
+    desc: "Two Pair and Full House are now worth 10x per stack.",
     stack: { kind: "stackable" }
   },
   {
@@ -2803,7 +2839,7 @@ function applyReward(id) {
     const stacks = rewards.stickTogetherStacks;
     enqueueRewardBurst(
       "Group Up",
-      `Now ${Math.pow(3, stacks)}x (${stacks} stack${stacks === 1 ? "" : "s"})`
+      `Now ${Math.pow(5, stacks)}x (${stacks} stack${stacks === 1 ? "" : "s"})`
     );
     syncHandChartScores();
     scheduleSaveRun();
@@ -2839,7 +2875,7 @@ function applyReward(id) {
     const stacks = rewards.splitUpStacks;
     enqueueRewardBurst(
       "Split Up",
-      `Now ${Math.pow(4, stacks)}x (${stacks} stack${stacks === 1 ? "" : "s"})`
+      `Now ${Math.pow(10, stacks)}x (${stacks} stack${stacks === 1 ? "" : "s"})`
     );
     syncHandChartScores();
     scheduleSaveRun();
@@ -3486,7 +3522,10 @@ function nextFrame() {
  * @param {{ maxFrames?: number }} [opts]
  */
 async function waitForFaceRectsStable(cells, opts = {}) {
-  const maxFrames = opts.maxFrames ?? 40;
+  const requested = opts.maxFrames ?? 40;
+  const isMobile = typeof MOBILE_MQ !== "undefined" && MOBILE_MQ.matches;
+  // Mobile can take longer to settle due to compositor jitter; waiting too long reads as "slow scoring".
+  const maxFrames = Math.min(requested, isMobile ? 26 : requested);
   const list = [...new Set(cells)].filter((el) => el instanceof HTMLElement);
   if (list.length === 0) return;
 
@@ -3524,7 +3563,8 @@ async function waitForFaceRectsStable(cells, opts = {}) {
 /** Wait until no swap wind-up / FLIP / legacy success animation is still on the board. */
 async function waitForBoardSwapMotionIdle() {
   const sel = ".cell.is-swap-flip, .cell.is-swap-windup, .cell.is-swap-success";
-  const maxFrames = 72;
+  const isMobile = typeof MOBILE_MQ !== "undefined" && MOBILE_MQ.matches;
+  const maxFrames = isMobile ? 48 : 72;
   for (let f = 0; f < maxFrames; f++) {
     if (!ui.board?.querySelector(sel)) break;
     await nextFrame();
@@ -3598,12 +3638,10 @@ async function pulseScoredLine(line, combo, contribCells, dimCells, onTotal, han
   await waitForFaceRectsStable(lineCells, { maxFrames: 48 });
   /** @type {HTMLElement[]} */
   const valuePops = [];
-  const lingerExtraMs = handBurstEl?.classList?.contains?.("is-jackpot") ? 900 : 0;
   let running = 0;
   let i = 0;
   const dimKeySet = new Set(dimCells.map((p) => `${p.r},${p.c}`));
 
-  // Keep the hand burst separate so jackpot can linger longer.
   const mainBurst = handBurstEl ?? null;
 
   // Kickers: show grey 0 popups and keep them dimmed.
@@ -3627,7 +3665,7 @@ async function pulseScoredLine(line, combo, contribCells, dimCells, onTotal, han
     // Two frames: lineLayer + scoreLine paint in the same rerender pass; give the
     // compositor a beat so the first pip’s getBoundingClientRect matches what you see.
     await nextFrame();
-    await nextFrame();
+    if (!(typeof MOBILE_MQ !== "undefined" && MOBILE_MQ.matches)) await nextFrame();
     // Per-card value popup once layout matches the pulse pose.
     const card = state.board[p.r]?.[p.c];
     /** @type {HTMLElement|null} */
@@ -3699,17 +3737,9 @@ async function pulseScoredLine(line, combo, contribCells, dimCells, onTotal, han
   setTimeout(() => valuePops.forEach((n) => n.remove()), 260);
 
   if (mainBurst) {
-    if (lingerExtraMs > 0) {
-      // IMPORTANT: only jackpot blocks subsequent scoring/cascades.
-      await sleep(lingerExtraMs);
-      mainBurst.classList.add("is-fading");
-      await sleep(260);
-      mainBurst.remove();
-    } else {
-      // Default behavior: don't block scoring; fade/remove async.
-      mainBurst.classList.add("is-fading");
-      setTimeout(() => mainBurst.remove(), 260);
-    }
+    // Fade/remove async (including jackpot) so cascades are not delayed.
+    mainBurst.classList.add("is-fading");
+    setTimeout(() => mainBurst.remove(), 260);
   }
 }
 
