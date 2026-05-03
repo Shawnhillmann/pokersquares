@@ -727,10 +727,9 @@ function comboSpeed(comboStep) {
   const step = Math.max(1, Math.floor(comboStep || 1));
   // First hand in a cascade ~10% faster than before; each further combo step +5% speed.
   const speed = 1.1 + (step - 1) * 0.05;
-  // Mobile browsers tend to feel a bit "laggier" due to input + audio scheduling latency,
-  // so we slightly bump the pace to match desktop perception.
-  const mobileBoost = typeof MOBILE_MQ !== "undefined" && MOBILE_MQ.matches ? 1.25 : 1;
-  return Math.min(2.8, speed * mobileBoost); // cap so it doesn't get silly late-game
+  // Mobile: tiny boost so it does not feel sluggish vs desktop; keep modest so it does not read as rushed.
+  const mobileBoost = typeof MOBILE_MQ !== "undefined" && MOBILE_MQ.matches ? 1.1 : 1;
+  return Math.min(2.65, speed * mobileBoost); // cap so it doesn't get silly late-game
 }
 
 function comboDelayMs(baseMs, comboStep) {
@@ -3525,7 +3524,7 @@ async function waitForFaceRectsStable(cells, opts = {}) {
   const requested = opts.maxFrames ?? 40;
   const isMobile = typeof MOBILE_MQ !== "undefined" && MOBILE_MQ.matches;
   // Mobile can take longer to settle due to compositor jitter; waiting too long reads as "slow scoring".
-  const maxFrames = Math.min(requested, isMobile ? 26 : requested);
+  const maxFrames = Math.min(requested, isMobile ? 34 : requested);
   const list = [...new Set(cells)].filter((el) => el instanceof HTMLElement);
   if (list.length === 0) return;
 
@@ -3564,7 +3563,7 @@ async function waitForFaceRectsStable(cells, opts = {}) {
 async function waitForBoardSwapMotionIdle() {
   const sel = ".cell.is-swap-flip, .cell.is-swap-windup, .cell.is-swap-success";
   const isMobile = typeof MOBILE_MQ !== "undefined" && MOBILE_MQ.matches;
-  const maxFrames = isMobile ? 48 : 72;
+  const maxFrames = isMobile ? 60 : 72;
   for (let f = 0; f < maxFrames; f++) {
     if (!ui.board?.querySelector(sel)) break;
     await nextFrame();
@@ -3665,7 +3664,7 @@ async function pulseScoredLine(line, combo, contribCells, dimCells, onTotal, han
     // Two frames: lineLayer + scoreLine paint in the same rerender pass; give the
     // compositor a beat so the first pip’s getBoundingClientRect matches what you see.
     await nextFrame();
-    if (!(typeof MOBILE_MQ !== "undefined" && MOBILE_MQ.matches)) await nextFrame();
+    await nextFrame();
     // Per-card value popup once layout matches the pulse pose.
     const card = state.board[p.r]?.[p.c];
     /** @type {HTMLElement|null} */
