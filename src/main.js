@@ -923,7 +923,7 @@ function updateRewardsTracker() {
   const descByLabel = {
     "Progressive Jackpots":
       "Scored hands now have  +0.25% jackpot chance per stack. Jackpot pays 100x and resets on hit.",
-    "Pocket Rockets": "Aces are worth 10x card value per stack.",
+    "Pocket Rockets": "Aces are now worth 10x card value per stack.",
     "Joker Cards": "Add a Joker card to your deck. Max 2.",
     "Diagonal Hands": "5 Card diagonal hands can now be scored as well.",
     "Close Enough": "Flushes and straights now only require 4 cards.",
@@ -931,7 +931,7 @@ function updateRewardsTracker() {
     "Gold Cards": "Each card has a +2% chance to appear as a Gold Card worth 50x.",
     "Broadway Cards": "10/J/Q/K/A are now worth 2x card value per stack.",
     "Low Cards": "2–9 are now worth 3x card value per stack.",
-    "Pocket Deuces": "2's are worth 10× card value per stack; each pick stacks another 10× on twos.",
+    "Pocket Deuces": "2's are now worth 10x card value per stack.",
     "Bigger Combos": "Consecutive scored hands in the same cascade gain +0.5x per stack.",
     "Bigger Numbers": "Scored cards permanently gain +1 card value per stack.",
     "Free Swaps": "Scored hands now add +0.25% chance for your next swap to be free.",
@@ -2152,6 +2152,14 @@ async function swapWithFlipAnimation(a, b) {
   bEl2.classList.remove("is-swap-flip");
   aEl2.style.removeProperty("transform");
   bEl2.style.removeProperty("transform");
+  aEl2.style.removeProperty("will-change");
+  bEl2.style.removeProperty("will-change");
+
+  // Long FLIP paths: transitionend can fire a hair before the compositor shows the
+  // final rest pose; score pips use face rects — yield frames so getBoundingClientRect
+  // matches the settled card (fixes “first pip off” after far swaps).
+  await nextFrame();
+  await nextFrame();
 }
 
 /**
@@ -2486,7 +2494,7 @@ const REWARD_DEFS = /** @type {const} */ ([
   {
     id: "pocketDeuces",
     name: "Pocket Deuces",
-    desc: "2's are worth 10× card value per stack (stackable).",
+    desc: "2's are now worth 10x card value per stack.",
     stack: { kind: "stackable" }
   },
   {
@@ -2546,7 +2554,7 @@ const REWARD_DEFS = /** @type {const} */ ([
   {
     id: "pocketRockets",
     name: "Pocket Rockets",
-    desc: "Aces are worth 10x card value per stack.",
+    desc: "Aces are now worth 10x card value per stack.",
     stack: { kind: "stackable" }
   },
   {
@@ -3350,6 +3358,16 @@ function nextFrame() {
   return new Promise((res) => requestAnimationFrame(() => res()));
 }
 
+/** Wait until no swap FLIP is mid-flight (should already be done after swapWithFlipAnimation). */
+async function waitForBoardSwapFlipIdle() {
+  const maxFrames = 48;
+  for (let f = 0; f < maxFrames; f++) {
+    if (!ui.board?.querySelector(".cell.is-swap-flip")) break;
+    await nextFrame();
+  }
+  await nextFrame();
+}
+
 async function kickDropAnimation() {
   // Two frames ensures the "from" transform is painted before we remove it.
   await nextFrame();
@@ -3403,6 +3421,9 @@ async function kickDropAnimation() {
  * @param {{ kind:"row"|"col"|"diagDown"|"diagUp", cells:{r:number,c:number}[] }} line
  */
 async function pulseScoredLine(line, combo, contribCells, dimCells, onTotal, handBurstEl) {
+  // After a long swap FLIP, faces can still be one paint behind; don’t anchor pips yet.
+  await waitForBoardSwapFlipIdle();
+
   // DOM nodes exist only after a render.
   const ordered = orderCellsForLine(line, contribCells); // only scoring cards
   const orderedDim = orderCellsForLine(line, dimCells);
