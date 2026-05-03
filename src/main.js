@@ -686,8 +686,9 @@ function boardLineOpts() {
 
 function comboSpeed(comboStep) {
   const step = Math.max(1, Math.floor(comboStep || 1));
-  const speed = 1 + (step - 1) * 0.03;
-  return Math.min(2.2, speed); // cap so it doesn't get silly late-game
+  // First hand in a cascade ~10% faster than before; each further combo step +5% speed.
+  const speed = 1.1 + (step - 1) * 0.05;
+  return Math.min(2.45, speed); // cap so it doesn't get silly late-game
 }
 
 function comboDelayMs(baseMs, comboStep) {
@@ -2155,11 +2156,9 @@ async function swapWithFlipAnimation(a, b) {
   aEl2.style.removeProperty("will-change");
   bEl2.style.removeProperty("will-change");
 
-  // Long FLIP paths: transitionend can fire a hair before the compositor shows the
-  // final rest pose; score pips use face rects — yield frames so getBoundingClientRect
-  // matches the settled card (fixes “first pip off” after far swaps).
-  await nextFrame();
-  await nextFrame();
+  // Long FLIP paths: transitionend can fire before the compositor shows the final rest
+  // pose; wait until face boxes stop moving so downstream score pips anchor correctly.
+  await waitForFaceRectsStable([aEl2, bEl2], { maxFrames: 48 });
 }
 
 /**
@@ -3358,11 +3357,53 @@ function nextFrame() {
   return new Promise((res) => requestAnimationFrame(() => res()));
 }
 
-/** Wait until no swap FLIP is mid-flight (should already be done after swapWithFlipAnimation). */
-async function waitForBoardSwapFlipIdle() {
-  const maxFrames = 48;
+/**
+ * Wait until swapped cells’ faces stop moving (subpixel/layout), so pip placement matches the eye.
+ * @param {HTMLElement[]} cells
+ * @param {{ maxFrames?: number }} [opts]
+ */
+async function waitForFaceRectsStable(cells, opts = {}) {
+  const maxFrames = opts.maxFrames ?? 40;
+  const list = [...new Set(cells)].filter((el) => el instanceof HTMLElement);
+  if (list.length === 0) return;
+
+  const sample = () =>
+    list.map((el) => {
+      const face = el.querySelector(".cardFace");
+      const r = face?.getBoundingClientRect?.() ?? el.getBoundingClientRect();
+      return { left: r.left, top: r.top, width: r.width, height: r.height };
+    });
+
+  let prev = sample();
+  let stableFrames = 0;
   for (let f = 0; f < maxFrames; f++) {
-    if (!ui.board?.querySelector(".cell.is-swap-flip")) break;
+    await nextFrame();
+    const cur = sample();
+    let maxDelta = 0;
+    for (let j = 0; j < cur.length; j++) {
+      const a = cur[j];
+      const b = prev[j];
+      maxDelta = Math.max(
+        maxDelta,
+        Math.abs(a.left - b.left),
+        Math.abs(a.top - b.top),
+        Math.abs(a.width - b.width),
+        Math.abs(a.height - b.height)
+      );
+    }
+    if (maxDelta < 0.65) stableFrames += 1;
+    else stableFrames = 0;
+    if (stableFrames >= 2) return;
+    prev = cur;
+  }
+}
+
+/** Wait until no swap wind-up / FLIP / legacy success animation is still on the board. */
+async function waitForBoardSwapMotionIdle() {
+  const sel = ".cell.is-swap-flip, .cell.is-swap-windup, .cell.is-swap-success";
+  const maxFrames = 72;
+  for (let f = 0; f < maxFrames; f++) {
+    if (!ui.board?.querySelector(sel)) break;
     await nextFrame();
   }
   await nextFrame();
@@ -3421,12 +3462,17 @@ async function kickDropAnimation() {
  * @param {{ kind:"row"|"col"|"diagDown"|"diagUp", cells:{r:number,c:number}[] }} line
  */
 async function pulseScoredLine(line, combo, contribCells, dimCells, onTotal, handBurstEl) {
-  // After a long swap FLIP, faces can still be one paint behind; don’t anchor pips yet.
-  await waitForBoardSwapFlipIdle();
-
   // DOM nodes exist only after a render.
   const ordered = orderCellsForLine(line, contribCells); // only scoring cards
   const orderedDim = orderCellsForLine(line, dimCells);
+
+  // Card-value pips must not show until swap motion is fully done and faces have settled
+  // (FLIP / wind-up can outlast transitionend vs compositor; rects must be stable).
+  await waitForBoardSwapMotionIdle();
+  const lineCells = [...orderedDim, ...ordered]
+    .map((p) => ui.board.querySelector(`.cell[data-r="${p.r}"][data-c="${p.c}"]`))
+    .filter((el) => el instanceof HTMLElement);
+  await waitForFaceRectsStable(lineCells, { maxFrames: 48 });
   /** @type {HTMLElement[]} */
   const valuePops = [];
   const lingerExtraMs = handBurstEl?.classList?.contains?.("is-jackpot") ? 900 : 0;
