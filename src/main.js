@@ -1500,7 +1500,7 @@ const settings = {
   crt: true,
   crtStrength: 0.72,
   fullscreen: false,
-  /** Mobile-only: short vibration patterns via `navigator.vibrate` (off by default). */
+  /** Android (typical): `navigator.vibrate` patterns; ineffective on iOS WebKit (off by default). */
   haptics: false
 };
 
@@ -1975,7 +1975,7 @@ function isMobileLayout() {
   return document.documentElement.classList.contains("is-mobile");
 }
 
-/** Low-level vibrate (mobile layout only); ignores `settings.haptics` — use for “test buzz” on enable. */
+/** Low-level vibrate (narrow layout only); ignores `settings.haptics` — use for “test buzz” on enable. */
 function triggerNavVibrate(pattern) {
   if (!isMobileLayout()) return;
   try {
@@ -1988,6 +1988,7 @@ function triggerNavVibrate(pattern) {
 }
 
 /**
+ * Uses `navigator.vibrate` where supported (commonly Android Chrome; not iOS Safari).
  * @param {"swap"|"score"|"scoreChain"|"goal"|"reward"|"hint"|"light"} kind
  */
 function playHaptic(kind) {

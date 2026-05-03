@@ -254,7 +254,7 @@ html {
   cursor: default;
 }
 
-/* Haptics toggle: only shown in mobile layout (`html.is-mobile`). */
+/* Haptics (`navigator.vibrate`): shown in narrow layout; vibration works on typical Android Chrome, not iOS Safari. */
 html:not(.is-mobile) #settingsHapticsRow {
   display: none;
 }
