@@ -92,10 +92,18 @@ function goalTargetForIndex(idx) {
     const steps = i - 10;
     return Math.max(1, Math.round(base10 * Math.pow(2, steps)));
   }
-  // Goal 21+: +200% each goal (x3 compounding).
   const base20 = Math.max(1, Math.round(base10 * Math.pow(2, 10))); // Goal 20
-  const steps = i - 20;
-  return Math.max(1, Math.round(base20 * Math.pow(3, steps)));
+  // Goal 21–24: +200% each goal (x3 compounding).
+  if (i <= 24) {
+    const steps = i - 20;
+    return Math.max(1, Math.round(base20 * Math.pow(3, steps)));
+  }
+  // Goal 25+: start at 200% on goal 24 (x3^4), then increase by +50% each goal:
+  // 25 = 250% (x3.5), 26 = 300% (x4), 27 = 350% (x4.5), etc.
+  const base24 = Math.max(1, Math.round(base20 * Math.pow(3, 4))); // Goal 24
+  const stepsAfter24 = i - 24;
+  const mult = 3 + 0.5 * stepsAfter24;
+  return Math.max(1, Math.round(base24 * mult));
 }
 
 const STARTING_POINTS = 500;
