@@ -2990,6 +2990,9 @@ function applyReward(id) {
     rewards.noClearTrips = true;
     lastPickedRewardName = "Instant Folds";
     enqueueRewardBurst("Instant Folds", "Two pair and trips are disabled · all other hands pay 2x");
+    syncHandChartScores();
+    updateRewardsTracker();
+    scheduleSaveRun();
     return;
   }
   // Backward compat: legacy split rewards now map to Playing Tight.
@@ -2998,6 +3001,9 @@ function applyReward(id) {
     rewards.noClearTrips = true;
     lastPickedRewardName = "Instant Folds";
     enqueueRewardBurst("Instant Folds", "Two pair and trips are disabled · all other hands pay 2x");
+    syncHandChartScores();
+    updateRewardsTracker();
+    scheduleSaveRun();
     return;
   }
 }
