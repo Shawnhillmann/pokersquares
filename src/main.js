@@ -216,13 +216,22 @@ function splitUpMultForType(type) {
   return stacks <= 0 ? 1 : Math.pow(10, stacks);
 }
 
-/** Product of stackable hand-type reward multipliers (Group Up, Straighten Up, Shape Up, Split Up). */
+function instantFoldsMultForType(type) {
+  // Instant Folds: Two Pair + Trips are disabled; all other hands pay 2×.
+  if (!(rewards.noClearTwoPair && rewards.noClearTrips)) return 1;
+  const t = String(type);
+  if (t === HAND_TYPE.TWO_PAIR || t === HAND_TYPE.THREE_OF_A_KIND) return 1;
+  return 2;
+}
+
+/** Product of hand-type reward multipliers (Group Up, Straight Up, Shape Up, Split Up, Instant Folds). */
 function lineTypeRewardMult(type) {
   return (
     stickTogetherMultForType(type) *
     straightUpMultForType(type) *
     shapeUpMultForType(type) *
-    splitUpMultForType(type)
+    splitUpMultForType(type) *
+    instantFoldsMultForType(type)
   );
 }
 
@@ -449,7 +458,7 @@ function cardScoreValue(card) {
   const isJoker = rank === "JOKER";
   const isAce = rank === "A";
   const aceStacks = Math.max(0, Math.floor(rewards.pocketRocketsStacks || 0));
-  const aceMult = aceStacks <= 0 ? 1 : Math.pow(10, aceStacks);
+  const aceMult = aceStacks <= 0 ? 1 : Math.pow(4, aceStacks);
   const broadwayStacks = Math.max(0, Math.floor(rewards.broadwayCardsStacks || 0));
   const broadwayMult =
     rankIsBroadway(rank) && broadwayStacks > 0 ? Math.pow(2, broadwayStacks) : 1;
@@ -461,7 +470,7 @@ function cardScoreValue(card) {
       : 0;
   const pocketDeucesStacks = Math.max(0, Math.floor(rewards.pocketDeucesStacks || 0));
   const pocketDeucesMult =
-    rank === "2" && pocketDeucesStacks > 0 ? Math.pow(10, pocketDeucesStacks) : 1;
+    rank === "2" && pocketDeucesStacks > 0 ? Math.pow(4, pocketDeucesStacks) : 1;
   const baseUnmult = (rewards.jokerWildcard && isJoker ? 10 : cardBaseValue(rank)) + perCard;
   let base = baseUnmult;
   if (isAce) base *= aceMult;
@@ -975,7 +984,7 @@ function updateRewardsTracker() {
   const descByLabel = {
     "Progressive Jackpots":
       "Scored hands now have  +0.25% jackpot chance per stack. Jackpot pays 100x and resets on hit.",
-    "Pocket Rockets": "Aces are now worth 10x card value per stack.",
+    "Pocket Rockets": "Aces are now worth 4x card value per stack.",
     "Joker Cards": "Add a Joker card to your deck. Max 2.",
     "Diagonal Hands": "5 Card diagonal hands can now be scored as well.",
     "Close Enough": "Flushes and straights now only require 4 cards.",
@@ -983,7 +992,7 @@ function updateRewardsTracker() {
     "Gold Cards": "Each card has a +2% chance to appear as a Gold Card worth 50x.",
     "Broadway Cards": "10/J/Q/K/A are now worth 2x card value per stack.",
     "Low Cards": "2–9 are now worth 3x card value per stack.",
-    "Pocket Deuces": "2's are now worth 10x card value per stack.",
+    "Pocket Deuces": "2's are now worth 4x card value per stack.",
     "Bigger Combos": "Consecutive scored hands in the same cascade gain +0.5x per stack.",
     "Bigger Numbers": "Scored cards permanently gain +1 card value per stack.",
     "Free Swaps": "Scored hands now add +0.25% chance for your next swap to be free.",
@@ -992,8 +1001,7 @@ function updateRewardsTracker() {
     "Shape Up": "All flushes are now worth 2x per stack.",
     "Straight Up": "All straights are now worth 2x per stack.",
     "Risky Moves": "Scored hands have an 80% chance to pay 2x, or a 20% chance to pay 0x.",
-    "Instant Folds":
-      "Two Pair and Trips are disabled, enabling less frequent but higher scoring hands.",
+    "Instant Folds": "Two pair and trips are disabled, all other hands are now worth 2x",
     "Ladder Up": "Hand types now gain +1x each time they are scored this run."
   };
 
@@ -1114,7 +1122,7 @@ function updateRewardsTracker() {
   if (rewards.pocketRocketsStacks > 0) {
     addRow(
       "Pocket Rockets",
-      `Aces ${fmtShort(Math.pow(10, rewards.pocketRocketsStacks))}x · ${rewards.pocketRocketsStacks}×`
+      `Aces ${fmtShort(Math.pow(4, rewards.pocketRocketsStacks))}x · ${rewards.pocketRocketsStacks}×`
     );
   } else addRow("Pocket Rockets", "Off");
 
@@ -1140,7 +1148,7 @@ function updateRewardsTracker() {
 
   if (rewards.pocketDeucesStacks > 0) {
     const stacks = Math.max(0, Math.floor(rewards.pocketDeucesStacks || 0));
-    addRow("Pocket Deuces", `2's ${fmtShort(Math.pow(10, stacks))}x · ${stacks}×`);
+    addRow("Pocket Deuces", `2's ${fmtShort(Math.pow(4, stacks))}x · ${stacks}×`);
   } else addRow("Pocket Deuces", "Off");
 
   if (rewards.biggerCombosStacks > 0) {
@@ -1178,7 +1186,7 @@ function updateRewardsTracker() {
   } else addRow("Straight Up", "Off");
 
   addRow("Risky Moves", rewards.pureBluff ? "On" : "Off");
-  addRow("Instant Folds", rewards.noClearTrips || rewards.noClearTwoPair ? "On" : "Off");
+  addRow("Instant Folds", rewards.noClearTrips || rewards.noClearTwoPair ? "On · 2x" : "Off");
   if (rewards.ladderUpStacks > 0) addRow("Ladder Up", `${rewards.ladderUpStacks}×`);
   else addRow("Ladder Up", "Off");
 }
@@ -2657,7 +2665,7 @@ const REWARD_DEFS = /** @type {const} */ ([
   {
     id: "pocketDeuces",
     name: "Pocket Deuces",
-    desc: "2's are now worth 10x card value per stack.",
+    desc: "2's are now worth 4x card value per stack.",
     stack: { kind: "stackable" }
   },
   {
@@ -2717,7 +2725,7 @@ const REWARD_DEFS = /** @type {const} */ ([
   {
     id: "pocketRockets",
     name: "Pocket Rockets",
-    desc: "Aces are now worth 10x card value per stack.",
+    desc: "Aces are now worth 4x card value per stack.",
     stack: { kind: "stackable" }
   },
   {
@@ -2753,7 +2761,7 @@ const REWARD_DEFS = /** @type {const} */ ([
   {
     id: "playingTight",
     name: "Instant Folds",
-    desc: "Two Pair and Trips are disabled, enabling less frequent but higher scoring hands.",
+    desc: "Two pair and trips are disabled, all other hands are now worth 2x",
     stack: { kind: "unique" }
   },
   {
@@ -2797,7 +2805,7 @@ function applyReward(id) {
     const stacks = Math.max(0, Math.floor(rewards.pocketDeucesStacks || 0));
     enqueueRewardBurst(
       "Pocket Deuces",
-      `2's are now ${fmtShort(Math.pow(10, stacks))}× value (${stacks} stack${stacks === 1 ? "" : "s"})`
+      `2's are now ${fmtShort(Math.pow(4, stacks))}× value (${stacks} stack${stacks === 1 ? "" : "s"})`
     );
     updateRewardsTracker();
     scheduleSaveRun();
@@ -2913,7 +2921,7 @@ function applyReward(id) {
     const stacks = rewards.pocketRocketsStacks;
     enqueueRewardBurst(
       "Pocket Rockets",
-      `Aces are now ${Math.pow(10, stacks)}x value (${stacks} stack${stacks === 1 ? "" : "s"})`
+      `Aces are now ${Math.pow(4, stacks)}x value (${stacks} stack${stacks === 1 ? "" : "s"})`
     );
     return;
   }
@@ -2981,7 +2989,7 @@ function applyReward(id) {
     rewards.noClearTwoPair = true;
     rewards.noClearTrips = true;
     lastPickedRewardName = "Instant Folds";
-    enqueueRewardBurst("Instant Folds", "Two Pair and Trips are now disabled");
+    enqueueRewardBurst("Instant Folds", "Two pair and trips are disabled · all other hands pay 2x");
     return;
   }
   // Backward compat: legacy split rewards now map to Playing Tight.
@@ -2989,7 +2997,7 @@ function applyReward(id) {
     rewards.noClearTwoPair = true;
     rewards.noClearTrips = true;
     lastPickedRewardName = "Instant Folds";
-    enqueueRewardBurst("Instant Folds", "Two Pair and Trips are now disabled");
+    enqueueRewardBurst("Instant Folds", "Two pair and trips are disabled · all other hands pay 2x");
     return;
   }
 }
