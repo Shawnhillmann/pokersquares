@@ -36,6 +36,7 @@ const ui = {
   finalPeakGoalValue: /** @type {HTMLElement|null} */ (document.getElementById("finalPeakGoalValue")),
   finalMovesValue: /** @type {HTMLElement} */ (document.getElementById("finalMovesValue")),
   restartBtn: /** @type {HTMLButtonElement} */ (document.getElementById("restartBtn")),
+  runEndShareBtn: /** @type {HTMLButtonElement|null} */ (document.getElementById("runEndShareBtn")),
   goalBar: /** @type {HTMLElement|null} */ (document.getElementById("goalBar")),
   goalCurrent: /** @type {HTMLElement|null} */ (document.getElementById("goalCurrent")),
   goalTarget: /** @type {HTMLElement|null} */ (document.getElementById("goalTarget")),
@@ -1951,7 +1952,7 @@ ui.hintBtn.addEventListener("click", async () => {
   playHaptic("hint");
 });
 
-ui.shareBtn?.addEventListener("click", async () => {
+async function sharePokariaLink() {
   const url = window.location.href;
   try {
     if (navigator.share) {
@@ -1969,7 +1970,10 @@ ui.shareBtn?.addEventListener("click", async () => {
     // eslint-disable-next-line no-alert
     window.prompt("Copy link:", url);
   }
-});
+}
+
+ui.shareBtn?.addEventListener("click", () => sharePokariaLink());
+ui.runEndShareBtn?.addEventListener("click", () => sharePokariaLink());
 
 // Mobile browsers (especially iOS) may suspend audio when backgrounded.
 // Try to re-unlock/resume audio when the tab becomes active again.
